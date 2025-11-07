@@ -4,8 +4,13 @@
   "description": "AI-powered browser automation extension with configurable LLM providers",
   "type": "module",
   "scripts": {
-    "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'",
-    "build": "echo 'No build step needed - load directly in Chrome'"
+    "test": "node tests/run-tests.js",
+    "validate": "node tests/validate-extension.js",
+    "test:unit": "node tests/unit/run-unit-tests.js",
+    "test:integration": "echo 'Load tests/integration/test-page.html in browser and run tests'",
+    "lint": "echo 'Linting extension files...' && node tests/lint-check.js",
+    "build": "node tests/validate-extension.js && echo 'Extension validated successfully'",
+    "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'"
   },
   "keywords": [
     "chrome-extension",

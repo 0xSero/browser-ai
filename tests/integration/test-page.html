@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser AI Agent - Integration Test Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #4f46e5;
+      border-bottom: 3px solid #4f46e5;
+      padding-bottom: 10px;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .test-group {
+      margin: 15px 0;
+      padding: 15px;
+      border-left: 4px solid #4f46e5;
+      background: #f9fafb;
+    }
+
+    .test-group h3 {
+      margin-top: 0;
+      color: #111827;
+    }
+
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #4338ca;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #3b82f6;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .command-example {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .checkbox-group {
+      margin: 10px 0;
+    }
+
+    .checkbox-group label {
+      display: block;
+      padding: 5px 0;
+    }
+
+    #testResults {
+      margin-top: 20px;
+    }
+
+    .test-result {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .test-result.pass {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .test-result.fail {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 Browser AI Agent - Integration Test Page</h1>
+
+  <div class="status info">
+    <strong>Instructions:</strong> This page provides test scenarios for the Browser AI Agent extension.
+    Open the extension's side panel and use the AI to interact with these test elements.
+  </div>
+
+  <!-- Navigation Tests -->
+  <div class="section">
+    <h2>1. Navigation Tests</h2>
+
+    <div class="test-group">
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Navigate to github.com"</div>
+      <div class="command-example">"Go back to the previous page"</div>
+      <div class="command-example">"Refresh this page"</div>
+    </div>
+  </div>
+
+  <!-- Form Interaction Tests -->
+  <div class="section">
+    <h2>2. Form Interaction Tests</h2>
+
+    <form id="testForm">
+      <div class="test-group">
+        <h3>Test Form</h3>
+        <label>Name:</label>
+        <input type="text" id="nameInput" name="name" placeholder="Enter your name">
+
+        <label>Email:</label>
+        <input type="email" id="emailInput" name="email" placeholder="Enter your email">
+
+        <label>Message:</label>
+        <textarea id="messageInput" name="message" rows="4" placeholder="Enter a message"></textarea>
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" id="subscribeCheck"> Subscribe to newsletter
+          </label>
+          <label>
+            <input type="checkbox" id="termsCheck"> I agree to terms and conditions
+          </label>
+        </div>
+
+        <button type="button" id="submitBtn">Submit Form</button>
+        <button type="button" id="clearBtn">Clear Form</button>
+      </div>
+
+      <div class="test-group">
+        <h3>Test Commands:</h3>
+        <div class="command-example">"Type 'John Doe' in the name field"</div>
+        <div class="command-example">"Fill the email with test@example.com"</div>
+        <div class="command-example">"Click the subscribe checkbox"</div>
+        <div class="command-example">"Fill the form with name: Jane Smith, email: jane@test.com, message: Hello World"</div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Click Tests -->
+  <div class="section">
+    <h2>3. Click and Interaction Tests</h2>
+
+    <div class="test-group">
+      <button id="clickTest1" class="test-btn">Click Me #1</button>
+      <button id="clickTest2" class="test-btn">Click Me #2</button>
+      <button id="clickTest3" class="test-btn">Click Me #3</button>
+
+      <div id="clickStatus" class="status hidden"></div>
+
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Click the 'Click Me #2' button"</div>
+      <div class="command-example">"Click all buttons on this page"</div>
+    </div>
+  </div>
+
+  <!-- Scroll Tests -->
+  <div class="section">
+    <h2>4. Scroll Tests</h2>
+
+    <div class="test-group">
+      <p>Scroll test content...</p>
+      <div style="height: 500px; background: linear-gradient(to bottom, #dbeafe, #fef3c7); padding: 20px; border-radius: 8px;">
+        <p>This is a tall section to test scrolling.</p>
+        <p style="margin-top: 200px;">Middle content</p>
+        <p style="margin-top: 200px;">Bottom content</p>
+      </div>
+
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Scroll down 300 pixels"</div>
+      <div class="command-example">"Scroll to the top of the page"</div>
+      <div class="command-example">"Scroll to the bottom"</div>
+    </div>
+  </div>
+
+  <!-- Content Extraction Tests -->
+  <div class="section">
+    <h2>5. Content Extraction Tests</h2>
+
+    <div class="test-group">
+      <div id="extractionTarget" style="background: #fef3c7; padding: 15px; border-radius: 6px;">
+        <h3>Target Content</h3>
+        <p>This is sample content for extraction testing.</p>
+        <ul>
+          <li>List item 1</li>
+          <li>List item 2</li>
+          <li>List item 3</li>
+        </ul>
+        <a href="https://example.com">Example Link 1</a>
+        <a href="https://test.com">Example Link 2</a>
+      </div>
+
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Get all the text from this page"</div>
+      <div class="command-example">"Get all links on this page"</div>
+      <div class="command-example">"Extract the content from #extractionTarget"</div>
+      <div class="command-example">"Take a screenshot"</div>
+    </div>
+  </div>
+
+  <!-- Tab Management Tests -->
+  <div class="section">
+    <h2>6. Tab Management Tests</h2>
+
+    <div class="test-group">
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Open github.com in a new tab"</div>
+      <div class="command-example">"List all open tabs"</div>
+      <div class="command-example">"Open twitter.com, reddit.com, and news.ycombinator.com in new tabs"</div>
+      <div class="command-example">"Group tabs 2, 3, and 4 with title 'Test Group' in blue"</div>
+      <div class="command-example">"Close tab 3"</div>
+    </div>
+  </div>
+
+  <!-- History Management Tests -->
+  <div class="section">
+    <h2>7. History Management Tests (NEW)</h2>
+
+    <div class="test-group">
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Search my history for 'github'"</div>
+      <div class="command-example">"Show me my browsing history from the last 24 hours"</div>
+      <div class="command-example">"Get my browsing history from the past 2 hours"</div>
+      <div class="command-example">"How many times have I visited github.com?"</div>
+      <div class="command-example">"Delete this URL from my history"</div>
+    </div>
+
+    <div class="status info">
+      <strong>Note:</strong> History deletion commands require user confirmation. The AI will ask before performing destructive actions.
+    </div>
+  </div>
+
+  <!-- Wait for Element Test -->
+  <div class="section">
+    <h2>8. Dynamic Content Tests</h2>
+
+    <div class="test-group">
+      <button id="loadDynamic">Load Dynamic Content (3 second delay)</button>
+      <div id="dynamicContent" class="hidden status success">
+        This content appeared dynamically!
+      </div>
+
+      <h3>Test Commands:</h3>
+      <div class="command-example">"Click the 'Load Dynamic Content' button and wait for the content to appear"</div>
+      <div class="command-example">"Wait for #dynamicContent to appear"</div>
+    </div>
+  </div>
+
+  <!-- Complex Workflows -->
+  <div class="section">
+    <h2>9. Complex Workflow Tests</h2>
+
+    <div class="test-group">
+      <h3>Multi-Step Workflows:</h3>
+
+      <div class="command-example">
+        "Search my history for 'test', then for each result, open it in a new tab and group them with title 'History Search' in green"
+      </div>
+
+      <div class="command-example">
+        "Fill out the test form with name: Test User, email: test@example.com, message: Automated test, then click subscribe checkbox and submit"
+      </div>
+
+      <div class="command-example">
+        "Scroll to the bottom of the page, take a screenshot, then scroll back to the top"
+      </div>
+
+      <div class="command-example">
+        "Get my recent history from the last hour, find all GitHub links, and open them in new tabs"
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Results Area -->
+  <div class="section">
+    <h2>Test Results</h2>
+    <div id="testResults">
+      <p class="status info">Test results will appear here when you interact with the page elements.</p>
+    </div>
+  </div>
+
+  <script>
+    // Test page interactivity
+    const testResults = document.getElementById('testResults');
+
+    function addResult(message, pass = true) {
+      const div = document.createElement('div');
+      div.className = `test-result ${pass ? 'pass' : 'fail'}`;
+      div.textContent = `${pass ? '✓' : '✗'} ${message}`;
+      testResults.appendChild(div);
+    }
+
+    // Form submission
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      const name = document.getElementById('nameInput').value;
+      const email = document.getElementById('emailInput').value;
+      const message = document.getElementById('messageInput').value;
+
+      if (name && email && message) {
+        addResult(`Form submitted: ${name}, ${email}`);
+      } else {
+        addResult('Form submission failed - missing fields', false);
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('testForm').reset();
+      addResult('Form cleared');
+    });
+
+    // Click tests
+    document.querySelectorAll('.test-btn').forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        const status = document.getElementById('clickStatus');
+        status.className = 'status success';
+        status.textContent = `Button #${index + 1} was clicked!`;
+        status.classList.remove('hidden');
+        addResult(`Button #${index + 1} clicked successfully`);
+      });
+    });
+
+    // Dynamic content
+    document.getElementById('loadDynamic').addEventListener('click', () => {
+      addResult('Loading dynamic content...');
+      setTimeout(() => {
+        document.getElementById('dynamicContent').classList.remove('hidden');
+        addResult('Dynamic content loaded successfully');
+      }, 3000);
+    });
+
+    // Page load
+    addResult('Test page loaded successfully');
+  </script>
+</body>
+</html>

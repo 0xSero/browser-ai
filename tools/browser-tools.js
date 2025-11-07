@@ -25,7 +25,13 @@ export class BrowserTools {
       getAllTabs: this.getAllTabs.bind(this),
       goBack: this.goBack.bind(this),
       goForward: this.goForward.bind(this),
-      refresh: this.refresh.bind(this)
+      refresh: this.refresh.bind(this),
+      // History management
+      searchHistory: this.searchHistory.bind(this),
+      getRecentHistory: this.getRecentHistory.bind(this),
+      deleteHistoryItem: this.deleteHistoryItem.bind(this),
+      deleteHistoryRange: this.deleteHistoryRange.bind(this),
+      getVisitCount: this.getVisitCount.bind(this)
     };
   }
 
@@ -239,6 +245,66 @@ export class BrowserTools {
             tabId: { type: 'number', description: 'Optional tab ID' }
           },
           required: []
+        }
+      },
+      {
+        name: 'searchHistory',
+        description: 'Search browser history for URLs matching a text query',
+        input_schema: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: 'Search query text' },
+            maxResults: { type: 'number', description: 'Maximum number of results (default: 100)' },
+            startTime: { type: 'number', description: 'Optional start time in milliseconds since epoch' },
+            endTime: { type: 'number', description: 'Optional end time in milliseconds since epoch' }
+          },
+          required: ['text']
+        }
+      },
+      {
+        name: 'getRecentHistory',
+        description: 'Get recently visited pages from browser history',
+        input_schema: {
+          type: 'object',
+          properties: {
+            maxResults: { type: 'number', description: 'Maximum number of results (default: 50)' },
+            hoursAgo: { type: 'number', description: 'Number of hours to look back (default: 24)' }
+          },
+          required: []
+        }
+      },
+      {
+        name: 'deleteHistoryItem',
+        description: 'Delete a specific URL from browser history',
+        input_schema: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', description: 'URL to delete from history' }
+          },
+          required: ['url']
+        }
+      },
+      {
+        name: 'deleteHistoryRange',
+        description: 'Delete all history items within a time range',
+        input_schema: {
+          type: 'object',
+          properties: {
+            startTime: { type: 'number', description: 'Start time in milliseconds since epoch' },
+            endTime: { type: 'number', description: 'End time in milliseconds since epoch' }
+          },
+          required: ['startTime', 'endTime']
+        }
+      },
+      {
+        name: 'getVisitCount',
+        description: 'Get the number of times a URL has been visited',
+        input_schema: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', description: 'URL to check visit count' }
+          },
+          required: ['url']
         }
       }
     ];
@@ -482,5 +548,155 @@ export class BrowserTools {
     const targetTabId = await this.getActiveTabId(tabId);
     await chrome.tabs.reload(targetTabId);
     return { success: true, tabId: targetTabId };
+  }
+
+  // History Management Methods
+
+  async searchHistory({ text, maxResults = 100, startTime, endTime }) {
+    const query = {
+      text,
+      maxResults
+    };
+
+    if (startTime) query.startTime = startTime;
+    if (endTime) query.endTime = endTime;
+
+    const results = await chrome.history.search(query);
+
+    return {
+      success: true,
+      count: results.length,
+      results: results.map(item => ({
+        url: item.url,
+        title: item.title,
+        lastVisitTime: item.lastVisitTime,
+        visitCount: item.visitCount,
+        typedCount: item.typedCount
+      }))
+    };
+  }
+
+  async getRecentHistory({ maxResults = 50, hoursAgo = 24 }) {
+    const endTime = Date.now();
+    const startTime = endTime - (hoursAgo * 60 * 60 * 1000);
+
+    const results = await chrome.history.search({
+      text: '',
+      startTime,
+      endTime,
+      maxResults
+    });
+
+    // Sort by most recent first
+    results.sort((a, b) => b.lastVisitTime - a.lastVisitTime);
+
+    return {
+      success: true,
+      count: results.length,
+      timeRange: {
+        from: new Date(startTime).toISOString(),
+        to: new Date(endTime).toISOString()
+      },
+      results: results.map(item => ({
+        url: item.url,
+        title: item.title,
+        lastVisitTime: item.lastVisitTime,
+        visitCount: item.visitCount,
+        lastVisitDate: new Date(item.lastVisitTime).toISOString()
+      }))
+    };
+  }
+
+  async deleteHistoryItem({ url }) {
+    // First check if URL exists in history
+    const results = await chrome.history.search({ text: url, maxResults: 1 });
+
+    if (results.length === 0) {
+      return {
+        success: false,
+        error: 'URL not found in history',
+        url
+      };
+    }
+
+    // Delete all visits to this URL
+    await chrome.history.deleteUrl({ url });
+
+    return {
+      success: true,
+      url,
+      message: 'URL deleted from history'
+    };
+  }
+
+  async deleteHistoryRange({ startTime, endTime }) {
+    // Validate time range
+    if (startTime >= endTime) {
+      return {
+        success: false,
+        error: 'startTime must be before endTime'
+      };
+    }
+
+    // Get count before deletion (for reporting)
+    const beforeResults = await chrome.history.search({
+      text: '',
+      startTime,
+      endTime,
+      maxResults: 10000
+    });
+
+    // Delete the range
+    await chrome.history.deleteRange({
+      startTime,
+      endTime
+    });
+
+    return {
+      success: true,
+      deletedCount: beforeResults.length,
+      timeRange: {
+        from: new Date(startTime).toISOString(),
+        to: new Date(endTime).toISOString()
+      },
+      message: `Deleted ${beforeResults.length} history items`
+    };
+  }
+
+  async getVisitCount({ url }) {
+    const results = await chrome.history.search({
+      text: url,
+      maxResults: 1
+    });
+
+    if (results.length === 0) {
+      return {
+        success: true,
+        url,
+        visitCount: 0,
+        found: false,
+        message: 'URL not found in history'
+      };
+    }
+
+    const item = results[0];
+
+    // Get detailed visits
+    const visits = await chrome.history.getVisits({ url });
+
+    return {
+      success: true,
+      url,
+      visitCount: item.visitCount,
+      typedCount: item.typedCount,
+      lastVisitTime: item.lastVisitTime,
+      lastVisitDate: new Date(item.lastVisitTime).toISOString(),
+      found: true,
+      visits: visits.slice(0, 10).map(visit => ({
+        visitTime: visit.visitTime,
+        visitDate: new Date(visit.visitTime).toISOString(),
+        transition: visit.transition
+      }))
+    };
   }
 }

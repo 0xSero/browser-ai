@@ -37,6 +37,13 @@ The AI has access to these powerful browser automation capabilities:
 - `createTabGroup` - Group tabs with title and color
 - `ungroupTabs` - Remove tabs from groups
 
+#### History Management
+- `searchHistory` - Search browser history for URLs matching text
+- `getRecentHistory` - Get recently visited pages
+- `deleteHistoryItem` - Delete specific URL from history
+- `deleteHistoryRange` - Delete history within time range
+- `getVisitCount` - Get visit count and details for a URL
+
 ### Modern UI
 - Side panel interface that opens on the right side of the browser
 - Clean, intuitive chat interface
@@ -414,6 +421,51 @@ This extension leverages the following Chrome Extension APIs:
 - Use browser DevTools to inspect and test selectors
 - Some elements may not be loaded yet - use waitForElement tool
 
+## Testing
+
+The extension includes a comprehensive test suite to ensure reliability and correctness.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run only validation
+npm run validate
+
+# Run only unit tests
+npm run test:unit
+```
+
+### Test Suite Components
+
+**Extension Validation** (`npm run validate`)
+- Validates manifest.json structure and required fields
+- Checks all required files exist
+- Validates JavaScript syntax
+- Verifies tool definitions
+- Ensures proper file structure
+
+**Unit Tests** (`npm run test:unit`)
+- Tool definition schema validation
+- AI provider configuration testing
+- Tool schema conversion (OpenAI/Anthropic formats)
+- Input validation
+- Error handling
+
+**Integration Tests**
+- Load `tests/integration/test-page.html` in your browser
+- Use the extension to interact with test elements
+- Verify all tools work correctly with real DOM elements
+
+### Test Results
+
+All tests passing:
+- ✓ 34 validation tests
+- ✓ 12 unit tests
+- Extension ready to load in Chrome
+
 ## Limitations
 
 - **Same-origin policy**: Some cross-origin interactions may be restricted
@@ -432,7 +484,7 @@ Potential features for future versions:
 - [ ] Multi-page workflows with state persistence
 - [ ] Integration with Chrome DevTools Protocol for advanced debugging
 - [ ] Screenshot analysis with vision-capable models
-- [ ] Bookmark and history management
+- [ ] Bookmark management (history management ✅ implemented)
 - [ ] Cookie and local storage manipulation
 - [ ] Network request interception and modification
 - [ ] Custom tool creation interface

@@ -748,6 +748,220 @@ await createTabGroup({
 
 ---
 
+### History Management Tools
+
+#### searchHistory
+**Description**: Search browser history for URLs matching a text query
+
+**Parameters**:
+```typescript
+{
+  text: string;              // Search query text
+  maxResults?: number;       // Max results (default: 100)
+  startTime?: number;        // Start time in ms since epoch
+  endTime?: number;          // End time in ms since epoch
+}
+```
+
+**Returns**:
+```typescript
+{
+  success: boolean;
+  count: number;
+  results: Array<{
+    url: string;
+    title: string;
+    lastVisitTime: number;
+    visitCount: number;
+    typedCount: number;
+  }>;
+}
+```
+
+**Example**:
+```javascript
+await searchHistory({
+  text: 'github',
+  maxResults: 50
+})
+```
+
+---
+
+#### getRecentHistory
+**Description**: Get recently visited pages from browser history
+
+**Parameters**:
+```typescript
+{
+  maxResults?: number;       // Max results (default: 50)
+  hoursAgo?: number;         // Hours to look back (default: 24)
+}
+```
+
+**Returns**:
+```typescript
+{
+  success: boolean;
+  count: number;
+  timeRange: {
+    from: string;            // ISO 8601 timestamp
+    to: string;              // ISO 8601 timestamp
+  };
+  results: Array<{
+    url: string;
+    title: string;
+    lastVisitTime: number;
+    visitCount: number;
+    lastVisitDate: string;   // ISO 8601 timestamp
+  }>;
+}
+```
+
+**Example**:
+```javascript
+// Get last 2 hours of history
+await getRecentHistory({
+  maxResults: 100,
+  hoursAgo: 2
+})
+```
+
+---
+
+#### deleteHistoryItem
+**Description**: Delete a specific URL from browser history
+
+**Parameters**:
+```typescript
+{
+  url: string;               // URL to delete
+}
+```
+
+**Returns**:
+```typescript
+{
+  success: boolean;
+  url: string;
+  message?: string;
+  error?: string;
+}
+```
+
+**Example**:
+```javascript
+await deleteHistoryItem({
+  url: 'https://example.com/page'
+})
+```
+
+**Notes**:
+- Deletes ALL visits to the specified URL
+- Returns error if URL not found in history
+- This action cannot be undone
+
+---
+
+#### deleteHistoryRange
+**Description**: Delete all history items within a time range
+
+**Parameters**:
+```typescript
+{
+  startTime: number;         // Start time in ms since epoch
+  endTime: number;           // End time in ms since epoch
+}
+```
+
+**Returns**:
+```typescript
+{
+  success: boolean;
+  deletedCount: number;
+  timeRange: {
+    from: string;            // ISO 8601 timestamp
+    to: string;              // ISO 8601 timestamp
+  };
+  message: string;
+}
+```
+
+**Example**:
+```javascript
+// Delete history from last week
+const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+const now = Date.now();
+
+await deleteHistoryRange({
+  startTime: oneWeekAgo,
+  endTime: now
+})
+```
+
+**Notes**:
+- Deletes ALL history entries in the specified range
+- This action cannot be undone
+- startTime must be before endTime
+
+---
+
+#### getVisitCount
+**Description**: Get the number of times a URL has been visited
+
+**Parameters**:
+```typescript
+{
+  url: string;               // URL to check
+}
+```
+
+**Returns**:
+```typescript
+{
+  success: boolean;
+  url: string;
+  visitCount: number;
+  typedCount: number;        // Times user typed URL directly
+  lastVisitTime: number;
+  lastVisitDate: string;     // ISO 8601 timestamp
+  found: boolean;
+  visits: Array<{            // Last 10 visits
+    visitTime: number;
+    visitDate: string;       // ISO 8601 timestamp
+    transition: string;      // How user arrived (link, typed, etc)
+  }>;
+}
+```
+
+**Example**:
+```javascript
+await getVisitCount({
+  url: 'https://github.com'
+})
+
+// Returns:
+// {
+//   success: true,
+//   url: 'https://github.com',
+//   visitCount: 42,
+//   typedCount: 5,
+//   lastVisitTime: 1699564800000,
+//   lastVisitDate: '2025-11-07T12:00:00.000Z',
+//   found: true,
+//   visits: [...]
+// }
+```
+
+**Transition Types**:
+- `link` - User followed a link
+- `typed` - User typed URL in address bar
+- `auto_bookmark` - User clicked a bookmark
+- `reload` - User reloaded the page
+- `form_submit` - User submitted a form
+
+---
+
 ## AI Provider Integration
 
 ### OpenAI API Format
