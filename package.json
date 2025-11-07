@@ -1,0 +1,21 @@
+{
+  "name": "browser-ai-agent",
+  "version": "1.0.0",
+  "description": "AI-powered browser automation extension with configurable LLM providers",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'",
+    "build": "echo 'No build step needed - load directly in Chrome'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "automation",
+    "openai",
+    "anthropic",
+    "browser-agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {}
+}

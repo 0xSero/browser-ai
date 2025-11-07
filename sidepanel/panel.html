@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser AI Agent</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>Browser AI Agent</h1>
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v6m0 6v6m0-18a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3 3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"></path>
+          <path d="m19.07 4.93-1.41 1.41M6.34 17.66l-1.41 1.41M19.07 19.07l-1.41-1.41M6.34 6.34 4.93 4.93"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel hidden">
+      <h2>Configuration</h2>
+
+      <div class="form-group">
+        <label for="provider">AI Provider</label>
+        <select id="provider">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="custom">Custom (OpenAI Compatible)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-...">
+        <small>Your API key is stored locally and never shared</small>
+      </div>
+
+      <div class="form-group">
+        <label for="model">Model</label>
+        <input type="text" id="model" placeholder="gpt-4, claude-3-5-sonnet-20241022">
+      </div>
+
+      <div class="form-group" id="customEndpointGroup" style="display: none;">
+        <label for="customEndpoint">Custom Endpoint</label>
+        <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1">
+      </div>
+
+      <div class="form-group">
+        <label for="systemPrompt">System Prompt</label>
+        <textarea id="systemPrompt" rows="4" placeholder="You are a helpful browser automation assistant..."></textarea>
+      </div>
+
+      <div class="button-group">
+        <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+        <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="chatInterface" class="chat-interface">
+      <div id="statusBar" class="status-bar">
+        <span id="statusText">Ready</span>
+      </div>
+
+      <div id="chatMessages" class="chat-messages"></div>
+
+      <div class="input-area">
+        <textarea id="userInput" placeholder="Ask the AI to interact with the browser..." rows="3"></textarea>
+        <button id="sendBtn" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="panel.js" type="module"></script>
+</body>
+</html>

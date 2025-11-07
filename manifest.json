@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Browser AI Agent",
+  "version": "1.0.0",
+  "description": "AI-powered browser automation with configurable LLM providers (OpenAI, Anthropic)",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "tabGroups",
+    "storage",
+    "bookmarks",
+    "history",
+    "cookies",
+    "debugger"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Open AI Agent Panel"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/panel.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
