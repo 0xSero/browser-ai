@@ -24,8 +24,10 @@
     <div id="settingsPanel" class="settings-panel hidden">
       <h2>Configuration</h2>
 
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">AI PROVIDER</h3>
+
       <div class="form-group">
-        <label for="provider">AI Provider</label>
+        <label for="provider">Provider</label>
         <select id="provider">
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
@@ -41,17 +43,70 @@
 
       <div class="form-group">
         <label for="model">Model</label>
-        <input type="text" id="model" placeholder="gpt-4, claude-3-5-sonnet-20241022">
+        <input type="text" id="model" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
+        <small>Recommended: gpt-4o for OpenAI, claude-3-5-sonnet-20241022 for Anthropic</small>
       </div>
 
       <div class="form-group" id="customEndpointGroup" style="display: none;">
         <label for="customEndpoint">Custom Endpoint</label>
         <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1">
+        <small>Base URL for OpenAI-compatible API</small>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL PARAMETERS</h3>
+
+      <div class="form-group">
+        <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
+        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+        <small>Controls randomness (0 = focused, 2 = creative)</small>
       </div>
 
       <div class="form-group">
+        <label for="maxTokens">Max Tokens</label>
+        <input type="number" id="maxTokens" min="1" max="4096" value="2048">
+        <small>Maximum response length</small>
+      </div>
+
+      <div class="form-group">
+        <label for="timeout">Request Timeout (ms)</label>
+        <input type="number" id="timeout" min="5000" step="1000" value="30000">
+        <small>Maximum time to wait for API response</small>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">BEHAVIOR</h3>
+
+      <div class="form-group">
+        <label for="autoScroll">Auto-scroll to latest message</label>
+        <select id="autoScroll">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmActions">Confirm dangerous actions</label>
+        <select id="confirmActions">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+        <small>Show confirmation for actions like deleting history or closing tabs</small>
+      </div>
+
+      <div class="form-group">
+        <label for="saveHistory">Save chat history</label>
+        <select id="saveHistory">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+        <small>Store conversations locally (max 50 messages)</small>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SYSTEM PROMPT</h3>
+
+      <div class="form-group">
         <label for="systemPrompt">System Prompt</label>
-        <textarea id="systemPrompt" rows="4" placeholder="You are a helpful browser automation assistant..."></textarea>
+        <textarea id="systemPrompt" rows="6" placeholder="You are a helpful browser automation assistant..."></textarea>
+        <small>Customize how the AI behaves and what tools it has access to</small>
       </div>
 
       <div class="button-group">
@@ -70,7 +125,12 @@
 
       <div class="input-area">
         <textarea id="userInput" placeholder="Ask the AI to interact with the browser..." rows="3"></textarea>
-        <button id="sendBtn" class="btn btn-primary">Send</button>
+        <button id="sendBtn" class="icon-btn send-btn" title="Send message">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
       </div>
     </div>
   </div>

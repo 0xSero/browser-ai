@@ -11,6 +11,13 @@ class SidePanelUI {
       customEndpoint: document.getElementById('customEndpoint'),
       customEndpointGroup: document.getElementById('customEndpointGroup'),
       systemPrompt: document.getElementById('systemPrompt'),
+      temperature: document.getElementById('temperature'),
+      temperatureValue: document.getElementById('temperatureValue'),
+      maxTokens: document.getElementById('maxTokens'),
+      timeout: document.getElementById('timeout'),
+      autoScroll: document.getElementById('autoScroll'),
+      confirmActions: document.getElementById('confirmActions'),
+      saveHistory: document.getElementById('saveHistory'),
       saveSettingsBtn: document.getElementById('saveSettingsBtn'),
       cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
       chatMessages: document.getElementById('chatMessages'),
@@ -39,6 +46,11 @@ class SidePanelUI {
     // Provider change
     this.elements.provider.addEventListener('change', () => {
       this.toggleCustomEndpoint();
+    });
+
+    // Temperature slider
+    this.elements.temperature.addEventListener('input', () => {
+      this.elements.temperatureValue.textContent = this.elements.temperature.value;
     });
 
     // Save settings
@@ -91,7 +103,13 @@ class SidePanelUI {
       'apiKey',
       'model',
       'customEndpoint',
-      'systemPrompt'
+      'systemPrompt',
+      'temperature',
+      'maxTokens',
+      'timeout',
+      'autoScroll',
+      'confirmActions',
+      'saveHistory'
     ]);
 
     this.elements.provider.value = settings.provider || 'openai';
@@ -99,6 +117,13 @@ class SidePanelUI {
     this.elements.model.value = settings.model || 'gpt-4o';
     this.elements.customEndpoint.value = settings.customEndpoint || '';
     this.elements.systemPrompt.value = settings.systemPrompt || this.getDefaultSystemPrompt();
+    this.elements.temperature.value = settings.temperature || 0.7;
+    this.elements.temperatureValue.textContent = this.elements.temperature.value;
+    this.elements.maxTokens.value = settings.maxTokens || 2048;
+    this.elements.timeout.value = settings.timeout || 30000;
+    this.elements.autoScroll.value = settings.autoScroll !== undefined ? settings.autoScroll : 'true';
+    this.elements.confirmActions.value = settings.confirmActions !== undefined ? settings.confirmActions : 'true';
+    this.elements.saveHistory.value = settings.saveHistory !== undefined ? settings.saveHistory : 'true';
 
     this.toggleCustomEndpoint();
   }
@@ -109,7 +134,13 @@ class SidePanelUI {
       apiKey: this.elements.apiKey.value,
       model: this.elements.model.value,
       customEndpoint: this.elements.customEndpoint.value,
-      systemPrompt: this.elements.systemPrompt.value
+      systemPrompt: this.elements.systemPrompt.value,
+      temperature: parseFloat(this.elements.temperature.value),
+      maxTokens: parseInt(this.elements.maxTokens.value),
+      timeout: parseInt(this.elements.timeout.value),
+      autoScroll: this.elements.autoScroll.value === 'true',
+      confirmActions: this.elements.confirmActions.value === 'true',
+      saveHistory: this.elements.saveHistory.value === 'true'
     };
 
     await chrome.storage.local.set(settings);
