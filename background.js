@@ -139,9 +139,12 @@ class BackgroundService {
 
       const result = await this.browserTools.executeTool(toolCall.name, toolCall.args);
 
+      // Ensure result is not null
+      const finalResult = result || { error: 'No result returned' };
+
       // Send result back to AI provider
       if (this.aiProvider) {
-        this.aiProvider.addToolResult(toolCall.id, result);
+        this.aiProvider.addToolResult(toolCall.id, finalResult);
       }
 
       // Also send result to side panel for display
@@ -149,10 +152,10 @@ class BackgroundService {
         type: 'tool_execution',
         tool: toolCall.name,
         args: toolCall.args,
-        result: result
+        result: finalResult
       });
 
-      return result;
+      return finalResult;
     } catch (error) {
       console.error('Error executing tool:', error);
       const errorResult = { error: error.message };

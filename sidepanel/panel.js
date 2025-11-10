@@ -349,7 +349,7 @@ Always confirm before performing destructive actions. Be precise and describe wh
     let toolDiv = null;
     const lastMessage = this.elements.chatMessages.lastElementChild;
 
-    if (result === null) {
+    if (result === null || result === undefined) {
       // First message - just show the tool being called
       toolDiv = document.createElement('div');
       toolDiv.className = 'tool-call';
@@ -395,9 +395,12 @@ Always confirm before performing destructive actions. Be precise and describe wh
       if (toolCallElements.length > 0) {
         toolDiv = toolCallElements[toolCallElements.length - 1];
         const resultDiv = toolDiv.querySelector('.tool-call-result');
-        const isError = result.error || (result.success === false);
-        resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
-        resultDiv.textContent = JSON.stringify(result, null, 2);
+
+        if (resultDiv) {
+          const isError = (result && (result.error || result.success === false));
+          resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
+          resultDiv.textContent = JSON.stringify(result, null, 2);
+        }
       }
     }
 

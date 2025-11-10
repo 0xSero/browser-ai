@@ -334,10 +334,32 @@ export class BrowserTools {
     const result = await chrome.scripting.executeScript({
       target: { tabId: targetTabId },
       func: (sel) => {
-        const element = document.querySelector(sel);
-        if (!element) return { success: false, error: 'Element not found' };
-        element.click();
-        return { success: true, selector: sel };
+        try {
+          const element = document.querySelector(sel);
+          if (!element) {
+            // Try to find similar elements for debugging
+            const allElements = document.querySelectorAll('*');
+            const matching = Array.from(allElements).filter(el =>
+              el.textContent && el.textContent.includes(sel.replace(/['"]/g, ''))
+            );
+            return {
+              success: false,
+              error: 'Element not found',
+              selector: sel,
+              found: false,
+              suggestions: matching.slice(0, 5).map(el => ({
+                tagName: el.tagName,
+                text: el.textContent.substring(0, 50),
+                id: el.id,
+                className: el.className
+              }))
+            };
+          }
+          element.click();
+          return { success: true, selector: sel, found: true };
+        } catch (error) {
+          return { success: false, error: error.message, selector: sel };
+        }
       },
       args: [selector]
     });
