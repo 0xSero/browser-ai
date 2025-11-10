@@ -133,7 +133,8 @@ class BackgroundService {
       this.sendToSidePanel({
         type: 'tool_execution',
         tool: toolCall.name,
-        args: toolCall.args
+        args: toolCall.args,
+        result: null
       });
 
       const result = await this.browserTools.executeTool(toolCall.name, toolCall.args);
@@ -143,12 +144,27 @@ class BackgroundService {
         this.aiProvider.addToolResult(toolCall.id, result);
       }
 
+      // Also send result to side panel for display
+      this.sendToSidePanel({
+        type: 'tool_execution',
+        tool: toolCall.name,
+        args: toolCall.args,
+        result: result
+      });
+
       return result;
     } catch (error) {
       console.error('Error executing tool:', error);
+      const errorResult = { error: error.message };
       if (this.aiProvider) {
-        this.aiProvider.addToolResult(toolCall.id, { error: error.message });
+        this.aiProvider.addToolResult(toolCall.id, errorResult);
       }
+      this.sendToSidePanel({
+        type: 'tool_execution',
+        tool: toolCall.name,
+        args: toolCall.args,
+        result: errorResult
+      });
       throw error;
     }
   }

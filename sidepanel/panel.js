@@ -345,18 +345,60 @@ Always confirm before performing destructive actions. Be precise and describe wh
   }
 
   displayToolExecution(toolName, args, result) {
-    const toolDiv = document.createElement('div');
-    toolDiv.className = 'tool-call';
-    toolDiv.innerHTML = `
-      <div class="tool-call-name">🔧 ${toolName}</div>
-      <div class="tool-call-args">${JSON.stringify(args, null, 2)}</div>
-    `;
-
+    // Find or create tool call element
+    let toolDiv = null;
     const lastMessage = this.elements.chatMessages.lastElementChild;
-    if (lastMessage && lastMessage.classList.contains('assistant')) {
-      lastMessage.appendChild(toolDiv);
+
+    if (result === null) {
+      // First message - just show the tool being called
+      toolDiv = document.createElement('div');
+      toolDiv.className = 'tool-call';
+
+      toolDiv.innerHTML = `
+        <div class="tool-call-header">
+          <svg class="tool-call-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+          </svg>
+          <span>🔧 ${toolName}</span>
+        </div>
+        <div class="tool-call-body">
+          <div class="tool-call-section">
+            <div class="tool-call-label">Arguments</div>
+            <div class="tool-call-args">${this.escapeHtml(JSON.stringify(args, null, 2))}</div>
+          </div>
+          <div class="tool-call-section">
+            <div class="tool-call-label">Result</div>
+            <div class="tool-call-result">⏳ Running...</div>
+          </div>
+        </div>
+      `;
+
+      // Make it collapsible
+      const header = toolDiv.querySelector('.tool-call-header');
+      const body = toolDiv.querySelector('.tool-call-body');
+      body.style.display = 'none';
+      let isExpanded = false;
+
+      header.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        body.style.display = isExpanded ? 'block' : 'none';
+      });
+
+      if (lastMessage && lastMessage.classList.contains('assistant')) {
+        lastMessage.appendChild(toolDiv);
+      } else {
+        this.elements.chatMessages.appendChild(toolDiv);
+      }
     } else {
-      this.elements.chatMessages.appendChild(toolDiv);
+      // Second message - update with result
+      const toolCallElements = lastMessage.querySelectorAll('.tool-call');
+      if (toolCallElements.length > 0) {
+        toolDiv = toolCallElements[toolCallElements.length - 1];
+        const resultDiv = toolDiv.querySelector('.tool-call-result');
+        const isError = result.error || (result.success === false);
+        resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
+        resultDiv.textContent = JSON.stringify(result, null, 2);
+      }
     }
 
     this.scrollToBottom();

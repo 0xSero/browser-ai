@@ -262,25 +262,75 @@ body {
 }
 
 .tool-call {
-  margin-top: 4px;
-  padding: 8px 12px;
-  background: #78350f;
-  border: 1px solid #fbbf24;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 2px;
+  overflow: hidden;
+}
+
+.tool-call-header {
+  padding: 8px 12px;
+  background: var(--primary-color);
+  color: white;
   font-size: 12px;
-  color: #fef3c7;
-}
-
-.tool-call-name {
   font-weight: 600;
-  margin-bottom: 4px;
-  color: #fde68a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
 
-.tool-call-args {
+.tool-call-header:hover {
+  background: var(--primary-hover);
+}
+
+.tool-call-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.tool-call-body {
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tool-call-section {
+  margin-bottom: 10px;
+}
+
+.tool-call-section:last-child {
+  margin-bottom: 0;
+}
+
+.tool-call-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.tool-call-args,
+.tool-call-result {
   font-family: 'Courier New', monospace;
   font-size: 11px;
-  color: #fef3c7;
+  color: var(--text-primary);
+  background: var(--background);
+  padding: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tool-call-result {
+  color: #6ee7b7;
+}
+
+.tool-call-result.error {
+  color: #fca5a5;
 }
 
 .thinking-block {
