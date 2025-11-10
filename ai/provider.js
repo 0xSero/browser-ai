@@ -6,6 +6,9 @@ export class AIProvider {
     this.model = settings.model;
     this.customEndpoint = settings.customEndpoint;
     this.systemPrompt = settings.systemPrompt;
+    this.sendScreenshotsAsImages = settings.sendScreenshotsAsImages || false;
+    this.screenshotQuality = settings.screenshotQuality || 'high';
+    this.showThinking = settings.showThinking !== undefined ? settings.showThinking : true;
     this.messages = [];
   }
 
@@ -70,10 +73,22 @@ When using tools, be precise and explain what you're doing. Always verify succes
     // Add assistant message to history
     this.messages.push(message);
 
+    // Extract thinking (content before tool calls)
+    let thinking = null;
+    let content = message.content || '';
+
+    // Check for tool calls
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      // Thinking is the content before the tool calls
+      thinking = content;
+      content = '';
+    }
+
     // Check for tool calls
     if (message.tool_calls && message.tool_calls.length > 0) {
       return {
-        content: message.content || '',
+        content: content,
+        thinking: thinking,
         toolCalls: message.tool_calls.map(tc => ({
           id: tc.id,
           name: tc.function.name,
@@ -83,7 +98,8 @@ When using tools, be precise and explain what you're doing. Always verify succes
     }
 
     return {
-      content: message.content,
+      content: content,
+      thinking: thinking,
       toolCalls: []
     };
   }
@@ -126,13 +142,28 @@ When using tools, be precise and explain what you're doing. Always verify succes
       content: data.content
     });
 
+    // Extract thinking (text before tool use)
+    let thinking = null;
+    let content = '';
+
+    const textBlock = data.content.find(block => block.type === 'text');
+    if (textBlock) {
+      content = textBlock.text || '';
+    }
+
     // Check for tool use
     const toolUseBlocks = data.content.filter(block => block.type === 'tool_use');
 
     if (toolUseBlocks.length > 0) {
-      const textBlock = data.content.find(block => block.type === 'text');
+      // Thinking is the text before tool use
+      thinking = content;
+      content = '';
+    }
+
+    if (toolUseBlocks.length > 0) {
       return {
-        content: textBlock ? textBlock.text : '',
+        content: content,
+        thinking: thinking,
         toolCalls: toolUseBlocks.map(block => ({
           id: block.id,
           name: block.name,
@@ -141,9 +172,9 @@ When using tools, be precise and explain what you're doing. Always verify succes
       };
     }
 
-    const textBlock = data.content.find(block => block.type === 'text');
     return {
-      content: textBlock ? textBlock.text : '',
+      content: content,
+      thinking: thinking,
       toolCalls: []
     };
   }
@@ -151,30 +182,79 @@ When using tools, be precise and explain what you're doing. Always verify succes
   addToolResult(toolCallId, result) {
     if (this.provider === 'anthropic') {
       // Anthropic format
+      const content = this.shouldSendAsImage(result)
+        ? this.formatImageForAnthropic(result)
+        : JSON.stringify(result);
+
       this.messages.push({
         role: 'user',
         content: [{
           type: 'tool_result',
           tool_use_id: toolCallId,
-          content: JSON.stringify(result)
+          content: content
         }]
       });
     } else {
       // OpenAI format
+      const content = this.shouldSendAsImage(result)
+        ? this.formatImageForOpenAI(result)
+        : JSON.stringify(result);
+
       this.messages.push({
         role: 'tool',
         tool_call_id: toolCallId,
-        content: JSON.stringify(result)
+        content: content
       });
     }
+  }
+
+  shouldSendAsImage(result) {
+    return this.sendScreenshotsAsImages &&
+           result.success &&
+           result.dataUrl &&
+           result.dataUrl.startsWith('data:image/');
+  }
+
+  formatImageForOpenAI(result) {
+    // Extract base64 data from data URL
+    const base64Data = result.dataUrl.split(',')[1];
+    return JSON.stringify({
+      success: result.success,
+      tabId: result.tabId,
+      image: {
+        data: base64Data,
+        mime_type: 'image/png'
+      }
+    });
+  }
+
+  formatImageForAnthropic(result) {
+    // Extract base64 data from data URL
+    const base64Data = result.dataUrl.split(',')[1];
+    return JSON.stringify({
+      success: result.success,
+      tabId: result.tabId,
+      image: {
+        data: base64Data,
+        mime_type: 'image/png'
+      }
+    });
   }
 
   async continueConversation() {
     // Continue conversation after tool execution
     if (this.provider === 'anthropic') {
-      return await this.callAnthropic([]);
+      const response = await this.callAnthropic([]);
+      return {
+        content: response.content,
+        thinking: response.thinking
+      };
     } else {
-      return await this.callOpenAI([]);
+      const response = await this.callOpenAI([]);
+      return {
+        content: response.content,
+        thinking: response.thinking
+      };
     }
   }
 

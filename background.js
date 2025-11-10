@@ -62,7 +62,10 @@ class BackgroundService {
         'apiKey',
         'model',
         'customEndpoint',
-        'systemPrompt'
+        'systemPrompt',
+        'sendScreenshotsAsImages',
+        'screenshotQuality',
+        'showThinking'
       ]);
 
       if (!settings.apiKey) {
@@ -105,13 +108,15 @@ class BackgroundService {
         const finalResponse = await this.aiProvider.continueConversation();
         this.sendToSidePanel({
           type: 'assistant_response',
-          content: finalResponse.content
+          content: finalResponse.content,
+          thinking: finalResponse.thinking
         });
       } else {
         // Direct text response
         this.sendToSidePanel({
           type: 'assistant_response',
-          content: response.content
+          content: response.content,
+          thinking: response.thinking
         });
       }
     } catch (error) {

@@ -73,7 +73,35 @@
         <small>Maximum time to wait for API response</small>
       </div>
 
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SCREENSHOTS</h3>
+
+      <div class="form-group">
+        <label for="sendScreenshotsAsImages">Send screenshots as images</label>
+        <select id="sendScreenshotsAsImages">
+          <option value="true">Enabled (requires vision-capable model)</option>
+          <option value="false">Disabled (send as text)</option>
+        </select>
+        <small>When enabled, screenshots are sent as images to vision models like GPT-4o or Claude 3</small>
+      </div>
+
+      <div class="form-group">
+        <label for="screenshotQuality">Screenshot Quality</label>
+        <select id="screenshotQuality">
+          <option value="high">High (slower, better quality)</option>
+          <option value="low">Low (faster, smaller size)</option>
+        </select>
+      </div>
+
       <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">BEHAVIOR</h3>
+
+      <div class="form-group">
+        <label for="showThinking">Show AI thinking process</label>
+        <select id="showThinking">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+        <small>Display the AI's reasoning before tool calls</small>
+      </div>
 
       <div class="form-group">
         <label for="autoScroll">Auto-scroll to latest message</label>
@@ -99,6 +127,20 @@
           <option value="false">Disabled</option>
         </select>
         <small>Store conversations locally (max 50 messages)</small>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL CONFIGURATIONS</h3>
+
+      <div class="form-group">
+        <label>Active Configuration</label>
+        <div style="display: flex; gap: 8px;">
+          <select id="activeConfig" style="flex: 1;">
+            <option value="default">Default</option>
+          </select>
+          <button id="newConfigBtn" class="btn btn-secondary" style="min-width: 80px;">New</button>
+          <button id="deleteConfigBtn" class="btn btn-secondary" style="min-width: 80px;">Delete</button>
+        </div>
+        <small>Save and switch between different model configurations</small>
       </div>
 
       <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SYSTEM PROMPT</h3>

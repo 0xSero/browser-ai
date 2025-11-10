@@ -15,9 +15,15 @@ class SidePanelUI {
       temperatureValue: document.getElementById('temperatureValue'),
       maxTokens: document.getElementById('maxTokens'),
       timeout: document.getElementById('timeout'),
+      sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
+      screenshotQuality: document.getElementById('screenshotQuality'),
+      showThinking: document.getElementById('showThinking'),
       autoScroll: document.getElementById('autoScroll'),
       confirmActions: document.getElementById('confirmActions'),
       saveHistory: document.getElementById('saveHistory'),
+      activeConfig: document.getElementById('activeConfig'),
+      newConfigBtn: document.getElementById('newConfigBtn'),
+      deleteConfigBtn: document.getElementById('deleteConfigBtn'),
       saveSettingsBtn: document.getElementById('saveSettingsBtn'),
       cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
       chatMessages: document.getElementById('chatMessages'),
@@ -28,6 +34,8 @@ class SidePanelUI {
     };
 
     this.conversationHistory = [];
+    this.currentConfig = 'default';
+    this.configs = { default: {} };
     this.init();
   }
 
@@ -52,6 +60,11 @@ class SidePanelUI {
     this.elements.temperature.addEventListener('input', () => {
       this.elements.temperatureValue.textContent = this.elements.temperature.value;
     });
+
+    // Configuration management
+    this.elements.newConfigBtn.addEventListener('click', () => this.createNewConfig());
+    this.elements.deleteConfigBtn.addEventListener('click', () => this.deleteConfig());
+    this.elements.activeConfig.addEventListener('change', () => this.switchConfig());
 
     // Save settings
     this.elements.saveSettingsBtn.addEventListener('click', () => {
@@ -81,7 +94,7 @@ class SidePanelUI {
       if (message.type === 'tool_execution') {
         this.displayToolExecution(message.tool, message.args, message.result);
       } else if (message.type === 'assistant_response') {
-        this.displayAssistantMessage(message.content);
+        this.displayAssistantMessage(message.content, message.thinking);
       } else if (message.type === 'error') {
         this.updateStatus(message.message, 'error');
       }
@@ -107,9 +120,14 @@ class SidePanelUI {
       'temperature',
       'maxTokens',
       'timeout',
+      'sendScreenshotsAsImages',
+      'screenshotQuality',
+      'showThinking',
       'autoScroll',
       'confirmActions',
-      'saveHistory'
+      'saveHistory',
+      'activeConfig',
+      'configs'
     ]);
 
     this.elements.provider.value = settings.provider || 'openai';
@@ -121,10 +139,17 @@ class SidePanelUI {
     this.elements.temperatureValue.textContent = this.elements.temperature.value;
     this.elements.maxTokens.value = settings.maxTokens || 2048;
     this.elements.timeout.value = settings.timeout || 30000;
+    this.elements.sendScreenshotsAsImages.value = settings.sendScreenshotsAsImages !== undefined ? settings.sendScreenshotsAsImages : 'true';
+    this.elements.screenshotQuality.value = settings.screenshotQuality || 'high';
+    this.elements.showThinking.value = settings.showThinking !== undefined ? settings.showThinking : 'true';
     this.elements.autoScroll.value = settings.autoScroll !== undefined ? settings.autoScroll : 'true';
     this.elements.confirmActions.value = settings.confirmActions !== undefined ? settings.confirmActions : 'true';
     this.elements.saveHistory.value = settings.saveHistory !== undefined ? settings.saveHistory : 'true';
 
+    this.currentConfig = settings.activeConfig || 'default';
+    this.configs = settings.configs || { default: {} };
+
+    this.refreshConfigDropdown();
     this.toggleCustomEndpoint();
   }
 
@@ -138,9 +163,14 @@ class SidePanelUI {
       temperature: parseFloat(this.elements.temperature.value),
       maxTokens: parseInt(this.elements.maxTokens.value),
       timeout: parseInt(this.elements.timeout.value),
+      sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
+      screenshotQuality: this.elements.screenshotQuality.value,
+      showThinking: this.elements.showThinking.value === 'true',
       autoScroll: this.elements.autoScroll.value === 'true',
       confirmActions: this.elements.confirmActions.value === 'true',
-      saveHistory: this.elements.saveHistory.value === 'true'
+      saveHistory: this.elements.saveHistory.value === 'true',
+      activeConfig: this.currentConfig,
+      configs: this.configs
     };
 
     await chrome.storage.local.set(settings);
@@ -162,6 +192,84 @@ Available actions:
 - Fill forms
 
 Always confirm before performing destructive actions. Be precise and describe what you're doing.`;
+  }
+
+  async createNewConfig() {
+    const name = prompt('Enter configuration name:');
+    if (!name) return;
+
+    if (this.configs[name]) {
+      alert('Configuration already exists!');
+      return;
+    }
+
+    this.configs[name] = {
+      provider: this.elements.provider.value,
+      apiKey: this.elements.apiKey.value,
+      model: this.elements.model.value,
+      customEndpoint: this.elements.customEndpoint.value,
+      systemPrompt: this.elements.systemPrompt.value,
+      temperature: parseFloat(this.elements.temperature.value),
+      maxTokens: parseInt(this.elements.maxTokens.value),
+      timeout: parseInt(this.elements.timeout.value),
+      sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
+      screenshotQuality: this.elements.screenshotQuality.value
+    };
+
+    this.currentConfig = name;
+    this.refreshConfigDropdown();
+    this.updateStatus(`Configuration "${name}" created`, 'success');
+  }
+
+  async deleteConfig() {
+    if (this.currentConfig === 'default') {
+      alert('Cannot delete default configuration');
+      return;
+    }
+
+    if (confirm(`Delete configuration "${this.currentConfig}"?`)) {
+      delete this.configs[this.currentConfig];
+      this.currentConfig = 'default';
+      this.refreshConfigDropdown();
+      this.updateStatus('Configuration deleted', 'success');
+    }
+  }
+
+  async switchConfig() {
+    const newConfig = this.elements.activeConfig.value;
+    if (!this.configs[newConfig]) {
+      alert('Configuration not found');
+      return;
+    }
+
+    const config = this.configs[newConfig];
+    this.elements.provider.value = config.provider;
+    this.elements.model.value = config.model;
+    this.elements.customEndpoint.value = config.customEndpoint;
+    this.elements.systemPrompt.value = config.systemPrompt;
+    this.elements.temperature.value = config.temperature;
+    this.elements.temperatureValue.textContent = config.temperature;
+    this.elements.maxTokens.value = config.maxTokens;
+    this.elements.timeout.value = config.timeout;
+    this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages ? 'true' : 'false';
+    this.elements.screenshotQuality.value = config.screenshotQuality;
+
+    this.currentConfig = newConfig;
+    this.toggleCustomEndpoint();
+    this.updateStatus(`Switched to configuration "${newConfig}"`, 'success');
+  }
+
+  refreshConfigDropdown() {
+    this.elements.activeConfig.innerHTML = '';
+    Object.keys(this.configs).forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      if (name === this.currentConfig) {
+        option.selected = true;
+      }
+      this.elements.activeConfig.appendChild(option);
+    });
   }
 
   async sendMessage() {
@@ -207,7 +315,7 @@ Always confirm before performing destructive actions. Be precise and describe wh
     this.scrollToBottom();
   }
 
-  displayAssistantMessage(content) {
+  displayAssistantMessage(content, thinking = null) {
     // Add to conversation history
     this.conversationHistory.push({
       role: 'assistant',
@@ -216,10 +324,21 @@ Always confirm before performing destructive actions. Be precise and describe wh
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
-    messageDiv.innerHTML = `
-      <div class="message-header">Assistant</div>
-      <div class="message-content">${this.escapeHtml(content)}</div>
-    `;
+
+    let html = `<div class="message-header">Assistant</div>`;
+
+    if (thinking && this.elements.showThinking.value === 'true') {
+      html += `
+        <div class="thinking-block">
+          <div class="thinking-header">🤔 Thinking...</div>
+          <div class="thinking-content">${this.escapeHtml(thinking)}</div>
+        </div>
+      `;
+    }
+
+    html += `<div class="message-content">${this.escapeHtml(content)}</div>`;
+
+    messageDiv.innerHTML = html;
     this.elements.chatMessages.appendChild(messageDiv);
     this.scrollToBottom();
     this.updateStatus('Ready', 'success');
