@@ -30,12 +30,15 @@ class SidePanelUI {
       userInput: document.getElementById('userInput'),
       sendBtn: document.getElementById('sendBtn'),
       statusBar: document.getElementById('statusBar'),
-      statusText: document.getElementById('statusText')
+      statusText: document.getElementById('statusText'),
+      toolTimeline: document.getElementById('toolTimeline')
     };
 
     this.conversationHistory = [];
     this.currentConfig = 'default';
     this.configs = { default: {} };
+    this.toolCallViews = new Map();
+    this.timelineItems = new Map();
     this.init();
   }
 
@@ -92,11 +95,18 @@ class SidePanelUI {
     // Listen for messages from background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'tool_execution') {
-        this.displayToolExecution(message.tool, message.args, message.result);
+        if (!message.result) {
+          this.addTimelineItem(message.id, message.tool, message.args);
+        } else {
+          this.updateTimelineItem(message.id, message.result);
+        }
+        this.displayToolExecution(message.tool, message.args, message.result, message.id);
       } else if (message.type === 'assistant_response') {
         this.displayAssistantMessage(message.content, message.thinking);
       } else if (message.type === 'error') {
         this.updateStatus(message.message, 'error');
+      } else if (message.type === 'warning') {
+        this.updateStatus(message.message, 'warning');
       }
     });
   }
@@ -315,7 +325,42 @@ Always confirm before performing destructive actions. Be precise and describe wh
     this.scrollToBottom();
   }
 
+  deduplicateThinking(thinking) {
+    if (!thinking) return thinking;
+
+    // Split into lines and deduplicate consecutive identical lines
+    const lines = thinking.split('\n');
+    const deduplicated = [];
+    let lastLine = null;
+    let repeatCount = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === lastLine) {
+        repeatCount++;
+        // Show first occurrence and count if more than 3 repeats
+        if (repeatCount === 3) {
+          deduplicated.push(`... (repeated ${repeatCount + 1} times)`);
+        } else if (repeatCount > 3) {
+          // Update the repeat count
+          deduplicated[deduplicated.length - 1] = `... (repeated ${repeatCount + 1} times)`;
+        }
+      } else {
+        deduplicated.push(line);
+        lastLine = trimmed;
+        repeatCount = 0;
+      }
+    }
+
+    return deduplicated.join('\n');
+  }
+
   displayAssistantMessage(content, thinking = null) {
+    // Don't display empty messages unless there's thinking content
+    if ((!content || content.trim() === '') && !thinking) {
+      return;
+    }
+
     // Add to conversation history
     this.conversationHistory.push({
       role: 'assistant',
@@ -328,15 +373,19 @@ Always confirm before performing destructive actions. Be precise and describe wh
     let html = `<div class="message-header">Assistant</div>`;
 
     if (thinking && this.elements.showThinking.value === 'true') {
+      const cleanedThinking = this.deduplicateThinking(thinking);
       html += `
         <div class="thinking-block">
           <div class="thinking-header">🤔 Thinking...</div>
-          <div class="thinking-content">${this.escapeHtml(thinking)}</div>
+          <div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>
         </div>
       `;
     }
 
-    html += `<div class="message-content">${this.escapeHtml(content)}</div>`;
+    // Only add content div if content is not empty
+    if (content && content.trim() !== '') {
+      html += `<div class="message-content">${this.escapeHtml(content)}</div>`;
+    }
 
     messageDiv.innerHTML = html;
     this.elements.chatMessages.appendChild(messageDiv);
@@ -344,7 +393,7 @@ Always confirm before performing destructive actions. Be precise and describe wh
     this.updateStatus('Ready', 'success');
   }
 
-  displayToolExecution(toolName, args, result) {
+  displayToolExecution(toolName, args, result, toolCallId = null) {
     // Find or create tool call element
     let toolDiv = null;
     const lastMessage = this.elements.chatMessages.lastElementChild;
@@ -373,15 +422,23 @@ Always confirm before performing destructive actions. Be precise and describe wh
         </div>
       `;
 
-      // Make it collapsible
+      // Make it collapsible (start expanded by default)
       const header = toolDiv.querySelector('.tool-call-header');
       const body = toolDiv.querySelector('.tool-call-body');
-      body.style.display = 'none';
-      let isExpanded = false;
+      body.style.display = 'block'; // Start expanded
+      let isExpanded = true;
+
+      // Add expand/collapse indicator
+      const indicator = document.createElement('span');
+      indicator.textContent = '▼';
+      indicator.style.marginLeft = 'auto';
+      indicator.style.transition = 'transform 0.2s ease';
+      header.appendChild(indicator);
 
       header.addEventListener('click', () => {
         isExpanded = !isExpanded;
         body.style.display = isExpanded ? 'block' : 'none';
+        indicator.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
       });
 
       if (lastMessage && lastMessage.classList.contains('assistant')) {
@@ -389,22 +446,98 @@ Always confirm before performing destructive actions. Be precise and describe wh
       } else {
         this.elements.chatMessages.appendChild(toolDiv);
       }
+      if (toolCallId) {
+        this.toolCallViews.set(toolCallId, toolDiv);
+      }
     } else {
       // Second message - update with result
-      const toolCallElements = lastMessage.querySelectorAll('.tool-call');
-      if (toolCallElements.length > 0) {
-        toolDiv = toolCallElements[toolCallElements.length - 1];
-        const resultDiv = toolDiv.querySelector('.tool-call-result');
-
-        if (resultDiv) {
-          const isError = (result && (result.error || result.success === false));
-          resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
-          resultDiv.textContent = JSON.stringify(result, null, 2);
+      if (toolCallId && this.toolCallViews.has(toolCallId)) {
+        toolDiv = this.toolCallViews.get(toolCallId);
+      } else {
+        // Fallback to last tool-call in chat
+        const toolCallElements = this.elements.chatMessages.querySelectorAll('.tool-call');
+        if (toolCallElements.length === 0) {
+          console.warn('No tool-call element found to update with result');
+          return;
         }
+        toolDiv = toolCallElements[toolCallElements.length - 1];
+      }
+      let resultDiv = toolDiv.querySelector('.tool-call-result');
+      if (!resultDiv) {
+        // Create a result container defensively if missing
+        resultDiv = document.createElement('div');
+        resultDiv.className = 'tool-call-result';
+        toolDiv.appendChild(resultDiv);
+      }
+
+      const isError = (result && (result.error || result.success === false));
+      resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
+
+      // Special handling for results with dataUrl (screenshots)
+      if (result && result.dataUrl && result.dataUrl.startsWith('data:image/')) {
+        const metaData = { ...result };
+        delete metaData.dataUrl; // Avoid rendering massive base64 in metadata block
+
+        // Use a safe innerHTML with only our own generated content
+        resultDiv.innerHTML = `
+          <div style="margin-bottom: 12px;">
+            <img src="${result.dataUrl}" alt="Screenshot" style="max-width: 100%; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;" />
+          </div>
+          <div style="font-size: 10px; color: #888; opacity: 0.7;">
+            Click image to open in new tab
+          </div>
+          <pre style="margin-top: 8px; font-size: 10px;">${this.escapeHtml(JSON.stringify(metaData, null, 2))}</pre>
+        `;
+
+        // Add click handler programmatically to avoid inline JS being blocked by CSP
+        const img = resultDiv.querySelector('img');
+        if (img) {
+          img.addEventListener('click', () => {
+            try {
+              window.open(result.dataUrl, '_blank');
+            } catch (e) {
+              console.warn('Failed to open screenshot in new tab:', e);
+            }
+          });
+        }
+      } else {
+        // Fallback to plain JSON rendering
+        resultDiv.textContent = JSON.stringify(result, null, 2);
       }
     }
 
     this.scrollToBottom();
+  }
+
+  addTimelineItem(id, toolName, args) {
+    if (!this.elements.toolTimeline) return;
+    const row = document.createElement('div');
+    row.className = 'tool-timeline-item';
+    row.dataset.id = id || `temp-${Date.now()}`;
+    row.dataset.start = String(Date.now());
+    row.innerHTML = `
+      <span class="tool-timeline-status running"></span>
+      <span class="tool-timeline-name">${this.escapeHtml(toolName)}</span>
+      <span class="tool-timeline-args" style="opacity:0.8;">${this.escapeHtml(JSON.stringify(args))}</span>
+      <span class="tool-timeline-meta">Running…</span>
+    `;
+    this.elements.toolTimeline.appendChild(row);
+    while (this.elements.toolTimeline.children.length > 30) {
+      this.elements.toolTimeline.removeChild(this.elements.toolTimeline.firstChild);
+    }
+    if (id) this.timelineItems.set(id, row);
+  }
+
+  updateTimelineItem(id, result) {
+    if (!id || !this.timelineItems.has(id)) return;
+    const row = this.timelineItems.get(id);
+    const statusEl = row.querySelector('.tool-timeline-status');
+    const metaEl = row.querySelector('.tool-timeline-meta');
+    const start = parseInt(row.dataset.start || '0', 10);
+    const dur = start ? `${Math.max(1, Date.now() - start)}ms` : '';
+    const isError = result && (result.error || result.success === false);
+    statusEl.className = `tool-timeline-status ${isError ? 'error' : 'success'}`;
+    metaEl.textContent = isError ? `Error · ${dur}` : `Done · ${dur}`;
   }
 
   updateStatus(text, type = 'default') {
