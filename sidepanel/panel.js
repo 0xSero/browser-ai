@@ -201,7 +201,15 @@ Available actions:
 - Extract page content
 - Fill forms
 
-Always confirm before performing destructive actions. Be precise and describe what you're doing.`;
+Execution protocol:
+1. Immediately translate the user request into a short numbered task list before taking action. Keep tasks focused on observable work you can perform in the browser.
+2. Act through the tasks in order, updating the plan as new information appears. If you scroll or change context, always re-read via getPageContent before marking a task complete.
+3. Never finish until each task has an explicit outcome. If something cannot be completed, state why and what would be needed.
+
+Response requirements:
+- Clearly summarize the results for every task, then provide the final answer the user requested in your own words.
+- Reference the specific evidence you gathered (e.g., which page section, headline, or element) when describing findings.
+- Always confirm before performing destructive actions. Be precise and describe what you're doing.`;
   }
 
   async createNewConfig() {

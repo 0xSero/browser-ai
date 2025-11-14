@@ -317,6 +317,14 @@ These are MANDATORY rules. Violating them means giving wrong information to the 
     }
   }
 
+  requestFinalResponse(message = null) {
+    const prompt = message || 'You must provide a final response that explicitly answers the user, referencing the data you collected for each task.';
+    this.messages.push({
+      role: 'user',
+      content: prompt
+    });
+  }
+
   shouldSendAsImage(result) {
     // Only send images if enabled AND we're using a provider that supports it
     if (!this.sendScreenshotsAsImages || !result.success || !result.dataUrl || !result.dataUrl.startsWith('data:image/')) {
@@ -328,15 +336,13 @@ These are MANDATORY rules. Violating them means giving wrong information to the 
       return true;
     }
 
-    // OpenAI: only official endpoint supports vision API multi-part content
-    // Custom endpoints often don't support the multi-part content array format even if they have vision models
-    if (this.provider === 'openai' && !this.customEndpoint) {
+    // OpenAI and OpenAI-compatible endpoints: rely on the user toggle
+    // If a custom endpoint cannot handle the multi-part payload, the user can
+    // simply disable screenshot sending in settings.
+    if (this.provider === 'openai' || this.provider === 'custom') {
       return true;
     }
 
-    // For custom endpoints: disable image sending by default
-    // The multi-part content format causes 422 errors on most custom endpoints
-    // Even if the model supports vision, the API wrapper might not support the format
     return false;
   }
 
