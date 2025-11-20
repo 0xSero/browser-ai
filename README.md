@@ -1,6 +1,10 @@
 # Browser AI Agent
 
-A powerful Chrome extension that enables AI models to interact with and control your browser through a comprehensive set of automation tools. Configure your preferred LLM provider (OpenAI, Anthropic, or any OpenAI-compatible API) and let AI assist with web browsing, form filling, testing, and automation tasks.
+[![Browser Support](https://img.shields.io/badge/support-Chrome%20%7C%20Firefox-green)](https://www.mozilla.org/firefox/)
+
+A powerful browser extension that enables AI models to interact with and control your browser through a comprehensive set of automation tools. Configure your preferred LLM provider (OpenAI, Anthropic, or any OpenAI-compatible API) and let AI assist with web browsing, form filling, testing, and automation tasks.
+
+This is a fork of the original [browser-ai](https://github.com/0xSero/browser-ai) repository, adapted to be fully compatible with both Google Chrome and Mozilla Firefox from a single codebase.
 
 ## Features
 
@@ -54,56 +58,65 @@ The AI has access to these powerful browser automation capabilities:
 ## Installation
 
 ### Prerequisites
-- Google Chrome or any Chromium-based browser (Edge, Brave, etc.)
+- **A modern browser:**
+  - Google Chrome or any Chromium-based browser (Edge, Brave, etc.)
+  - Mozilla Firefox (version 112+)
 - An API key from OpenAI or Anthropic
 
-### Install the Extension
+### 1. Get the Code
 
-1. **Clone or download this repository**
-   ```bash
-   git clone <repository-url>
-   cd browser-ai
-   ```
+Clone or download this repository:
+```bash
+git clone https://github.com/lsunay/browser-ai.git
+cd browser-ai
+```
 
-2. **Create extension icons** (optional but recommended)
+### 2. Install Dependencies
 
-   The extension needs three icon files in the `icons/` directory:
-   - `icon16.png` (16x16 pixels)
-   - `icon48.png` (48x48 pixels)
-   - `icon128.png` (128x128 pixels)
+This project uses `web-ext` for packaging the Firefox version. Install it via npm:
+```bash
+npm install
+```
 
-   You can:
-   - Create them using any image editor
-   - Use an online icon generator
-   - Skip this step (extension will work but won't show an icon)
+### 3. Load the Extension for Development
 
-   See `icons/README.md` for more details.
+You can load the extension directly from the source code for testing.
 
-3. **Load the extension in Chrome**
+**On Google Chrome:**
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable "Developer mode" (toggle in top right corner).
+3. Click "Load unpacked".
+4. Select the `browser-ai` directory.
 
-   a. Open Chrome and navigate to `chrome://extensions/`
+**On Mozilla Firefox:**
+1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+2. Click "Load Temporary Add-on...".
+3. Select the `manifest.json` file from the `browser-ai` directory.
 
-   b. Enable "Developer mode" (toggle in top right corner)
+The extension should now appear in your extensions list.
 
-   c. Click "Load unpacked"
+## Development and Building
 
-   d. Select the `browser-ai` directory
+### Running Tests
+The extension includes a validation suite to ensure reliability.
+```bash
+# Run all validation tests
+npm test
+```
 
-   e. The extension should now appear in your extensions list
+### Building the Package for Firefox
 
-4. **Pin the extension** (optional)
-
-   Click the puzzle piece icon in Chrome's toolbar and pin the Browser AI Agent extension for easy access.
+To create a distributable `.zip` file for Firefox (e.g., for submission to the Mozilla Add-ons store), run the build command:
+```bash
+npm run build
+```
+The packaged extension will be created in the `web-ext-artifacts/` directory.
 
 ## Configuration
 
-1. **Open the side panel**
-
-   Click the Browser AI Agent icon in your Chrome toolbar
-
-2. **Click the settings icon** (gear icon in the top right)
-
-3. **Configure your AI provider**
+1. **Open the side panel** by clicking the Browser AI Agent icon in your browser's toolbar.
+2. **Click the settings icon** (gear icon in the top right).
+3. **Configure your AI provider:**
 
    **For OpenAI:**
    - Provider: OpenAI
@@ -119,17 +132,12 @@ The AI has access to these powerful browser automation capabilities:
    - Provider: Custom (OpenAI Compatible)
    - API Key: Your API key
    - Model: Your model name
-   - Custom Endpoint: Your API endpoint URL (e.g., `https://api.example.com/v1`)
+   - Custom Endpoint: Your API endpoint URL (e.g., `http://localhost:8080/v1/chat/completions`)
 
-4. **Customize the system prompt** (optional)
-
-   Modify the system prompt to change how the AI behaves. The default prompt explains available tools and encourages careful, descriptive actions.
-
-5. **Save settings**
+4. **Customize the system prompt** (optional).
+5. **Save settings**.
 
 ## Usage
-
-### Basic Usage
 
 Once configured, simply type your requests in the chat interface:
 
@@ -140,32 +148,6 @@ Once configured, simply type your requests in the chat interface:
 - "Open the first 3 article links in new tabs and group them"
 - "Scroll down and click the 'Load More' button"
 
-### Advanced Examples
-
-**Web Scraping:**
-```
-"Extract all product names and prices from this page"
-```
-
-**Form Automation:**
-```
-"Fill out the contact form:
-Name: Jane Smith
-Email: jane@example.com
-Message: I'm interested in your services"
-```
-
-**Multi-Tab Workflow:**
-```
-"Open tabs for github.com, stackoverflow.com, and reddit.com,
-then group them with the title 'Dev Sites' in blue"
-```
-
-**Page Analysis:**
-```
-"Scroll through this page and give me a summary of the main points"
-```
-
 ## Architecture
 
 ### File Structure
@@ -173,9 +155,9 @@ then group them with the title 'Dev Sites' in blue"
 ```
 browser-ai/
 ├── manifest.json              # Extension manifest (Manifest V3)
-├── background.js              # Background service worker
+├── background.js              # Background service worker/script
 ├── content.js                 # Content script injected into pages
-├── package.json               # Project metadata
+├── package.json               # Project metadata & scripts
 ├── sidepanel/
 │   ├── panel.html            # Side panel UI
 │   ├── panel.css             # Side panel styles
@@ -185,342 +167,96 @@ browser-ai/
 ├── tools/
 │   └── browser-tools.js      # Browser automation tool implementations
 └── icons/
-    ├── icon16.png            # Extension icon (16x16)
-    ├── icon48.png            # Extension icon (48x48)
-    ├── icon128.png           # Extension icon (128x128)
-    └── README.md             # Icon creation guide
+    └── ...                   # Extension icons
 ```
 
 ### How It Works
 
-1. **User Input**: User types a message in the side panel
-2. **Context Gathering**: Extension gathers current tab information
-3. **AI Processing**: Message is sent to the configured AI provider with tool definitions
-4. **Tool Execution**: If AI decides to use tools, they're executed via Chrome APIs
-5. **Response**: Results are sent back to AI, which provides a natural language response
-6. **Display**: Response is shown to user in the chat interface
+1. **User Input**: User types a message in the side panel.
+2. **Context Gathering**: Extension gathers current tab information.
+3. **AI Processing**: Message is sent to the configured AI provider with tool definitions.
+4. **Tool Execution**: If AI decides to use tools, they're executed via Browser APIs.
+5. **Response**: Results are sent back to AI, which provides a natural language response.
+6. **Display**: Response is shown to user in the chat interface.
 
 ### Communication Flow
 
 ```
-Side Panel (UI) ←→ Background Worker ←→ AI Provider (OpenAI/Anthropic)
+Side Panel (UI) ←→ Background Script ←→ AI Provider (OpenAI/Anthropic)
                           ↓
                    Browser Tools
                           ↓
-                   Chrome APIs ←→ Content Script ←→ Web Page
+                   Browser APIs ←→ Content Script ←→ Web Page
 ```
 
 ## API Specification
 
-### Tool Definitions
+All tools follow a standard schema compatible with OpenAI's function calling and Anthropic's tool use APIs. See the original `README.md` for the full tool API specification.
 
-All tools follow a standard schema compatible with OpenAI's function calling and Anthropic's tool use APIs.
+## Browser APIs Used
 
-#### Navigation Tools
+This extension leverages the following WebExtensions APIs:
 
-**navigate**
-```javascript
-{
-  url: string,           // URL to navigate to
-  tabId?: number        // Optional: specific tab ID
-}
-```
-
-**goBack / goForward**
-```javascript
-{
-  tabId?: number        // Optional: specific tab ID
-}
-```
-
-**refresh**
-```javascript
-{
-  tabId?: number        // Optional: specific tab ID
-}
-```
-
-#### Content Tools
-
-**getPageContent**
-```javascript
-{
-  type: 'text' | 'html' | 'title' | 'url' | 'links',
-  selector?: string,    // Optional: CSS selector for specific element
-  tabId?: number
-}
-```
-
-**screenshot**
-```javascript
-{
-  tabId?: number        // Optional: specific tab ID
-}
-```
-
-#### Interaction Tools
-
-**click**
-```javascript
-{
-  selector: string,     // CSS selector for element
-  tabId?: number
-}
-```
-
-**type**
-```javascript
-{
-  selector: string,     // CSS selector for input element
-  text: string,         // Text to type
-  clear?: boolean,      // Clear existing text first (default: true)
-  tabId?: number
-}
-```
-
-**fillForm**
-```javascript
-{
-  fields: Array<{
-    selector: string,
-    value: string
-  }>,
-  tabId?: number
-}
-```
-
-**scroll**
-```javascript
-{
-  direction: 'up' | 'down' | 'top' | 'bottom',
-  amount?: number,      // Pixels to scroll (for up/down, default: 500)
-  tabId?: number
-}
-```
-
-**waitForElement**
-```javascript
-{
-  selector: string,     // CSS selector to wait for
-  timeout?: number,     // Milliseconds (default: 5000)
-  tabId?: number
-}
-```
-
-#### Tab Management Tools
-
-**openTab**
-```javascript
-{
-  url: string,
-  active?: boolean      // Switch to new tab (default: true)
-}
-```
-
-**closeTab**
-```javascript
-{
-  tabId?: number        // Tab to close (default: current tab)
-}
-```
-
-**switchTab**
-```javascript
-{
-  tabId: number         // Tab ID to switch to
-}
-```
-
-**getAllTabs**
-```javascript
-{} // No parameters
-```
-
-Returns:
-```javascript
-{
-  success: true,
-  tabs: Array<{
-    id: number,
-    title: string,
-    url: string,
-    active: boolean,
-    groupId: number
-  }>
-}
-```
-
-#### Tab Group Tools
-
-**createTabGroup**
-```javascript
-{
-  tabIds: number[],     // Array of tab IDs to group
-  title?: string,       // Group title
-  color?: 'grey' | 'blue' | 'red' | 'yellow' | 'green' |
-          'pink' | 'purple' | 'cyan' | 'orange'
-}
-```
-
-**ungroupTabs**
-```javascript
-{
-  tabIds: number[]      // Array of tab IDs to ungroup
-}
-```
-
-## Chrome APIs Used
-
-This extension leverages the following Chrome Extension APIs:
-
-- **chrome.sidePanel** - Side panel UI
-- **chrome.tabs** - Tab management
-- **chrome.tabGroups** - Tab grouping
-- **chrome.scripting** - Script injection and DOM manipulation
-- **chrome.storage** - Configuration persistence
-- **chrome.runtime** - Message passing
-- **chrome.windows** - Window management (future)
-- **chrome.bookmarks** - Bookmark access (future)
-- **chrome.history** - History access (future)
-- **chrome.debugger** - Advanced automation (future)
+- **browser.sidePanel** / **browser.sidebarAction** - Side panel UI
+- **browser.tabs** - Tab management
+- **browser.tabGroups** - Tab grouping
+- **browser.scripting** - Script injection and DOM manipulation
+- **browser.storage** - Configuration persistence
+- **browser.runtime** - Message passing
+- **browser.history** - History access
 
 ## Security & Privacy
 
-- **API keys are stored locally** in Chrome's storage and never transmitted except to your configured AI provider
-- **All tool executions require explicit AI decision** - the AI must decide to use each tool
-- **Content script has limited permissions** - can only interact with page DOM
-- **No data collection** - this extension does not collect or transmit any user data except to your AI provider
-- **Open source** - all code is visible and auditable
+- **API keys are stored locally** in your browser's storage and never transmitted except to your configured AI provider.
+- **All tool executions require explicit AI decision** - the AI must decide to use each tool.
+- **No data collection** - this extension does not collect or transmit any user data except to your AI provider.
+- **Open source** - all code is visible and auditable.
 
 ## Troubleshooting
 
 ### Extension won't load
-- Make sure you're in Developer Mode in chrome://extensions
-- Check the console for errors
-- Verify all files are present in the directory
+- Make sure you're in Developer Mode (`chrome://extensions`) or have loaded it via `about:debugging` (Firefox).
+- Check the browser console for errors.
+- Verify all files are present in the directory.
 
 ### Side panel doesn't open
-- Try clicking the extension icon
-- Check if the extension is enabled
-- Reload the extension from chrome://extensions
+- Try clicking the extension icon.
+- Check if the extension is enabled.
+- Reload the extension from the browser's extension management page.
 
 ### AI not responding
-- Verify your API key is correct
-- Check your internet connection
-- Open browser DevTools (F12) → Console tab to see errors
-- Verify the model name is correct for your provider
-
-### Tools not working
-- Make sure you granted necessary permissions
-- Try reloading the page you're trying to interact with
-- Check the console for error messages
-- Some websites may block automation attempts
-
-### "Element not found" errors
-- CSS selectors must be precise
-- Use browser DevTools to inspect and test selectors
-- Some elements may not be loaded yet - use waitForElement tool
+- Verify your API key is correct.
+- Check your internet connection.
+- Open browser DevTools (F12) → Console tab to see errors.
+- Verify the model name is correct for your provider.
 
 ## Testing
 
-The extension includes a comprehensive test suite to ensure reliability and correctness.
+The extension includes a validation suite to ensure reliability and correctness.
 
-### Running Tests
+### Running Validation
 
 ```bash
-# Run all tests
+# Run all validation tests
 npm test
-
-# Run only validation
-npm run validate
-
-# Run only unit tests
-npm run test:unit
 ```
-
-### Test Suite Components
-
-**Extension Validation** (`npm run validate`)
-- Validates manifest.json structure and required fields
-- Checks all required files exist
-- Validates JavaScript syntax
-- Verifies tool definitions
-- Ensures proper file structure
-
-**Unit Tests** (`npm run test:unit`)
-- Tool definition schema validation
-- AI provider configuration testing
-- Tool schema conversion (OpenAI/Anthropic formats)
-- Input validation
-- Error handling
-
-**Integration Tests**
-- Load `tests/integration/test-page.html` in your browser
-- Use the extension to interact with test elements
-- Verify all tools work correctly with real DOM elements
-
-### Test Results
-
-All tests passing:
-- ✓ 34 validation tests
-- ✓ 12 unit tests
-- Extension ready to load in Chrome
 
 ## Limitations
 
-- **Same-origin policy**: Some cross-origin interactions may be restricted
-- **Dynamic content**: Heavy JavaScript sites may require waiting for elements
-- **CAPTCHAs**: Cannot solve CAPTCHAs (by design)
-- **isTrusted events**: Some sites detect simulated events
-- **Rate limits**: Subject to your AI provider's rate limits
-- **Chrome Web Store policies**: Not submitted to store (developer mode only)
+- **Same-origin policy**: Some cross-origin interactions may be restricted.
+- **Dynamic content**: Heavy JavaScript sites may require waiting for elements.
+- **CAPTCHAs**: Cannot solve CAPTCHAs (by design).
+- **isTrusted events**: Some sites detect simulated events.
+- **Rate limits**: Subject to your AI provider's rate limits.
 
 ## Future Enhancements
 
-Potential features for future versions:
-
 - [ ] Visual element selection tool
 - [ ] Recording and playback of action sequences
-- [ ] Multi-page workflows with state persistence
-- [ ] Integration with Chrome DevTools Protocol for advanced debugging
 - [ ] Screenshot analysis with vision-capable models
-- [ ] Bookmark management (history management ✅ implemented)
-- [ ] Cookie and local storage manipulation
-- [ ] Network request interception and modification
+- [ ] Bookmark management
 - [ ] Custom tool creation interface
-- [ ] Export conversation history
-- [ ] Workflow templates
-
-## Contributing
-
-Contributions are welcome! Areas for improvement:
-
-- Better error handling and user feedback
-- Additional browser automation tools
-- UI/UX enhancements
-- Performance optimizations
-- Documentation improvements
-- Testing framework
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Credits
-
-Built using:
-- Chrome Extension Manifest V3
-- Chrome Side Panel API
-- OpenAI API / Anthropic API
-- Modern JavaScript (ES6+)
-
-## Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Check existing issues for solutions
-- Read the troubleshooting section
-
----
-
-**Note**: This extension is for automation and productivity purposes. Always respect websites' terms of service and robots.txt policies. Use responsibly and ethically.
+MIT License - see LICENSE file for details.
