@@ -1,4 +1,9 @@
-// Browser Tools - All browser automation capabilities
+// Cross-browser compatibility
+if (typeof browser === 'undefined') {
+  var browser = chrome;
+}
+
+// Browser Automation Tools
 export class BrowserTools {
   constructor() {
     this.tools = this.initializeTools();

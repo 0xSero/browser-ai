@@ -1,3 +1,8 @@
+// Cross-browser compatibility
+if (typeof browser === 'undefined') {
+  var browser = chrome;
+}
+
 // Side Panel UI Controller
 class SidePanelUI {
   constructor() {

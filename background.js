@@ -1,3 +1,8 @@
+// Cross-browser compatibility
+if (typeof browser === 'undefined') {
+  var browser = chrome;
+}
+
 // Background Service Worker
 import { BrowserTools } from './tools/browser-tools.js';
 import { AIProvider } from './ai/provider.js';
