@@ -58,9 +58,9 @@ These are MANDATORY rules. Violating them means giving wrong information to the 
   }
 
   async callOpenAI(tools) {
-    const endpoint = this.provider === 'custom'
+    const fullUrl = this.provider === 'custom'
       ? this.customEndpoint
-      : 'https://api.openai.com/v1';
+      : 'https://api.openai.com/v1/chat/completions';
 
     const payload = {
       model: this.model,
@@ -69,7 +69,7 @@ These are MANDATORY rules. Violating them means giving wrong information to the 
       tool_choice: 'auto'
     };
 
-    const response = await fetch(`${endpoint}/chat/completions`, {
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -766,6 +766,14 @@ export class BrowserTools {
   }
 
   async createTabGroup({ tabIds, title, color = 'grey' }) {
+    // Tab groups not supported in Firefox yet
+    if (typeof browser !== 'undefined' && !chrome.tabs.group) {
+      return {
+        success: false,
+        error: 'Tab groups are not supported in this browser version',
+        tabIds
+      };
+    }
     const groupId = await chrome.tabs.group({ tabIds });
     if (title || color) {
       await chrome.tabGroups.update(groupId, {
@@ -777,6 +785,14 @@ export class BrowserTools {
   }
 
   async ungroupTabs({ tabIds }) {
+    // Tab groups not supported in Firefox yet
+    if (typeof browser !== 'undefined' && !chrome.tabs.ungroup) {
+      return {
+        success: false,
+        error: 'Tab groups are not supported in this browser version',
+        tabIds
+      };
+    }
     await chrome.tabs.ungroup(tabIds);
     return { success: true, tabIds };
   }

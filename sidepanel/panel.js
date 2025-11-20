@@ -39,13 +39,45 @@ class SidePanelUI {
     this.configs = { default: {} };
     this.toolCallViews = new Map();
     this.timelineItems = new Map();
+    this.port = null;
     this.init();
   }
 
   async init() {
+    this.connectToBackground();
     this.setupEventListeners();
     await this.loadSettings();
     this.updateStatus('Ready', 'success');
+  }
+
+  connectToBackground() {
+    this.port = browser.runtime.connect({ name: 'sidepanel' });
+
+    // Listen for messages from the background script
+    this.port.onMessage.addListener((message) => {
+      if (message.type === 'tool_execution') {
+        if (!message.result) {
+          this.addTimelineItem(message.id, message.tool, message.args);
+        } else {
+          this.updateTimelineItem(message.id, message.result);
+        }
+        this.displayToolExecution(message.tool, message.args, message.result, message.id);
+      } else if (message.type === 'assistant_response') {
+        this.displayAssistantMessage(message.content, message.thinking);
+      } else if (message.type === 'error') {
+        this.updateStatus(message.message, 'error');
+      } else if (message.type === 'warning') {
+        this.updateStatus(message.message, 'warning');
+      }
+    });
+
+    // Handle disconnection
+    this.port.onDisconnect.addListener(() => {
+      this.port = null;
+      this.updateStatus('Disconnected. Attempting to reconnect...', 'error');
+      // Optional: Implement a reconnection strategy
+      setTimeout(() => this.connectToBackground(), 1000);
+    });
   }
 
   setupEventListeners() {
@@ -92,23 +124,7 @@ class SidePanelUI {
       }
     });
 
-    // Listen for messages from background
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'tool_execution') {
-        if (!message.result) {
-          this.addTimelineItem(message.id, message.tool, message.args);
-        } else {
-          this.updateTimelineItem(message.id, message.result);
-        }
-        this.displayToolExecution(message.tool, message.args, message.result, message.id);
-      } else if (message.type === 'assistant_response') {
-        this.displayAssistantMessage(message.content, message.thinking);
-      } else if (message.type === 'error') {
-        this.updateStatus(message.message, 'error');
-      } else if (message.type === 'warning') {
-        this.updateStatus(message.message, 'warning');
-      }
-    });
+    // Note: The primary message listener is now in connectToBackground()
   }
 
   toggleSettings() {
@@ -121,7 +137,7 @@ class SidePanelUI {
   }
 
   async loadSettings() {
-    const settings = await chrome.storage.local.get([
+    const settings = await browser.storage.local.get([
       'provider',
       'apiKey',
       'model',
@@ -183,7 +199,7 @@ class SidePanelUI {
       configs: this.configs
     };
 
-    await chrome.storage.local.set(settings);
+    await browser.storage.local.set(settings);
     this.updateStatus('Settings saved successfully', 'success');
     this.toggleSettings();
   }
@@ -310,8 +326,13 @@ Response requirements:
     this.updateStatus('Processing...', 'active');
 
     // Send to background for processing
+    if (!this.port) {
+      this.updateStatus('Error: Not connected to background service.', 'error');
+      return;
+    }
+
     try {
-      chrome.runtime.sendMessage({
+      this.port.postMessage({
         type: 'user_message',
         message: userMessage,
         conversationHistory: this.conversationHistory

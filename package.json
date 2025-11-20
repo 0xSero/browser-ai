@@ -9,7 +9,7 @@
     "test:unit": "node tests/unit/run-unit-tests.js",
     "test:integration": "echo 'Load tests/integration/test-page.html in browser and run tests'",
     "lint": "echo 'Linting extension files...' && node tests/lint-check.js",
-    "build": "node tests/validate-extension.js && echo 'Extension validated successfully'",
+    "build": "npm run validate && web-ext build --overwrite-dest --ignore-files tests/ package.json package-lock.json",
     "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'"
   },
   "keywords": [
@@ -22,5 +22,7 @@
   ],
   "author": "",
   "license": "MIT",
-  "devDependencies": {}
+  "devDependencies": {
+    "web-ext": "^9.2.0"
+  }
 }

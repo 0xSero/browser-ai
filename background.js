@@ -10,26 +10,28 @@ class BackgroundService {
   }
 
   init() {
-    // Set up side panel behavior
-    chrome.sidePanel
-      .setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error) => console.error(error));
+    // Open the sidebar when the action button is clicked
+    browser.action.onClicked.addListener(() => {
+      browser.sidebarAction.open();
+    });
 
-    // Listen for messages from side panel
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      this.handleMessage(message, sender, sendResponse);
-      return true; // Keep channel open for async response
+    // Listen for long-lived connections from side panel
+    browser.runtime.onConnect.addListener((port) => {
+      this.port = port;
+      port.onMessage.addListener((message) => {
+        this.handleMessage(message, port);
+      });
     });
 
     // Listen for tab updates
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (changeInfo.status === 'complete') {
         // Notify side panel if needed
       }
     });
   }
 
-  async handleMessage(message, sender, sendResponse) {
+  async handleMessage(message, port) {
     try {
       switch (message.type) {
         case 'user_message':
@@ -38,7 +40,9 @@ class BackgroundService {
 
         case 'execute_tool':
           const result = await this.browserTools.executeTool(message.tool, message.args);
-          sendResponse({ success: true, result });
+          // Note: execute_tool is now primarily initiated from the background script
+          // This case might be deprecated or used for direct tool calls from the panel
+          port.postMessage({ success: true, result });
           break;
 
         default:
@@ -50,14 +54,13 @@ class BackgroundService {
         type: 'error',
         message: error.message
       });
-      sendResponse({ success: false, error: error.message });
     }
   }
 
   async processUserMessage(userMessage, conversationHistory) {
     try {
       // Get settings
-      const settings = await chrome.storage.local.get([
+      const settings = await browser.storage.local.get([
         'provider',
         'apiKey',
         'model',
@@ -83,7 +86,7 @@ class BackgroundService {
       const tools = this.browserTools.getToolDefinitions();
 
       // Get current tab info for context
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
       const context = {
         currentUrl: activeTab?.url || 'unknown',
         currentTitle: activeTab?.title || 'unknown',
@@ -227,10 +230,18 @@ class BackgroundService {
   }
 
   sendToSidePanel(message) {
-    // Send message to all side panels
-    chrome.runtime.sendMessage(message).catch(err => {
-      console.log('Side panel not open:', err);
-    });
+    if (this.port) {
+      try {
+        this.port.postMessage(message);
+      } catch (error) {
+        console.error('Failed to send message to side panel:', error);
+        if (error.message.includes('disconnected')) {
+          this.port = null;
+        }
+      }
+    } else {
+      console.warn('Side panel port not connected. Message not sent:', message);
+    }
   }
 }
 

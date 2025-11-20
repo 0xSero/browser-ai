@@ -104,10 +104,17 @@ class ExtensionValidator {
     });
 
     this.test('required permissions are declared', () => {
-      const required = ['sidePanel', 'activeTab', 'scripting', 'tabs', 'storage'];
-      const missing = required.filter(p => !this.manifest.permissions?.includes(p));
-      if (missing.length > 0) {
-        throw new Error(`Missing permissions: ${missing.join(', ')}`);
+      // Flexible check for either sidePanel or just the core permissions
+      const corePermissions = ['activeTab', 'scripting', 'tabs', 'storage'];
+      const hasCore = corePermissions.every(p => this.manifest.permissions?.includes(p));
+      const hasSidePanel = this.manifest.permissions?.includes('sidePanel');
+
+      if (!hasCore) {
+        const missing = corePermissions.filter(p => !this.manifest.permissions?.includes(p));
+        throw new Error(`Missing core permissions: ${missing.join(', ')}`);
+      }
+      if (!hasSidePanel) {
+        this.warn('Permission "sidePanel" is missing. This is required for Chrome but not for Firefox.');
       }
     });
 
@@ -117,15 +124,19 @@ class ExtensionValidator {
       }
     });
 
-    this.test('background service worker is configured', () => {
-      if (!this.manifest.background?.service_worker) {
-        throw new Error('Must have background.service_worker');
+    this.test('background script is configured', () => {
+      const hasServiceWorker = !!this.manifest.background?.service_worker;
+      const hasScripts = Array.isArray(this.manifest.background?.scripts) && this.manifest.background.scripts.length > 0;
+      if (!hasServiceWorker && !hasScripts) {
+        throw new Error('Must have background.service_worker (Chrome) or background.scripts (Firefox)');
       }
     });
 
-    this.test('side_panel is configured', () => {
-      if (!this.manifest.side_panel?.default_path) {
-        throw new Error('Must have side_panel.default_path');
+    this.test('panel is configured (sidebar_action or side_panel)', () => {
+      const hasSidePanel = !!this.manifest.side_panel?.default_path;
+      const hasSidebarAction = !!this.manifest.sidebar_action?.default_panel;
+      if (!hasSidePanel && !hasSidebarAction) {
+        throw new Error('Must have side_panel.default_path (Chrome) or sidebar_action.default_panel (Firefox)');
       }
     });
 
@@ -288,7 +299,7 @@ class ExtensionValidator {
 
     if (this.failed === 0) {
       this.log('\n✓ Extension validation passed!', 'success');
-      this.log('Extension is ready to load in Chrome.', 'success');
+      this.log('Extension is ready for packaging and loading.', 'success');
       return true;
     } else {
       this.log('\n✗ Extension validation failed!', 'error');

@@ -9,7 +9,7 @@ class ContentScriptHandler {
 
   init() {
     // Listen for messages from background script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       this.handleMessage(message, sender, sendResponse);
       return true; // Keep channel open for async response
     });
@@ -65,7 +65,7 @@ class ContentScriptHandler {
   }
 
   notifyReady() {
-    chrome.runtime.sendMessage({
+    browser.runtime.sendMessage({
       type: 'content_script_ready',
       url: window.location.href
     }).catch(() => {

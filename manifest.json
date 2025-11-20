@@ -4,29 +4,48 @@
   "version": "1.0.0",
   "description": "AI-powered browser automation with configurable LLM providers (OpenAI, Anthropic)",
   "permissions": [
-    "sidePanel",
     "activeTab",
     "scripting",
     "tabs",
-    "tabGroups",
     "storage",
     "bookmarks",
     "history",
-    "cookies",
-    "debugger"
+    "cookies"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "action": {
-    "default_title": "Open AI Agent Panel"
+    "default_title": "Open AI Agent Panel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
   },
   "background": {
-    "service_worker": "background.js",
+    "scripts": ["background.js"],
     "type": "module"
   },
-  "side_panel": {
-    "default_path": "sidepanel/panel.html"
+  "sidebar_action": {
+    "default_panel": "sidepanel/panel.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "browser-ai@sunaytech.com",
+      "strict_min_version": "112.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ]
+      }
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://api.openai.com https://api.anthropic.com http://192.168.1.12:8080"
   },
   "icons": {
     "16": "icons/icon16.png",
