@@ -1,10 +1,10 @@
 # Browser AI Agent
 
-[![Browser Support](https://img.shields.io/badge/support-Chrome%20%7C%20Firefox-green)](https://www.mozilla.org/firefox/)
+[![Browser Support](https://img.shields.io/badge/status-Firefox%20(Stable)-orange)](https://www.mozilla.org/firefox/) [![Browser Support](https://img.shields.io/badge/status-Chrome%20(WIP)-lightgrey)](https://www.google.com/chrome/)
 
-A powerful browser extension that enables AI models to interact with and control your browser through a comprehensive set of automation tools. Configure your preferred LLM provider (OpenAI, Anthropic, or any OpenAI-compatible API) and let AI assist with web browsing, form filling, testing, and automation tasks.
+A powerful browser extension that enables AI models to interact with and control your browser. This fork adapts the original [browser-ai](https://github.com/0xSero/browser-ai) repository to run on **Mozilla Firefox**.
 
-This is a fork of the original [browser-ai](https://github.com/0xSero/browser-ai) repository, adapted to be fully compatible with both Google Chrome and Mozilla Firefox from a single codebase.
+While the underlying JavaScript has been made cross-browser compatible, this branch is currently configured to work **out-of-the-box only on Firefox**.
 
 ## Features
 
@@ -55,12 +55,10 @@ The AI has access to these powerful browser automation capabilities:
 - Tool execution visibility
 - Easy configuration management
 
-## Installation
+## Installation (for Firefox)
 
 ### Prerequisites
-- **A modern browser:**
-  - Google Chrome or any Chromium-based browser (Edge, Brave, etc.)
-  - Mozilla Firefox (version 112+)
+- **Mozilla Firefox** (version 112+)
 - An API key from OpenAI or Anthropic
 
 ### 1. Get the Code
@@ -73,27 +71,22 @@ cd browser-ai
 
 ### 2. Install Dependencies
 
-This project uses `web-ext` for packaging the Firefox version. Install it via npm:
+This project uses `web-ext` for packaging. Install it via npm:
 ```bash
 npm install
 ```
 
-### 3. Load the Extension for Development
+### 3. Load the Extension in Firefox
 
 You can load the extension directly from the source code for testing.
 
-**On Google Chrome:**
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top right corner).
-3. Click "Load unpacked".
-4. Select the `browser-ai` directory.
-
-**On Mozilla Firefox:**
 1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 2. Click "Load Temporary Add-on...".
 3. Select the `manifest.json` file from the `browser-ai` directory.
 
 The extension should now appear in your extensions list.
+
+**Note on Chrome:** To run this on Chrome, you would need to modify the `manifest.json` file to use `service_worker` and `side_panel` keys instead of `scripts` and `sidebar_action`.
 
 ## Development and Building
 
