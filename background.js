@@ -55,6 +55,19 @@ class BackgroundService {
 
   async processUserMessage(userMessage, conversationHistory, isInsight = false) {
     try {
+      let finalUserMessage = userMessage;
+      let finalConversationHistory = [...conversationHistory];
+
+      // Pre-fetch page content for Deep-Insight requests
+      if (isInsight === true) {
+        const pageContentResult = await this.tools.getPageContent({ type: 'text' });
+        if (pageContentResult.success && pageContentResult.content) {
+          finalUserMessage = `Based on the following content, please respond to this request: "${userMessage}"\n\n---\n\nPAGE CONTENT:\n${pageContentResult.content}`;
+          finalConversationHistory.pop(); // Remove original short prompt
+          finalConversationHistory.push({ role: 'user', content: finalUserMessage });
+        }
+      }
+
       // Get settings
       const settings = await browser.storage.local.get([
         'provider',
@@ -66,20 +79,13 @@ class BackgroundService {
       ]);
 
       if (!settings.apiKey) {
-        this.sendToSidePanel({
-          type: 'error',
-          message: 'Please configure your API key in settings'
-        });
+        this.sendToSidePanel({ type: 'error', message: 'Please configure your API key in settings' });
         return;
       }
 
-      // Initialize AI provider
       this.aiProvider = new AIProvider(settings);
-
-      // Get available tools
       const tools = this.browserTools.getToolDefinitions();
 
-      // Get current tab info for context
       const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
       const context = {
         currentUrl: activeTab?.url || 'unknown',
@@ -87,53 +93,37 @@ class BackgroundService {
         tabId: activeTab?.id
       };
 
-      // Call AI with tools
       const response = await this.aiProvider.chat(
-        conversationHistory,
+        finalConversationHistory,
         tools,
         context
       );
 
-      // Process response and handle tool execution loop
       let currentResponse = response;
       let toolIterations = 0;
-      const maxIterations = 10; // Safety limit to prevent infinite loops
+      const maxIterations = 10;
 
-      // Keep executing tools until AI is done
       while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
         toolIterations++;
-
         if (toolIterations > maxIterations) {
-          console.warn('Reached maximum tool execution iterations');
-          this.sendToSidePanel({
-            type: 'warning',
-            message: 'Reached maximum tool execution limit. Task may be incomplete.'
-          });
+          this.sendToSidePanel({ type: 'warning', message: 'Reached maximum tool execution limit.' });
           break;
         }
-
-        // Execute all tool calls in this round
         for (const toolCall of currentResponse.toolCalls) {
           await this.executeToolCall(toolCall);
         }
-
-        // Continue conversation and check if AI wants to call more tools
         currentResponse = await this.aiProvider.continueConversation();
       }
 
-      // Send final response when no more tool calls
       this.sendToSidePanel({
         type: 'assistant_response',
         content: currentResponse.content,
         thinking: currentResponse.thinking,
-        isInsight: isInsight // Pass the flag back to the UI
+        isInsight: isInsight
       });
     } catch (error) {
       console.error('Error processing user message:', error);
-      this.sendToSidePanel({
-        type: 'error',
-        message: 'Error: ' + error.message
-      });
+      this.sendToSidePanel({ type: 'error', message: 'Error: ' + error.message });
     }
   }
 
