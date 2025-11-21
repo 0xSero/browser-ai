@@ -49,11 +49,12 @@ The AI has access to these powerful browser automation capabilities:
 - `getVisitCount` - Get visit count and details for a URL
 
 ### Modern UI
-- Side panel interface that opens on the right side of the browser
-- Clean, intuitive chat interface
-- Real-time status updates
-- Tool execution visibility
-- Easy configuration management
+- **Tabbed Interface**: A clean UI with separate tabs for the interactive "Agent" and the analytical "Deep-Insight".
+- **Customizable Deep-Insight Prompts**: Configure, add, or delete your own one-click analysis prompts from the settings menu.
+- **Markdown Support**: AI responses are rendered with rich formatting (headings, lists, code blocks) for better readability.
+- **Settings Import/Export**: Backup and restore all your settings, including your custom Deep-Insight prompts, to a JSON file.
+- **Real-time status updates**
+- **Tool execution visibility**
 
 ## Installation (for Firefox)
 

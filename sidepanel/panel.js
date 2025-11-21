@@ -42,6 +42,12 @@ class SidePanelUI {
       showThinking: document.getElementById('showThinking'),
       saveSettingsBtn: document.getElementById('saveSettingsBtn'),
       cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
+      
+      // Dynamic Prompts
+      insightPromptsContainer: document.getElementById('insightPromptsContainer'),
+      addInsightPromptBtn: document.getElementById('addInsightPromptBtn'),
+
+      // Backup & Restore
       exportSettingsBtn: document.getElementById('exportSettingsBtn'),
       importSettingsInput: document.getElementById('importSettingsInput'),
 
@@ -68,15 +74,12 @@ class SidePanelUI {
     this.port = browser.runtime.connect({ name: 'sidepanel' });
 
     this.port.onMessage.addListener((message) => {
-      if (message.type === 'tool_execution') {
-        // ... (same as before)
-      } else if (message.type === 'assistant_response') {
+      if (message.type === 'assistant_response') {
         this.displayAssistantMessage(message.content, message.thinking, message.isInsight);
       } else if (message.type === 'error') {
         this.updateStatus(message.message, 'error');
-      } else if (message.type === 'warning') {
-        this.updateStatus(message.message, 'warning');
       }
+      // Other message types can be handled here
     });
 
     this.port.onDisconnect.addListener(() => {
@@ -87,30 +90,12 @@ class SidePanelUI {
   }
 
   setupEventListeners() {
-    // Settings toggle
+    // Main UI
     this.elements.settingsBtn.addEventListener('click', () => this.toggleSettings());
-
-    // Tabs
     this.elements.agentTabBtn.addEventListener('click', () => this.switchTab('agent'));
     this.elements.deepInsightTabBtn.addEventListener('click', () => this.switchTab('deep-insight'));
 
-    // Provider change
-    this.elements.provider.addEventListener('change', () => this.toggleCustomEndpoint());
-
-    // Temperature slider
-    this.elements.temperature.addEventListener('input', () => {
-      this.elements.temperatureValue.textContent = this.elements.temperature.value;
-    });
-
-    // Save/Cancel settings
-    this.elements.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
-    this.elements.cancelSettingsBtn.addEventListener('click', () => this.toggleSettings());
-
-    // Export/Import settings
-    this.elements.exportSettingsBtn.addEventListener('click', () => this.exportSettings());
-    this.elements.importSettingsInput.addEventListener('change', (e) => this.importSettings(e));
-
-    // Agent View: Send message
+    // Agent View
     this.elements.sendBtn.addEventListener('click', () => this.sendMessage());
     this.elements.userInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -119,30 +104,34 @@ class SidePanelUI {
       }
     });
 
-    // Deep-Insight View: Action buttons
-    this.elements.insightActions.addEventListener('click', (e) => {
-      if (e.target.classList.contains('insight-btn')) {
-        const prompt = e.target.dataset.prompt;
-        if (prompt) {
-          this.elements.insightOutput.innerHTML = 'Processing...';
-          this.sendMessage(prompt, true); // Send prompt and mark as insight message
-        }
+    // Deep-Insight View is handled dynamically
+
+    // Settings
+    this.elements.provider.addEventListener('change', () => this.toggleCustomEndpoint());
+    this.elements.temperature.addEventListener('input', () => {
+      this.elements.temperatureValue.textContent = this.elements.temperature.value;
+    });
+    this.elements.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+    this.elements.cancelSettingsBtn.addEventListener('click', () => this.toggleSettings());
+    this.elements.exportSettingsBtn.addEventListener('click', () => this.exportSettings());
+    this.elements.importSettingsInput.addEventListener('change', (e) => this.importSettings(e));
+    
+    // Dynamic Prompts
+    this.elements.addInsightPromptBtn.addEventListener('click', () => this.addInsightPrompt());
+    this.elements.insightPromptsContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('delete-prompt-btn')) {
+        const index = e.target.dataset.index;
+        this.deleteInsightPrompt(index);
       }
     });
   }
 
   switchTab(tabName) {
-    if (tabName === 'agent') {
-      this.elements.agentView.classList.remove('hidden');
-      this.elements.deepInsightView.classList.add('hidden');
-      this.elements.agentTabBtn.classList.add('active');
-      this.elements.deepInsightTabBtn.classList.remove('active');
-    } else if (tabName === 'deep-insight') {
-      this.elements.agentView.classList.add('hidden');
-      this.elements.deepInsightView.classList.remove('hidden');
-      this.elements.agentTabBtn.classList.remove('active');
-      this.elements.deepInsightTabBtn.classList.add('active');
-    }
+    const isAgent = tabName === 'agent';
+    this.elements.agentView.classList.toggle('hidden', !isAgent);
+    this.elements.deepInsightView.classList.toggle('hidden', isAgent);
+    this.elements.agentTabBtn.classList.toggle('active', isAgent);
+    this.elements.deepInsightTabBtn.classList.toggle('active', !isAgent);
   }
 
   toggleSettings() {
@@ -154,27 +143,41 @@ class SidePanelUI {
     this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
   }
 
-  async loadSettings() {
-    const settings = await browser.storage.local.get([
-      'provider', 'apiKey', 'model', 'customEndpoint', 'systemPrompt',
-      'temperature', 'maxTokens', 'timeout', 'showThinking'
-    ]);
+  getDefaultInsightPrompts() {
+    return [
+      { label: 'Summarize Page', prompt: 'Summarize the key points of the current page.' },
+      { label: 'Extract Headings', prompt: 'Extract all the main headings from this page.' },
+      { label: 'Analyze Tone', prompt: 'Analyze the tone and sentiment of the text on this page.' },
+      { label: 'Extract Links', prompt: 'Extract all links (URLs and their text) from the current page content.' }
+    ];
+  }
 
+  async loadSettings() {
+    const settings = await browser.storage.local.get(null); // Get all settings
+
+    // Core settings
     this.elements.provider.value = settings.provider || 'openai';
     this.elements.apiKey.value = settings.apiKey || '';
     this.elements.model.value = settings.model || 'gpt-4o';
     this.elements.customEndpoint.value = settings.customEndpoint || '';
-    this.elements.systemPrompt.value = settings.systemPrompt || this.getDefaultSystemPrompt();
+    this.elements.systemPrompt.value = settings.systemPrompt || `You are a browser automation assistant.`;
     this.elements.temperature.value = settings.temperature || 0.7;
     this.elements.temperatureValue.textContent = this.elements.temperature.value;
     this.elements.maxTokens.value = settings.maxTokens || 2048;
     this.elements.timeout.value = settings.timeout || 30000;
-    this.elements.showThinking.value = settings.showThinking !== undefined ? settings.showThinking : 'true';
+    this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
     
+    // Insight Prompts
+    const insightPrompts = settings.insightPrompts || this.getDefaultInsightPrompts();
+    this.renderInsightPrompts(insightPrompts);
+    this.renderInsightButtons(insightPrompts);
+
     this.toggleCustomEndpoint();
   }
 
   async saveSettings() {
+    const insightPrompts = this.getInsightPromptsFromUI();
+
     const settings = {
       provider: this.elements.provider.value,
       apiKey: this.elements.apiKey.value,
@@ -185,9 +188,11 @@ class SidePanelUI {
       maxTokens: parseInt(this.elements.maxTokens.value),
       timeout: parseInt(this.elements.timeout.value),
       showThinking: this.elements.showThinking.value === 'true',
+      insightPrompts: insightPrompts,
     };
 
     await browser.storage.local.set(settings);
+    this.renderInsightButtons(insightPrompts); // Re-render buttons in main UI
     this.updateStatus('Settings saved successfully', 'success');
     this.toggleSettings();
   }
@@ -202,9 +207,7 @@ class SidePanelUI {
       const a = document.createElement('a');
       a.href = url;
       a.download = 'browser-ai-settings.json';
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       this.updateStatus('Settings exported', 'success');
@@ -222,7 +225,7 @@ class SidePanelUI {
       try {
         const settings = JSON.parse(e.target.result);
         await browser.storage.local.set(settings);
-        await this.loadSettings();
+        await this.loadSettings(); // Reload all settings from storage
         this.updateStatus('Settings imported successfully', 'success');
         this.toggleSettings();
       } catch (error) {
@@ -230,10 +233,66 @@ class SidePanelUI {
       }
     };
     reader.readAsText(file);
+    event.target.value = ''; // Reset file input
   }
 
-  getDefaultSystemPrompt() {
-    return `You are a browser automation assistant. You can interact with web pages using the available tools.`;
+  renderInsightPrompts(prompts) {
+    this.elements.insightPromptsContainer.innerHTML = '';
+    prompts.forEach((prompt, index) => {
+      const div = document.createElement('div');
+      div.className = 'prompt-item';
+      div.innerHTML = `
+        <input type="text" class="prompt-label" value="${this.escapeHtml(prompt.label)}" placeholder="Button Label">
+        <textarea class="prompt-text" placeholder="Prompt for the AI">${this.escapeHtml(prompt.prompt)}</textarea>
+        <button class="delete-prompt-btn" data-index="${index}">Delete</button>
+      `;
+      this.elements.insightPromptsContainer.appendChild(div);
+    });
+  }
+
+  renderInsightButtons(prompts) {
+    this.elements.insightActions.innerHTML = '';
+    prompts.forEach(prompt => {
+      const button = document.createElement('button');
+      button.className = 'insight-btn';
+      button.dataset.prompt = prompt.prompt;
+      button.textContent = prompt.label;
+      this.elements.insightActions.appendChild(button);
+    });
+    // Re-add event listener to the parent
+    this.elements.insightActions.addEventListener('click', (e) => {
+      if (e.target.classList.contains('insight-btn')) {
+        const promptText = e.target.dataset.prompt;
+        if (promptText) {
+          this.elements.insightOutput.innerHTML = 'Processing...';
+          this.sendMessage(promptText, true);
+        }
+      }
+    });
+  }
+
+  addInsightPrompt(label = '', prompt = '') {
+    const prompts = this.getInsightPromptsFromUI();
+    prompts.push({ label, prompt });
+    this.renderInsightPrompts(prompts);
+  }
+
+  deleteInsightPrompt(index) {
+    const prompts = this.getInsightPromptsFromUI();
+    prompts.splice(index, 1);
+    this.renderInsightPrompts(prompts);
+  }
+
+  getInsightPromptsFromUI() {
+    const prompts = [];
+    this.elements.insightPromptsContainer.querySelectorAll('.prompt-item').forEach(item => {
+      const label = item.querySelector('.prompt-label').value.trim();
+      const prompt = item.querySelector('.prompt-text').value.trim();
+      if (label && prompt) {
+        prompts.push({ label, prompt });
+      }
+    });
+    return prompts;
   }
 
   async sendMessage(message = null, isInsight = false) {
@@ -249,7 +308,7 @@ class SidePanelUI {
     this.updateStatus('Processing...', 'active');
 
     if (!this.port) {
-      this.updateStatus('Error: Not connected to background service.', 'error');
+      this.updateStatus('Error: Not connected to background.', 'error');
       return;
     }
 
@@ -258,21 +317,17 @@ class SidePanelUI {
         type: 'user_message',
         message: userMessage,
         conversationHistory: this.conversationHistory,
-        isInsight: isInsight // Pass flag to background
+        isInsight: isInsight
       });
     } catch (error) {
       this.updateStatus('Error: ' + error.message, 'error');
-      this.displayAssistantMessage('Sorry, an error occurred: ' + error.message);
     }
   }
 
   displayUserMessage(content) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message user';
-    messageDiv.innerHTML = `
-      <div class="message-header">You</div>
-      <div class="message-content">${this.escapeHtml(content)}</div>
-    `;
+    messageDiv.innerHTML = `<div class="message-header">You</div><div class="message-content">${this.escapeHtml(content)}</div>`;
     this.elements.chatMessages.appendChild(messageDiv);
     this.scrollToBottom();
   }
@@ -281,8 +336,6 @@ class SidePanelUI {
     if (!content && !thinking) return;
 
     this.conversationHistory.push({ role: 'assistant', content });
-
-    // Use Markdown for the content
     const formattedContent = marked.parse(content || '');
 
     if (isInsight) {
@@ -294,55 +347,14 @@ class SidePanelUI {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
     let html = `<div class="message-header">Assistant</div>`;
-
     if (thinking && this.elements.showThinking.value === 'true') {
-      html += `
-        <div class="thinking-block">
-          <div class="thinking-header">🤔 Thinking...</div>
-          <div class="thinking-content">${this.escapeHtml(thinking)}</div>
-        </div>
-      `;
+      html += `<div class="thinking-block">... Thinking ...</div>`;
     }
-    
     html += `<div class="message-content">${formattedContent}</div>`;
     messageDiv.innerHTML = html;
     this.elements.chatMessages.appendChild(messageDiv);
     this.scrollToBottom();
     this.updateStatus('Ready', 'success');
-  }
-
-  displayToolExecution(toolName, args, result, toolCallId = null) {
-    // This function remains largely the same, but we ensure it appends to the correct view.
-    // For now, all tool executions will appear in the Agent view.
-    // ... (rest of the function is the same as before)
-  }
-
-  // ... (addTimelineItem, updateTimelineItem, updateStatus, scrollToBottom functions are the same)
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // Placeholder for functions that are the same
-  addTimelineItem(id, toolName, args) {
-    if (!this.elements.toolTimeline) return;
-    const row = document.createElement('div');
-    row.className = 'tool-timeline-item';
-    row.dataset.id = id || `temp-${Date.now()}`;
-    row.dataset.start = String(Date.now());
-    row.innerHTML = `<span class="tool-timeline-status running"></span><span class="tool-timeline-name">${this.escapeHtml(toolName)}</span>`;
-    this.elements.toolTimeline.appendChild(row);
-    if (id) this.timelineItems.set(id, row);
-  }
-
-  updateTimelineItem(id, result) {
-    if (!id || !this.timelineItems.has(id)) return;
-    const row = this.timelineItems.get(id);
-    const statusEl = row.querySelector('.tool-timeline-status');
-    const isError = result && (result.error || result.success === false);
-    statusEl.className = `tool-timeline-status ${isError ? 'error' : 'success'}`;
   }
 
   updateStatus(text, type = 'default') {
@@ -352,6 +364,15 @@ class SidePanelUI {
 
   scrollToBottom() {
     this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+  }
+
+  escapeHtml(text) {
+    return text
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
   }
 }
 

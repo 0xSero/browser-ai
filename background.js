@@ -55,7 +55,37 @@ class BackgroundService {
 
   async processUserMessage(userMessage, conversationHistory, isInsight = false) {
     try {
-      // ... (get settings logic is the same)
+      // Get settings
+      const settings = await browser.storage.local.get([
+        'provider',
+        'apiKey',
+        'model',
+        'customEndpoint',
+        'systemPrompt',
+        'showThinking'
+      ]);
+
+      if (!settings.apiKey) {
+        this.sendToSidePanel({
+          type: 'error',
+          message: 'Please configure your API key in settings'
+        });
+        return;
+      }
+
+      // Initialize AI provider
+      this.aiProvider = new AIProvider(settings);
+
+      // Get available tools
+      const tools = this.browserTools.getToolDefinitions();
+
+      // Get current tab info for context
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      const context = {
+        currentUrl: activeTab?.url || 'unknown',
+        currentTitle: activeTab?.title || 'unknown',
+        tabId: activeTab?.id
+      };
 
       // Call AI with tools
       const response = await this.aiProvider.chat(
@@ -64,7 +94,32 @@ class BackgroundService {
         context
       );
 
-      // ... (tool execution loop is the same)
+      // Process response and handle tool execution loop
+      let currentResponse = response;
+      let toolIterations = 0;
+      const maxIterations = 10; // Safety limit to prevent infinite loops
+
+      // Keep executing tools until AI is done
+      while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
+        toolIterations++;
+
+        if (toolIterations > maxIterations) {
+          console.warn('Reached maximum tool execution iterations');
+          this.sendToSidePanel({
+            type: 'warning',
+            message: 'Reached maximum tool execution limit. Task may be incomplete.'
+          });
+          break;
+        }
+
+        // Execute all tool calls in this round
+        for (const toolCall of currentResponse.toolCalls) {
+          await this.executeToolCall(toolCall);
+        }
+
+        // Continue conversation and check if AI wants to call more tools
+        currentResponse = await this.aiProvider.continueConversation();
+      }
 
       // Send final response when no more tool calls
       this.sendToSidePanel({

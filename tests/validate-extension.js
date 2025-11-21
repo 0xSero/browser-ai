@@ -105,7 +105,7 @@ class ExtensionValidator {
 
     this.test('required permissions are declared', () => {
       // Flexible check for either sidePanel or just the core permissions
-      const corePermissions = ['activeTab', 'scripting', 'tabs', 'storage'];
+      const corePermissions = ['scripting', 'tabs', 'storage'];
       const hasCore = corePermissions.every(p => this.manifest.permissions?.includes(p));
       const hasSidePanel = this.manifest.permissions?.includes('sidePanel');
 

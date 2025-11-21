@@ -24,9 +24,6 @@
   --warning: #f59e0b;
   --accent-color: #8b5cf6;
   --accent-hover: #7c3aed;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.6);
 }
 
 body {
@@ -175,23 +172,6 @@ body {
   background: var(--surface);
 }
 
-.tool-call {
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.tool-call-header {
-  padding: 5px;
-  background: var(--surface-elevated);
-  font-weight: bold;
-}
-
-.tool-call-body {
-  padding: 5px;
-}
-
 .input-area {
   padding: 10px;
   background: var(--surface);
@@ -315,50 +295,80 @@ body {
 }
 
 /* Markdown Styles */
-.message-content h1, .message-content h2, .message-content h3 {
+.message-content h1, .message-content h2, .message-content h3,
+.insight-output h1, .insight-output h2, .insight-output h3 {
   margin-top: 1em;
   margin-bottom: 0.5em;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.3em;
 }
-.message-content p {
+.message-content p, .insight-output p {
   margin-bottom: 1em;
 }
-.message-content ul, .message-content ol {
+.message-content ul, .message-content ol,
+.insight-output ul, .insight-output ol {
   margin-left: 20px;
   margin-bottom: 1em;
 }
-.message-content code {
+.message-content code, .insight-output code {
   background-color: var(--surface-elevated);
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-family: monospace;
 }
-.message-content pre {
+.message-content pre, .insight-output pre {
   background-color: var(--surface-elevated);
   padding: 10px;
   border-radius: 5px;
   overflow-x: auto;
 }
-.message-content pre code {
+.message-content pre code, .insight-output pre code {
   padding: 0;
   background: none;
 }
-.message-content blockquote {
+.message-content blockquote, .insight-output blockquote {
   border-left: 3px solid var(--accent-color);
   padding-left: 10px;
   margin-left: 0;
   color: var(--text-secondary);
 }
-.message-content table {
+.message-content table, .insight-output table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1em;
 }
-.message-content th, .message-content td {
+.message-content th, .message-content td,
+.insight-output th, .insight-output td {
   border: 1px solid var(--border);
   padding: 8px;
 }
-.message-content th {
+.message-content th, .insight-output th {
   background-color: var(--surface-elevated);
+}
+
+/* Dynamic Prompts in Settings */
+.prompt-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prompt-item input, .prompt-item textarea {
+  width: 100%;
+}
+.prompt-label {
+  font-weight: bold;
+}
+.delete-prompt-btn {
+  background-color: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error);
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-end;
 }
