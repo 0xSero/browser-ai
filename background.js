@@ -103,7 +103,8 @@ class BackgroundService {
       const response = await this.aiProvider.chat(
         messagesForAI,
         tools,
-        context
+        context,
+        isInsight // Pass the flag to the chat method
       );
 
       let currentResponse = response;

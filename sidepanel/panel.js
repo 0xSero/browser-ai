@@ -124,6 +124,17 @@ class SidePanelUI {
         this.deleteInsightPrompt(index);
       }
     });
+
+    // Event delegation for dynamically created insight buttons
+    this.elements.insightActions.addEventListener('click', (e) => {
+      if (e.target.classList.contains('insight-btn')) {
+        const promptText = e.target.dataset.prompt;
+        if (promptText) {
+          this.elements.insightOutput.innerHTML = 'Processing...';
+          this.sendMessage(promptText, true);
+        }
+      }
+    });
   }
 
   switchTab(tabName) {
@@ -258,16 +269,6 @@ class SidePanelUI {
       button.dataset.prompt = prompt.prompt;
       button.textContent = prompt.label;
       this.elements.insightActions.appendChild(button);
-    });
-    // Re-add event listener to the parent
-    this.elements.insightActions.addEventListener('click', (e) => {
-      if (e.target.classList.contains('insight-btn')) {
-        const promptText = e.target.dataset.prompt;
-        if (promptText) {
-          this.elements.insightOutput.innerHTML = 'Processing...';
-          this.sendMessage(promptText, true);
-        }
-      }
     });
   }
 
