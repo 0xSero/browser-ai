@@ -55,32 +55,38 @@ class BackgroundService {
 
   async processUserMessage(userMessage, conversationHistory, isInsight = false) {
     try {
-      let finalUserMessage = userMessage;
-      let finalConversationHistory = [...conversationHistory];
+      let messagesForAI;
 
-      // Pre-fetch page content for Deep-Insight requests
-      if (isInsight === true) {
-        const pageContentResult = await this.tools.getPageContent({ type: 'text' });
-        if (pageContentResult.success && pageContentResult.content) {
-          finalUserMessage = `Based on the following content, please respond to this request: "${userMessage}"\n\n---\n\nPAGE CONTENT:\n${pageContentResult.content}`;
-          finalConversationHistory.pop(); // Remove original short prompt
-          finalConversationHistory.push({ role: 'user', content: finalUserMessage });
-        }
-      }
-
-      // Get settings
+      // Get settings first, as they contain the system prompt
       const settings = await browser.storage.local.get([
-        'provider',
-        'apiKey',
-        'model',
-        'customEndpoint',
-        'systemPrompt',
-        'showThinking'
+        'provider', 'apiKey', 'model', 'customEndpoint', 'systemPrompt', 'showThinking'
       ]);
 
       if (!settings.apiKey) {
         this.sendToSidePanel({ type: 'error', message: 'Please configure your API key in settings' });
         return;
+      }
+
+      // Prepare messages for the AI based on the request type
+      if (isInsight === true) {
+        // For Deep-Insight, create a fresh, single-shot request
+        const pageContentResult = await this.browserTools.getPageContent({ type: 'text' });
+        let insightPrompt = userMessage;
+
+        if (pageContentResult.success && pageContentResult.content) {
+          insightPrompt = `Based on the following content, please respond to this request: "${userMessage}"\n\n---\n\nPAGE CONTENT:\n${pageContentResult.content}`;
+        }
+        
+        messagesForAI = [
+          { role: 'system', content: settings.systemPrompt },
+          { role: 'user', content: insightPrompt }
+        ];
+      } else {
+        // For Agent chat, use the existing conversation history
+        messagesForAI = [
+          { role: 'system', content: settings.systemPrompt },
+          ...conversationHistory
+        ];
       }
 
       this.aiProvider = new AIProvider(settings);
@@ -93,8 +99,9 @@ class BackgroundService {
         tabId: activeTab?.id
       };
 
+      // Use the prepared messages array
       const response = await this.aiProvider.chat(
-        finalConversationHistory,
+        messagesForAI,
         tools,
         context
       );

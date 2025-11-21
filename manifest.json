@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser AI Agent",
-  "version": "1.0.10",
+  "version": "1.0.12",
   "description": "AI-powered browser automation with configurable LLM providers (OpenAI, Anthropic)",
   "permissions": [
     "scripting",
