@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"中文"
+    },
+    "browserActionTitle": {
+        "message": "智能浏览助手-cllama"
+    },
+    "cllamaDescription": {
+        "message": "智能浏览助手：可自定义的深度内容分析+多场景的智能对话+多语言翻译，支持本地Ollama与主流AI(如OpenAI、DeepSeek、智谱)。"
+    },
+    "inputMessage": {
+        "message": "请输入消息...",
+        "description": "消息输入框占位符文本"
+    },
+    "Insightify": {
+        "message": "深度洞察"
+    },
+    "urlCssSelector":{
+        "message": "内容锚点"
+    },
+    "urlCssSelectorDesc":{
+        "message": "内容锚点是通过配置CSS选择器来更精准匹配页面核心内容"
+    },
+    "urlPrefix": {
+        "message": "网址前缀"
+    },
+    "cssSelector":{
+        "message": "CSS选择器"
+    },
+    "InsightRecipes":{
+        "message": "洞察配方"
+    },
+    "name":{
+        "message": "名称"
+    },
+    "Prompt":{
+        "message": "提示语"
+    },
+    "wordsRemaining": {
+        "message": "剩余字数"
+    },
+    "chat": {
+        "message": "智能对话"
+    },
+    "scenario": {
+        "message" : "场景"
+    },
+    "ScenarioManage": {
+        "message" : "场景管理"
+    },
+    "inputSample": {
+        "message": "输入样例"
+    },
+    "chatOnly": {
+        "message": "随便聊..."
+    },
+    "translate": {
+        "message": "翻译"
+    },
+    "settings": {
+        "message": "设置"
+    },
+    "ollamaHostLabel": {
+        "message": "API网址"
+    },
+    "modelNameLabel": {
+        "message": "模型名称"
+    },
+    "tranPromptLabel": {
+        "message": "翻译Prompt"
+    },
+    "expBaseData": {
+        "message": "基础配置"
+    },
+    "expInsightTasks": {
+        "message": "洞察配方配置"
+    },
+    "expCssSelector": {
+        "message": "内容锚点配置"
+    },
+    "expScenarioPresets": {
+        "message": "聊天场景配置"
+    },
+    "expInsightData": {
+        "message": "深度洞察数据"
+    },
+    "expChatRecords": {
+        "message": "聊天记录"
+    },
+    "save": {
+        "message": "保存"
+    },
+    "close": {
+        "message": "关闭"
+    },
+    "add": {
+        "message": "新增"
+    },
+    "import": {
+        "message": "导入"
+    },
+    "export" :{
+        "message": "导出"
+    },
+    "clear" : {
+        "message": "清空"
+    },
+    "confirm": {
+        "message": "确定"
+    },
+    "cancel":{
+        "message": "取消"
+    },
+    "saveSuccessMessage": {
+        "message": "保存成功"
+    },
+    "importSuccessMessage": {
+        "message": "导入成功"
+    },
+    "importFailMessage": {
+        "message": "导入失败"
+    },
+    "getModuleListFailMessage":{
+        "message": "获取模型列表失败"
+    },
+    "tranPrompt": {
+        "message": "请重写用户给定的句子或单词，如果用户给出的是{localLanguage}之外的其他语言则用{localLanguage}重写用户给定的内容，否则用英文重写。注意：重写时必须尊重原意。"
+    },
+    "translateWaitMessage": {
+        "message": "正在翻译，请稍候..."
+    },
+    "cllamaError": {
+        "message": "很抱歉，我遇到了一些问题，请稍后再试或者检查一下您的cllama配置信息是否正确。"
+    },
+    "urlPrefixError":{
+        "message": "网址前缀输入不正确，必须以http或https开头"
+    },
+    "waitMessage": {
+        "message": "思考中，请稍候......"
+    },
+    "confirmClearChat": {
+        "message": "您确认删除此会话记录吗？"
+    },
+    "insightifyPageError1": {
+        "message": "标题和内容为空，不能生成页面相关信息。"
+    },
+    "insightifyPageError2": {
+        "message": "无法处理该页面信息，如确认页面没有问题可刷新重试。"
+    },
+    "summarizer": {
+        "message": "摘要"
+    },
+    "summaryPrompt": {
+        "message": "请根据给定页面信息内容生成简短摘要，要求：1、最多300字。2、一律用{localLanguage}生成摘要信息。"
+    },
+    "requiredError":{
+        "message": "必输项不能为空"
+    },
+    "exportOptionEmptyError":{
+        "message": "请至少选择一个导出选项"
+    },
+    "importPromptMsg1":{
+        "message": "请选择您的cllama数据文件进行导入处理"
+    },
+    "importPromptMsg2":{
+        "message": "点击选择文件"
+    },
+    "importPromptMsg3":{
+        "message": "仅支持\".json\"格式文件"
+    },
+    "importWarnMsg1":{
+        "message": "注意：导入将覆盖部分原有数据。"
+    },
+    "importFailMsg1":{
+        "message": "导入失败：文件中的数据没有cllama数据。"
+    },
+    "noUpdateDataError":{
+        "message": "没有找到要更新的数据"
+    },
+    "directorExample1_name":{
+        "message": "语言大模型提示词生成"
+    },
+    "directorExample1_prompt":{
+        "message": "你是一位大模型提示词生成专家，请根据用户的需求编写一个智能助手的提示词，来指导大模型进行内容生成，要求：\n 1. 以 Markdown 格式输出\n 2. 贴合用户需求，描述智能助手的定位、能力、知识储备\n 3. 提示词应清晰、精确、易于理解，在保持质量的同时，尽可能简洁\n 4. 只输出提示词，不要输出多余解释"
+    },
+    "directorExample1_sample":{
+        "message": "请帮我生成一个'法律顾问'的提示词"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "创造性 (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "值越高，回复越随机、有创意；越低则越稳定、专注。"
+    },
+    "apiSettingsFocusLabel": {
+        "message": "专注度 (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "值越高，回复越跳脱常规；越低则越保守、越按常理。"
+    },
+    "apiSettingsResetButton": {
+        "message": "重置"
+    },
+    "apiSettingsSaveButton": {
+        "message": "保存设置"
+    },
+    "confirmDelete": {
+        "message": "您确认删除吗？注意：删除后无法恢复"
+    },
+    "fish_title": {
+        "message": "无记忆对话模式"
+    },
+    "copy": {
+        "message": "复制",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "删除",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "已复制!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "若选中则发送该文件给AI服务",
+        "description": "Activate button title"
+    }
+}

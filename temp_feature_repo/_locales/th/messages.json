@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"ไทย"
+    },
+    "browserActionTitle": {
+        "message": "ผู้ช่วยการเรียกดูอัจฉริยะ - cllama"
+    },
+    "cllamaDescription": {
+        "message": "ผู้ช่วยการเรียกดูอัจฉริยะ: การวิเคราะห์เนื้อหาเชิงลึกที่ปรับแต่งได้ + การสนทนาอัจฉริยะในหลายสถานการณ์ + การแปลหลายภาษา รองรับบริการ Ollama ในเครื่องและ AI หลัก(เช่น OpenAI, DeepSeek)"
+    },
+    "inputMessage": {
+        "message": "ป้อนข้อความ...",
+        "description": "ข้อความตัวยึดตำแหน่งสำหรับช่องป้อนข้อความ"
+    },
+    "Insightify": {
+        "message": "ข้อมูลเชิงลึก"
+    },
+    "urlCssSelector":{
+        "message": "จุดยึดเนื้อหา"
+    },
+    "urlCssSelectorDesc":{
+        "message": "จุดยึดเนื้อหาช่วยให้จับคู่เนื้อหาหลักของหน้าเว็บได้แม่นยำยิ่งขึ้นโดยการกำหนดตัวเลือก CSS"
+    },
+    "urlPrefix": {
+        "message": "คำนำหน้า URL"
+    },
+    "cssSelector":{
+        "message": "ตัวเลือก CSS"
+    },
+    "InsightRecipes":{
+        "message": "สูตรข้อมูลเชิงลึก"
+    },
+    "name":{
+        "message": "ชื่อ"
+    },
+    "Prompt":{
+        "message": "พร้อมท์"
+    },
+    "wordsRemaining": {
+        "message": "คำที่เหลือ"
+    },
+    "chat": {
+        "message": "การสนทนาอัจฉริยะ"
+    },
+    "scenario": {
+        "message" : "สถานการณ์"
+    },
+    "ScenarioManage": {
+        "message" : "การจัดการสถานการณ์"
+    },
+    "inputSample": {
+        "message": "ตัวอย่างการป้อนข้อมูล"
+    },
+    "chatOnly": {
+        "message": "แค่คุยกัน..."
+    },
+    "translate": {
+        "message": "แปล"
+    },
+    "settings": {
+        "message": "การตั้งค่า"
+    },
+    "ollamaHostLabel": {
+        "message": "URL API"
+    },
+    "modelNameLabel": {
+        "message": "ชื่อโมเดล"
+    },
+    "tranPromptLabel": {
+        "message": "พร้อมท์การแปล"
+    },
+    "expBaseData": {
+        "message": "การกำหนดค่าพื้นฐาน"
+    },
+    "expInsightTasks": {
+        "message": "การกำหนดค่าสูตรข้อมูลเชิงลึก"
+    },
+    "expCssSelector": {
+        "message": "การกำหนดค่าจุดยึดเนื้อหา"
+    },
+    "expScenarioPresets": {
+        "message": "การกำหนดค่าสถานการณ์การแชท"
+    },
+    "expInsightData": {
+        "message": "ข้อมูลเชิงลึก"
+    },
+    "expChatRecords": {
+        "message": "บันทึกการแชท"
+    },
+    "save": {
+        "message": "บันทึก"
+    },
+    "close": {
+        "message": "ปิด"
+    },
+    "add": {
+        "message": "เพิ่ม"
+    },
+    "import": {
+        "message": "นำเข้า"
+    },
+    "export" :{
+        "message": "ส่งออก"
+    },
+    "clear" : {
+        "message": "ล้าง"
+    },
+    "confirm": {
+        "message": "ยืนยัน"
+    },
+    "cancel":{
+        "message": "ยกเลิก"
+    },
+    "saveSuccessMessage": {
+        "message": "บันทึกสำเร็จ"
+    },
+    "importSuccessMessage": {
+        "message": "นำเข้าสำเร็จ"
+    },
+    "importFailMessage": {
+        "message": "นำเข้าล้มเหลว"
+    },
+    "getModuleListFailMessage":{
+        "message": "ไม่สามารถรับรายการโมเดลได้"
+    },
+    "tranPrompt": {
+        "message": "โปรดเขียนประโยคหรือคำที่ผู้ใช้ให้มาใหม่ หากผู้ใช้ให้มาเป็นภาษาอื่นที่ไม่ใช่ {localLanguage} ให้เขียนเนื้อหาที่ผู้ใช้ให้มาใหม่เป็น {localLanguage} มิฉะนั้นให้เขียนใหม่เป็นภาษาอังกฤษ หมายเหตุ: ต้องเคารพความหมายเดิมเมื่อเขียนใหม่"
+    },
+    "translateWaitMessage": {
+        "message": "กำลังแปล โปรดรอสักครู่..."
+    },
+    "cllamaError": {
+        "message": "ขออภัย ฉันพบปัญหาบางอย่ง โปรดลองอีกครั้งในภายหลัง หรือตรวจสอบว่าข้อมูลการกำหนดค่า cllama ของคุณถูกต้องหรือไม่"
+    },
+    "urlPrefixError":{
+        "message": "คำนำหน้า URL ไม่ถูกต้อง ต้องขึ้นต้นด้วย http หรือ https"
+    },
+    "waitMessage": {
+        "message": "กำลังคิด โปรดรอสักครู่..."
+    },
+    "confirmClearChat": {
+        "message": "คุณยืนยันที่จะลบบันทึกการสนทนานี้หรือไม่?"
+    },
+    "insightifyPageError1": {
+        "message": "ชื่อเรื่องและเนื้อหาว่างเปล่า ไม่สามารถสร้างข้อมูลที่เกี่ยวข้องกับหน้าเว็บได้"
+    },
+    "insightifyPageError2": {
+        "message": "ไม่สามารถประมวลผลข้อมูลหน้านี้ได้ หากคุณยืนยันว่าหน้าเว็บไม่มีปัญหา โปรดรีเฟรชและลองอีกครั้ง"
+    },
+    "summarizer": {
+        "message": "สรุป"
+    },
+    "summaryPrompt": {
+        "message": "โปรดสร้างสรุปสั้นๆ ตามเนื้อหาข้อมูลหน้าเว็บที่ให้มา ข้อกำหนด: 1. ไม่เกิน 300 คำ 2. สร้างข้อมูลสรุปเป็น {localLanguage} เสมอ"
+    },
+    "requiredError":{
+        "message": "รายการที่จำเป็นต้องไม่ว่างเปล่า"
+    },
+    "exportOptionEmptyError":{
+        "message": "โปรดเลือกตัวเลือกการส่งออกอย่างน้อยหนึ่งรายการ"
+    },
+    "importPromptMsg1":{
+        "message": "โปรดเลือกไฟล์ข้อมูล cllama ของคุณเพื่อดำเนินการนำเข้า"
+    },
+    "importPromptMsg2":{
+        "message": "คลิกเพื่อเลือกไฟล์"
+    },
+    "importPromptMsg3":{
+        "message": "รองรับเฉพาะไฟล์รูปแบบ \".json\" เท่านั้น"
+    },
+    "importWarnMsg1":{
+        "message": "หมายเหตุ: การนำเข้าจะเขียนทับข้อมูลเดิมบางส่วน"
+    },
+    "importFailMsg1":{
+        "message": "นำเข้าล้มเหลว: ข้อมูลในไฟล์ไม่มีข้อมูล cllama"
+    },
+    "noUpdateDataError":{
+        "message": "ไม่พบข้อมูลที่จะอัปเดต"
+    },
+    "directorExample1_name":{
+        "message": "การสร้างพร้อมท์โมเดลภาษาขนาดใหญ่"
+    },
+    "directorExample1_prompt":{
+        "message": "คุณเป็นผู้เชี่ยวชาญด้านการสร้างพร้อมท์โมเดลภาษาขนาดใหญ่ โปรดเขียนพร้อมท์สำหรับผู้ช่วยอัจฉริยะตามความต้องการของผู้ใช้ เพื่อแนะนำโมเดลภาษาขนาดใหญ่ในการสร้างเนื้อหา ข้อกำหนด:\n 1. ส่งออกในรูปแบบ Markdown\n 2. สอดคล้องกับความต้องการของผู้ใช้ อธิบายตำแหน่ง ความสามารถ และความรู้ของผู้ช่วยอัจฉริยะ\n 3. พร้อมท์ควรชัดเจน แม่นยำ และเข้าใจง่าย กระชับที่สุดเท่าที่จะทำได้ในขณะที่ยังคงคุณภาพ\n 4. ส่งออกเฉพาะพร้อมท์ ไม่ต้องมีคำอธิบายเพิ่มเติม"
+    },
+    "directorExample1_sample":{
+        "message": "โปรดช่วยฉันสร้างพร้อมท์สำหรับ 'ที่ปรึกษากฎหมาย'"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "ความคิดสร้างสรรค์ (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "ค่าที่สูงขึ้นทำให้การตอบสนองสุ่มและสร้างสรรค์มากขึ้น; ค่าที่ต่ำลงทำให้การตอบสนองมีเสถียรภาพและเน้นมากขึ้น"
+    },
+    "apiSettingsFocusLabel": {
+        "message": "โฟกัส (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "ค่าที่สูงขึ้นทำให้การตอบสนองไม่เป็นไปตามแบบแผนมากขึ้น; ค่าที่ต่ำลงทำให้การตอบสนองอนุรักษ์นิยมและเป็นไปตามแบบแผนมากขึ้น"
+    },
+    "apiSettingsResetButton": {
+        "message": "รีเซ็ต"
+    },
+    "apiSettingsSaveButton": {
+        "message": "บันทึกการตั้งค่า"
+    },
+    "confirmDelete": {
+        "message": "คุณแน่ใจหรือไม่ว่าต้องการลบ? หมายเหตุ: การดำเนินการนี้ไม่สามารถยกเลิกได้"
+    },
+    "fish_title": {
+        "message": "โหมดสนทนาแบบไม่มีหน่วยความจำ"
+    },
+    "copy": {
+        "message": "คัดลอก",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "ลบ",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "คัดลอกแล้ว!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "หากเลือก ให้ส่งไฟล์นี้ไปยังบริการ AI",
+        "description": "Activate button title"
+    }
+}

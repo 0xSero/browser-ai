@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap.css">
+  <link rel="stylesheet" type="text/css" href="/css/github-markdown-light.css">
+  <link rel="stylesheet" type="text/css" href="/css/katex.css">
+  <link rel="stylesheet" type="text/css" href="/css/cllama.css">
+  <link rel="stylesheet" type="text/css" href="chat.css">
+  <script src="/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="send" viewBox="0 0 512 512">
+      <path d="M16.1 260.2c-22.6 12.9-20.5 47.3 3.6 57.3L160 376l0 103.3c0 18.1 14.6 32.7 32.7 32.7c9.7 0 18.9-4.3 25.1-11.8l62-74.3 123.9 51.6c18.9 7.9 40.8-4.5 43.9-24.7l64-416c1.9-12.1-3.4-24.3-13.5-31.2s-23.3-7.5-34-1.4l-448 256zm52.1 25.5L409.7 90.6 190.1 336l1.2 1L68.2 285.7zM403.3 425.4L236.7 355.9 450.8 116.6 403.3 425.4z"/>
+    </symbol>
+    <symbol id="image" viewBox="0 0 512 512">
+      <path d="M448 80c8.8 0 16 7.2 16 16l0 319.8-5-6.5-136-176c-4.5-5.9-11.6-9.3-19-9.3s-14.4 3.4-19 9.3L202 340.7l-30.5-42.7C167 291.7 159.8 288 152 288s-15 3.7-19.5 10.1l-80 112L48 416.3l0-.3L48 96c0-8.8 7.2-16 16-16l384 0zM64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64L64 32zm80 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"  fill="gray" />
+    </symbol>
+    <symbol id="stop" viewBox="0 0 512 512">
+      <path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm224-72l0 144c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-144c0-13.3 10.7-24 24-24s24 10.7 24 24zm112 0l0 144c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-144c0-13.3 10.7-24 24-24s24 10.7 24 24z"/>
+    </symbol>
+    <symbol id="svg_copy" viewBox="0 0 448 512">
+      <path d="M208 0L332.1 0c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9L448 336c0 26.5-21.5 48-48 48l-192 0c-26.5 0-48-21.5-48-48l0-288c0-26.5 21.5-48 48-48zM48 128l80 0 0 64-64 0 0 256 192 0 0-32 64 0 0 48c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 176c0-26.5 21.5-48 48-48z"/>
+    </symbol>
+    <symbol id="svg_download" viewBox="0 0 512 512">
+      <path d="M64 0C28.7 0 0 28.7 0 64L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-288-128 0c-17.7 0-32-14.3-32-32L224 0 64 0zM256 0l0 128 128 0L256 0zM216 232l0 102.1 31-31c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-72 72c-9.4 9.4-24.6 9.4-33.9 0l-72-72c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l31 31L168 232c0-13.3 10.7-24 24-24s24 10.7 24 24z"/>
+    </symbol>
+    <symbol id="svg_run" viewBox="0 0 512 512">
+      <path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c7.6-4.2 16.8-4.1 24.3 .5l144 88c7.1 4.4 11.5 12.1 11.5 20.5s-4.4 16.1-11.5 20.5l-144 88c-7.4 4.5-16.7 4.7-24.3 .5s-12.3-12.2-12.3-20.9l0-176c0-8.7 4.7-16.7 12.3-20.9z"/>
+    </symbol>
+		<symbol id="svg_check" viewBox="0 0 16 16">
+		  <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+		</symbol>
+		<symbol id="svg_trash" viewBox="0 0 448 512">
+		  <path d="M170.5 51.6L151.5 80l145 0-19-28.4c-1.5-2.2-4-3.6-6.7-3.6l-93.7 0c-2.7 0-5.2 1.3-6.7 3.6zm147-26.6L354.2 80 368 80l48 0 8 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-8 0 0 304c0 44.2-35.8 80-80 80l-224 0c-44.2 0-80-35.8-80-80l0-304-8 0c-13.3 0-24-10.7-24-24S10.7 80 24 80l8 0 48 0 13.8 0 36.7-55.1C140.9 9.4 158.4 0 177.1 0l93.7 0c18.7 0 36.2 9.4 46.6 24.9zM80 128l0 304c0 17.7 14.3 32 32 32l224 0c17.7 0 32-14.3 32-32l0-304L80 128zm80 64l0 208c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-208c0-8.8 7.2-16 16-16s16 7.2 16 16zm80 0l0 208c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-208c0-8.8 7.2-16 16-16s16 7.2 16 16zm80 0l0 208c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-208c0-8.8 7.2-16 16-16s16 7.2 16 16z"/>
+		</symbol>
+		<symbol id="svg_new" viewBox="0 0 448 512">
+		  <path d="M320 464c8.8 0 16-7.2 16-16l0-288-80 0c-17.7 0-32-14.3-32-32l0-80L64 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16l256 0zM0 64C0 28.7 28.7 0 64 0L229.5 0c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3L384 448c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64z"/>
+		</symbol>
+		<symbol id="svg_settings" viewBox="0 0 512 512">
+		  <path d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 128a32 32 0 1 1 0-64 32 32 0 1 1 0 64zm73.3-64C253 35.7 224.8 16 192 16s-61 19.7-73.3 48L32 64C14.3 64 0 78.3 0 96s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 128c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 64z"/>
+		</symbol>
+		<symbol id="svg_fish" viewBox="0 0 576 512">
+		  <path d="M180.5 141.5C219.7 108.5 272.6 80 336 80s116.3 28.5 155.5 61.5c39.1 33 66.9 72.4 81 99.8c4.7 9.2 4.7 20.1 0 29.3c-14.1 27.4-41.9 66.8-81 99.8C452.3 403.5 399.4 432 336 432s-116.3-28.5-155.5-61.5c-16.2-13.7-30.5-28.5-42.7-43.1L48.1 379.6c-12.5 7.3-28.4 5.3-38.7-4.9S-3 348.7 4.2 336.1L50 256 4.2 175.9c-7.2-12.6-5-28.4 5.3-38.6s26.1-12.2 38.7-4.9l89.7 52.3c12.2-14.6 26.5-29.4 42.7-43.1zM448 256a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"/>
+		</symbol>  
+		<symbol id="svg_atta" viewBox="0 0 576 512">
+		  <path d="M364.2 83.8c-24.4-24.4-64-24.4-88.4 0l-184 184c-42.1 42.1-42.1 110.3 0 152.4s110.3 42.1 152.4 0l152-152c10.9-10.9 28.7-10.9 39.6 0s10.9 28.7 0 39.6l-152 152c-64 64-167.6 64-231.6 0s-64-167.6 0-231.6l184-184c46.3-46.3 121.3-46.3 167.6 0s46.3 121.3 0 167.6l-176 176c-28.6 28.6-75 28.6-103.6 0s-28.6-75 0-103.6l144-144c10.9-10.9 28.7-10.9 39.6 0s10.9 28.7 0 39.6l-144 144c-6.7 6.7-6.7 17.7 0 24.4s17.7 6.7 24.4 0l176-176c24.4-24.4 24.4-64 0-88.4z"/>
+		</symbol>       
+  </svg>
+<div class="category-container">
+  <div class="row" style="height: 36px;">
+    <div class="col">
+      <div class="input-group input-group-sm mb-3">
+        <button class="btn btn-outline-primary dropdown-toggle i18n" type="button" data-bs-toggle="dropdown" aria-expanded="false">scenario</button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item i18n" href="aidirector.html">ScenarioManage</a></li>
+        </ul>
+        <select class="form-select form-select-sm" id="chatCategory">
+          <option selected>...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+<hr />
+<div class="container-fluid" style="--bs-gutter-x: 0rem;">
+
+    <div class="chat-container" id="messages">
+
+    </div>
+
+    <div class="input-container">
+      <div style="display: flex;justify-content:space-between; margin-bottom: 5px;">
+
+        <div class="btn-group" role="group">
+          <a id="b_clear" class="btn btn-sm btn-outline-secondary" href="#" style="border: 0px;">
+            <svg class="bi theme-icon-active" style="width:1.3em;height:1.3em;"><use href="#svg_trash"></use></svg>
+          </a>
+          <a id="b_new" class="btn btn-sm btn-outline-secondary" href="#" style="border: 0px;">
+            <svg class="bi theme-icon-active" style="width:1.3em;height:1.3em;"><use href="#svg_new"></use></svg>
+          </a>
+          <a id="b_fish" title="__MSG_fish_title__" class="btn btn-sm btn-outline-secondary" href="#" style="border: 0px;">
+            <svg class="bi theme-icon-active" style="width:1.3em;height:1.3em;"><use href="#svg_fish"></use></svg>
+          </a>          
+          <a id="b_apiSettings" class="btn btn-sm btn-outline-secondary" href="#" style="border: 0px;" data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true">
+            <svg class="bi theme-icon-active" style="width:1.2em;height:1.2em;vertical-align:-.135em;"><use href="#svg_settings"></use></svg>
+          </a>
+        </div>
+
+        <div id="chat_records" class="btn-group" role="group">
+          <a class="btn btn-sm btn-outline-secondary" href="#">01</a>
+        </div>
+
+      </div>
+
+      <!-- Text Input Area -->
+      <div class="input-group">
+        <textarea id="msgInput" class="form-control i18n"  i18n="placeholder" placeholder="inputMessage" rows="3"></textarea>
+      </div>
+
+      <!-- Function Bar -->
+      <div class="function-bar d-flex align-items-center p-2 border border-top-0 rounded-bottom">
+        <div class="d-flex align-items-center flex-grow-1">
+          <button class="btn btn-link p-1" id="b_image" title="Upload File"><svg class="theme-icon-active" width="1.2em" height="1.2em"><use href="#svg_atta"></use></svg></button>
+          <input type="file" id="imageUpload" accept="image/*, audio/*, video/*, application/pdf" style="display: none;" />
+          <div id="modelServer" class="p-1" style="margin-left: 3px;">&nbsp;</div> :
+          <div id="modelSelectDiv" class="dropup-center dropup" style="display: none;">
+            <button class="btn btn-link p-1 dropdown-toggle" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration:none;max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              GPT-4
+            </button>
+            <ul id="modelList" class="dropdown-menu scrollable" aria-labelledby="modelDropdown">
+              <li><a class="dropdown-item" href="#">GPT-4</a></li>
+              <li><a class="dropdown-item" href="#">GPT-3.5</a></li>
+              <li><a class="dropdown-item" href="#">Claude</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <button id="sendBtn" class="btn btn-sm btn-primary px-4">
+          <svg class="bi theme-icon-active"><use href="#send" id="send_img"></use></svg>
+        </button>
+        <button id="cancelBtn" class="btn btn-sm btn-primary px-4" hidden>
+          <svg class="bi theme-icon-active"><use href="#stop" id="send_img"></use></svg>
+        </button>
+      </div>
+    </div>
+</div>
+<script src="chat.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.ucaction{
+    width: 50px;
+    text-align: right;
+}
+
+table {
+    user-select: text !important;
+}

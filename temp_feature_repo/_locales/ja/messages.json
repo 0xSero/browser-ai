@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"日本語"
+    },
+    "browserActionTitle": {
+        "message": "スマートブラウジングアシスタント - cllama"
+    },
+    "cllamaDescription": {
+        "message": "スマートブラウザアシスタント：カスタマイズ可能なコンテンツ分析＋多シーンAI対話＋多言語翻訳。Ollamaローカル及び主要AIサービス(OpenAI/DeepSeek/智譜)に対応、プライバシー保護。"
+    },
+    "inputMessage": {
+        "message": "メッセージを入力...",
+        "description": "メッセージ入力欄のプレースホルダーテキスト"
+    },
+    "Insightify": {
+        "message": "詳細分析"
+    },
+    "urlCssSelector":{
+        "message": "コンテンツアンカー"
+    },
+    "urlCssSelectorDesc":{
+        "message": "コンテンツアンカーはCSSセレクターを使用してページの主要なコンテンツを正確に特定します"
+    },
+    "urlPrefix": {
+        "message": "URLプレフィックス"
+    },
+    "cssSelector":{
+        "message": "CSSセレクター"
+    },
+    "InsightRecipes":{
+        "message": "分析レシピ"
+    },
+    "name":{
+        "message": "名前"
+    },
+    "Prompt":{
+        "message": "プロンプト"
+    },
+    "wordsRemaining": {
+        "message": "残り文字数"
+    },
+    "chat": {
+        "message": "スマートチャット"
+    },
+    "scenario": {
+        "message" : "シナリオ"
+    },
+    "ScenarioManage": {
+        "message" : "シナリオ管理"
+    },
+    "inputSample": {
+        "message": "入力サンプル"
+    },
+    "chatOnly": {
+        "message": "自由にチャット..."
+    },
+    "translate": {
+        "message": "翻訳"
+    },
+    "settings": {
+        "message": "設定"
+    },
+    "ollamaHostLabel": {
+        "message": "API URL"
+    },
+    "modelNameLabel": {
+        "message": "モデル名"
+    },
+    "tranPromptLabel": {
+        "message": "翻訳プロンプト"
+    },
+    "expBaseData": {
+        "message": "基本設定"
+    },
+    "expInsightTasks": {
+        "message": "分析レシピ設定"
+    },
+    "expCssSelector": {
+        "message": "コンテンツアンカー設定"
+    },
+    "expScenarioPresets": {
+        "message": "チャットシナリオ設定"
+    },
+    "expInsightData": {
+        "message": "詳細分析データ"
+    },
+    "expChatRecords": {
+        "message": "チャット記録"
+    },
+    "save": {
+        "message": "保存"
+    },
+    "close": {
+        "message": "閉じる"
+    },
+    "add": {
+        "message": "追加"
+    },
+    "import": {
+        "message": "インポート"
+    },
+    "export" :{
+        "message": "エクスポート"
+    },
+    "clear" : {
+        "message": "クリア"
+    },
+    "confirm": {
+        "message": "確認"
+    },
+    "cancel":{
+        "message": "キャンセル"
+    },
+    "saveSuccessMessage": {
+        "message": "保存に成功しました"
+    },
+    "importSuccessMessage": {
+        "message": "インポートに成功しました"
+    },
+    "importFailMessage": {
+        "message": "インポートに失敗しました"
+    },
+    "getModuleListFailMessage":{
+        "message": "モデルリストの取得に失敗しました"
+    },
+    "tranPrompt": {
+        "message": "ユーザーから与えられた文章や単語を書き換えてください。ユーザーが{localLanguage}以外の言語を提供した場合は{localLanguage}で書き換え、それ以外の場合は英語で書き換えてください。注意：書き換え時には元の意味を尊重する必要があります。"
+    },
+    "translateWaitMessage": {
+        "message": "翻訳中です。少々お待ちください..."
+    },
+    "cllamaError": {
+        "message": "申し訳ありませんが、問題が発生しました。後でもう一度試すか、cllamaの設定情報が正しいか確認してください。"
+    },
+    "urlPrefixError":{
+        "message": "URLプレフィックスが正しくありません。httpまたはhttpsで始まる必要があります"
+    },
+    "waitMessage": {
+        "message": "処理中です。少々お待ちください..."
+    },
+    "insightifyPageError1": {
+        "message": "タイトルとコンテンツが空です。ページ関連情報を生成できません。"
+    },
+    "insightifyPageError2": {
+        "message": "このページ情報を処理できません。ページに問題がないことを確認した場合は、更新してもう一度試してください。"
+    },
+    "summarizer": {
+        "message": "要約"
+    },
+    "summaryPrompt": {
+        "message": "指定されたページ情報の内容に基づいて簡潔な要約を生成してください。要件：1. 最大300文字。2. 常に{localLanguage}で要約情報を生成します。"
+    },
+    "requiredError":{
+        "message": "必須項目は空にできません"
+    },
+    "exportOptionEmptyError":{
+        "message": "少なくとも1つのエクスポートオプションを選択してください"
+    },
+    "importPromptMsg1":{
+        "message": "cllamaデータファイルを選択してインポート処理を行ってください"
+    },
+    "importPromptMsg2":{
+        "message": "ファイルを選択"
+    },
+    "importPromptMsg3":{
+        "message": "\".json\"形式のファイルのみサポートしています"
+    },
+    "importWarnMsg1":{
+        "message": "注意：インポートすると既存のデータの一部が上書きされます。"
+    },
+    "importFailMsg1":{
+        "message": "インポートに失敗しました：ファイルにcllamaデータが含まれていません。"
+    },
+    "noUpdateDataError":{
+        "message": "更新するデータが見つかりませんでした"
+    },
+    "directorExample1_name":{
+        "message": "LLMプロンプト生成"
+    },
+    "directorExample1_prompt":{
+        "message": "あなたはLLMプロンプト生成の専門家です。ユーザーの要求に基づいて、コンテンツ生成を導くスマートアシスタントのプロンプトを作成してください。要件：\n 1. Markdown形式で出力\n 2. ユーザーの要求に沿って、スマートアシスタントの位置付け、能力、知識を記述\n 3. プロンプトは明確で正確、理解しやすく、品質を保ちつつ可能な限り簡潔に\n 4. プロンプトのみを出力し、余分な説明は不要"
+    },
+    "directorExample1_sample":{
+        "message": "「法律顧問」のプロンプトを生成してください"
+    },
+    "confirmClearChat": {
+        "message": "このチャットを削除しますか？"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "創造性 (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "値が高いほど応答がランダムで創造的になります。値が低いほど安定して集中的になります。"
+    },
+    "apiSettingsFocusLabel": {
+        "message": "フォーカス (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "値が高いほど応答が非伝統的になります。値が低いほど保守的で伝統的になります。"
+    },
+    "apiSettingsResetButton": {
+        "message": "リセット"
+    },
+    "apiSettingsSaveButton": {
+        "message": "設定を保存"
+    },
+    "confirmDelete": {
+        "message": "本当に削除しますか？注意：この操作は元に戻せません。"
+    },
+    "fish_title": {
+        "message": "記憶なし会話モード"
+    },
+    "copy": {
+        "message": "コピー",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "削除",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "コピーしました！",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "選択した場合、このファイルをAIサービスに送信",
+        "description": "Activate button title"
+    }
+}

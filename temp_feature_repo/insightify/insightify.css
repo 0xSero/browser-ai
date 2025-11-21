@@ -1,0 +1,127 @@
+.container {
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.mt-3 {
+    margin-top: 0rem !important;
+}
+
+.right {
+    text-align: right;
+}
+
+.b_action {
+    margin-top: 2px;
+    margin-bottom: 3px;
+}
+
+#summaryList {
+    margin-top: 20px;
+}
+
+.summary-card {
+    border-radius: 3px;
+    padding: 0.8rem;
+    margin-bottom: 8px;
+    user-select: text !important;
+}
+
+.summary-card:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.entry-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    max-width: 96%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.entry-title::after {
+    content: "...";
+    position: absolute;
+    right: 0;
+    bottom: -1.5rem;
+    transform: translateX(-10%);
+    color: transparent;
+    transition: color 0.2s ease;
+}
+
+.entry-title:hover::after {
+    color: #495057;
+}
+
+.summary-content {
+    margin-top: 0.5rem;
+    background-color: transparent !important;
+}
+
+.think{
+    color: gray;
+    border-left: 2px solid gray;
+    padding-left: 10px;
+}
+
+.timestamp {
+    color: #8d97a4;
+    font-size: 0.85rem;
+    display: block;
+    margin-top: 0.8rem;
+    padding-left: 0.75rem;
+}
+
+.trash {
+    display: none;
+    margin-top: 0.5rem;
+    padding-left: 0.75rem;
+}
+
+.title-mask {
+    white-space:
+    nowrap;
+    text-overflow: ellipsis;
+    mask-image: linear-gradient(to right,black 60%,transparent 100%);
+}
+
+/* 标题超过宽度时的全屏显示 */
+.entry-title-full {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.code-container {
+    margin-top: 20px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 20px;
+}
+.toolbar {
+    padding: 8px 15px;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 5px 5px 0 0;
+}
+.btn-toolbar {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+}
+
+
+.bi {
+	width: 1em;
+	height: 1em;
+	vertical-align: -.125em;
+	fill: currentcolor;
+  }

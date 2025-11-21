@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"English"
+    },
+    "browserActionTitle": {
+        "message": "Smart Browsing Assistant - cllama"
+    },
+    "cllamaDescription": {
+        "message": "Customizable depth insights + multi-scenario AI chat + multilingual translation. Supports Ollama & major AI services(OpenAI/Gemini)"
+    },
+    "inputMessage": {
+        "message": "Please enter a message...",
+        "description": "Message input box placeholder text"
+    },
+    "Insightify": {
+        "message": "Deep Insight"
+    },
+    "urlCssSelector":{
+        "message": "Content Anchor"
+    },
+    "urlCssSelectorDesc":{
+        "message": "Content anchor uses CSS selectors to more accurately match page core content"
+    },
+    "urlPrefix": {
+        "message": "URL Prefix"
+    },
+    "cssSelector":{
+        "message": "CSS Selector"
+    },
+    "InsightRecipes":{
+        "message": "Insight Recipes"
+    },
+    "name":{
+        "message": "Name"
+    },
+    "Prompt":{
+        "message": "Prompt"
+    },
+    "wordsRemaining": {
+        "message": "Words remaining"
+    },
+    "chat": {
+        "message": "Smart Chat"
+    },
+    "scenario": {
+        "message" : "Scenario"
+    },
+    "ScenarioManage": {
+        "message" : "Scenario Management"
+    },
+    "inputSample": {
+        "message": "Input Sample"
+    },
+    "chatOnly": {
+        "message": "Chat freely..."
+    },
+    "translate": {
+        "message": "Translate"
+    },
+    "settings": {
+        "message": "Settings"
+    },
+    "ollamaHostLabel": {
+        "message": "API URL"
+    },
+    "modelNameLabel": {
+        "message": "Model Name"
+    },
+    "tranPromptLabel": {
+        "message": "Translation Prompt"
+    },
+    "expBaseData": {
+        "message": "Basic Configuration"
+    },
+    "expInsightTasks": {
+        "message": "Insight Recipes Configuration"
+    },
+    "expCssSelector": {
+        "message": "Content Anchor Configuration"
+    },
+    "expScenarioPresets": {
+        "message": "Chat Scenario Configuration"
+    },
+    "expInsightData": {
+        "message": "Deep Insight Data"
+    },
+    "expChatRecords": {
+        "message": "Chat Records"
+    },
+    "save": {
+        "message": "Save"
+    },
+    "close": {
+        "message": "Close"
+    },
+    "add": {
+        "message": "Add"
+    },
+    "import": {
+        "message": "Import"
+    },
+    "export" :{
+        "message": "Export"
+    },
+    "clear" : {
+        "message": "Clear"
+    },
+    "confirm": {
+        "message": "Confirm"
+    },
+    "cancel":{
+        "message": "Cancel"
+    },
+    "saveSuccessMessage": {
+        "message": "Saved successfully"
+    },
+    "importSuccessMessage": {
+        "message": "Imported successfully"
+    },
+    "importFailMessage": {
+        "message": "Import failed"
+    },
+    "getModuleListFailMessage":{
+        "message": "Failed to get model list"
+    },
+    "tranPrompt": {
+        "message": "Rewrite the user-supplied sentences or words to make them simpler. Note: the original meaning must be respected when rewriting."
+    },
+    "translateWaitMessage": {
+        "message": "Translating, please wait..."
+    },
+    "cllamaError": {
+        "message": "Sorry, I encountered some problems. Please try again later or check if your cllama configuration information is correct."
+    },
+    "urlPrefixError":{
+        "message": "Incorrect URL prefix input, must start with http or https"
+    },
+    "waitMessage": {
+        "message": "Thinking, please wait..."
+    },
+    "insightifyPageError1": {
+        "message": "Title and content are empty, cannot generate page-related information."
+    },
+    "insightifyPageError2": {
+        "message": "Unable to process this page information. If you confirm the page is fine, please refresh and try again."
+    },
+    "summarizer": {
+        "message": "Summary"
+    },
+    "summaryPrompt": {
+        "message": "Please generate a brief summary based on the given page content. Requirements: 1. Maximum 300 words. 2. Always generate summary information in {localLanguage}."
+    },
+    "requiredError":{
+        "message": "Required field cannot be empty"
+    },
+    "exportOptionEmptyError":{
+        "message": "Please select at least one export option"
+    },
+    "importPromptMsg1":{
+        "message": "Please select your cllama data file for import"
+    },
+    "importPromptMsg2":{
+        "message": "Click to select file"
+    },
+    "importPromptMsg3":{
+        "message": "Only \".json\" format files are supported"
+    },
+    "importWarnMsg1":{
+        "message": "Note: Importing will overwrite some existing data."
+    },
+    "importFailMsg1":{
+        "message": "Import failed: No cllama data found in the file."
+    },
+    "noUpdateDataError":{
+        "message": "No data found to update"
+    },
+    "directorExample1_name":{
+        "message": "LLM Prompt Generation"
+    },
+    "directorExample1_prompt":{
+        "message": "You are an expert in LLM prompt generation. Please create a smart assistant prompt based on user requirements, guiding the LLM in content generation. Requirements:\n 1. Output in Markdown format\n 2. Align with user needs, describing the smart assistant's positioning, capabilities, and knowledge base\n 3. The prompt should be clear, precise, and easy to understand, as concise as possible while maintaining quality\n 4. Only output the prompt, no additional explanations"
+    },
+    "directorExample1_sample":{
+        "message": "Please help me generate a 'legal advisor' prompt"
+    },
+    "confirmClearChat": {
+        "message": "Clear this chat history?"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "Creativity (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "Higher values make responses more random and creative; lower values make them more stable and focused."
+    },
+    "apiSettingsFocusLabel": {
+        "message": "Focus (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "Higher values make responses more unconventional; lower values make them more conservative and conventional."
+    },
+    "apiSettingsResetButton": {
+        "message": "Reset"
+    },
+    "apiSettingsSaveButton": {
+        "message": "Save Settings"
+    },
+    "confirmDelete": {
+        "message": "Are you sure you want to delete? Note: This action cannot be undone."
+    },
+    "fish_title": {
+        "message": "Conversation Mode without Memory"
+    },
+    "copy": {
+        "message": "Copy",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "Delete",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "Copied!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "If selected, send this file to AI service",
+        "description": "Activate button title"
+    }
+}

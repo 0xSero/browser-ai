@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"한국어"
+    },
+    "browserActionTitle": {
+        "message": "스마트 브라우징 도우미 - cllama"
+    },
+    "cllamaDescription": {
+        "message": "스마트 브라우징 도우미: 사용자 정의 가능한 심층 콘텐츠 분석 + 다중 시나리오 스마트 대화 + 다국어 번역, 로컬 Ollama 및 주류 AI(예: OpenAI, DeepSeek, Zhipu)."
+    },
+    "inputMessage": {
+        "message": "메시지 입력...",
+        "description": "메시지 입력 상자 자리 표시자 텍스트"
+    },
+    "Insightify": {
+        "message": "심층 통찰"
+    },
+    "urlCssSelector":{
+        "message": "콘텐츠 앵커"
+    },
+    "urlCssSelectorDesc":{
+        "message": "콘텐츠 앵커는 CSS 선택기를 구성하여 페이지 핵심 콘텐츠를 더 정확하게 일치시키는 것입니다."
+    },
+    "urlPrefix": {
+        "message": "URL 접두사"
+    },
+    "cssSelector":{
+        "message": "CSS 선택기"
+    },
+    "InsightRecipes":{
+        "message": "통찰 레시피"
+    },
+    "name":{
+        "message": "이름"
+    },
+    "Prompt":{
+        "message": "프롬프트"
+    },
+    "wordsRemaining": {
+        "message": "남은 단어 수"
+    },
+    "chat": {
+        "message": "스마트 대화"
+    },
+    "scenario": {
+        "message" : "시나리오"
+    },
+    "ScenarioManage": {
+        "message" : "시나리오 관리"
+    },
+    "inputSample": {
+        "message": "입력 예시"
+    },
+    "chatOnly": {
+        "message": "그냥 대화..."
+    },
+    "translate": {
+        "message": "번역"
+    },
+    "settings": {
+        "message": "설정"
+    },
+    "ollamaHostLabel": {
+        "message": "API URL"
+    },
+    "modelNameLabel": {
+        "message": "모델 이름"
+    },
+    "tranPromptLabel": {
+        "message": "번역 프롬프트"
+    },
+    "expBaseData": {
+        "message": "기본 구성"
+    },
+    "expInsightTasks": {
+        "message": "통찰 레시피 구성"
+    },
+    "expCssSelector": {
+        "message": "콘텐츠 앵커 구성"
+    },
+    "expScenarioPresets": {
+        "message": "채팅 시나리오 구성"
+    },
+    "expInsightData": {
+        "message": "심층 통찰 데이터"
+    },
+    "expChatRecords": {
+        "message": "채팅 기록"
+    },
+    "save": {
+        "message": "저장"
+    },
+    "close": {
+        "message": "닫기"
+    },
+    "add": {
+        "message": "추가"
+    },
+    "import": {
+        "message": "가져오기"
+    },
+    "export" :{
+        "message": "내보내기"
+    },
+    "clear" : {
+        "message": "지우기"
+    },
+    "confirm": {
+        "message": "확인"
+    },
+    "cancel":{
+        "message": "취소"
+    },
+    "saveSuccessMessage": {
+        "message": "저장 성공"
+    },
+    "importSuccessMessage": {
+        "message": "가져오기 성공"
+    },
+    "importFailMessage": {
+        "message": "가져오기 실패"
+    },
+    "getModuleListFailMessage":{
+        "message": "모델 목록 가져오기 실패"
+    },
+    "tranPrompt": {
+        "message": "사용자가 제공한 문장이나 단어를 다시 작성하십시오. 사용자가 {localLanguage} 이외의 다른 언어로 제공한 경우 사용자가 제공한 내용을 {localLanguage} 로 다시 작성하고, 그렇지 않으면 영어로 다시 작성하십시오. 참고: 다시 작성할 때 원본 의미를 존중해야 합니다."
+    },
+    "translateWaitMessage": {
+        "message": "번역 중입니다. 잠시 기다려 주십시오..."
+    },
+    "cllamaError": {
+        "message": "죄송합니다. 문제가 발생했습니다. 나중에 다시 시도하거나 cllama 구성 정보가 올바른지 확인하십시오."
+    },
+    "urlPrefixError":{
+        "message": "URL 접두사가 올바르지 않습니다. http 또는 https로 시작해야 합니다."
+    },
+    "waitMessage": {
+        "message": "생각 중입니다. 잠시 기다려 주십시오..."
+    },
+    "confirmClearChat": {
+        "message": "이 대화 기록을 삭제하시겠습니까?"
+    },
+    "insightifyPageError1": {
+        "message": "제목과 내용이 비어 있어 페이지 관련 정보를 생성할 수 없습니다."
+    },
+    "insightifyPageError2": {
+        "message": "이 페이지 정보를 처리할 수 없습니다. 페이지에 문제가 없음을 확인한 경우 새로 고침하고 다시 시도하십시오."
+    },
+    "summarizer": {
+        "message": "요약"
+    },
+    "summaryPrompt": {
+        "message": "제공된 페이지 정보 내용을 기반으로 짧은 요약을 생성하십시오. 요구 사항: 1. 최대 300자. 2. 항상 {localLanguage} 로 요약 정보를 생성하십시오."
+    },
+    "requiredError":{
+        "message": "필수 항목은 비워 둘 수 없습니다."
+    },
+    "exportOptionEmptyError":{
+        "message": "하나 이상의 내보내기 옵션을 선택하십시오."
+    },
+    "importPromptMsg1":{
+        "message": "가져오기 처리를 위해 cllama 데이터 파일을 선택하십시오."
+    },
+    "importPromptMsg2":{
+        "message": "파일 선택 클릭"
+    },
+    "importPromptMsg3":{
+        "message": "\".json\" 형식 파일만 지원합니다."
+    },
+    "importWarnMsg1":{
+        "message": "참고: 가져오기는 일부 원본 데이터를 덮어씁니다."
+    },
+    "importFailMsg1":{
+        "message": "가져오기 실패: 파일의 데이터에 cllama 데이터가 없습니다."
+    },
+    "noUpdateDataError":{
+        "message": "업데이트할 데이터를 찾을 수 없습니다."
+    },
+    "directorExample1_name":{
+        "message": "대규모 언어 모델 프롬프트 생성"
+    },
+    "directorExample1_prompt":{
+        "message": "당신은 대규모 언어 모델 프롬프트 생성 전문가입니다. 사용자의 요구에 따라 스마트 도우미의 프롬프트를 작성하여 대규모 언어 모델이 콘텐츠를 생성하도록 안내하십시오. 요구 사항:\n 1. Markdown 형식으로 출력\n 2. 사용자의 요구에 부합하고 스마트 도우미의 위치, 능력, 지식 보유량을 설명\n 3. 프롬프트는 명확하고 정확하며 이해하기 쉬워야 하며, 품질을 유지하면서 최대한 간결해야 합니다.\n 4. 프롬프트만 출력하고 불필요한 설명은 출력하지 마십시오."
+    },
+    "directorExample1_sample":{
+        "message": "'법률 고문'에 대한 프롬프트를 생성해 주세요."
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "창의성 (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "값이 높을수록 응답이 더 무작위적이고 창의적입니다. 값이 낮을수록 더 안정적이고 집중적입니다."
+    },
+    "apiSettingsFocusLabel": {
+        "message": "초점 (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "값이 높을수록 응답이 더 비전통적입니다. 값이 낮을수록 더 보수적이고 전통적입니다."
+    },
+    "apiSettingsResetButton": {
+        "message": "초기화"
+    },
+    "apiSettingsSaveButton": {
+        "message": "설정 저장"
+    },
+    "confirmDelete": {
+        "message": "정말 삭제하시겠습니까? 참고: 이 작업은 되돌릴 수 없습니다."
+    },
+    "fish_title": {
+        "message": "기억 없는 대화 모드"
+    },
+    "copy": {
+        "message": "복사",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "삭제",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "복사되었습니다!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "선택 시 이 파일을 AI 서비스로 전송",
+        "description": "Activate button title"
+    }
+}

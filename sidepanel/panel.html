@@ -2,32 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Browser AI Agent</title>
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
+
   <div class="container">
-    <!-- Header -->
     <header class="header">
-      <h1>Browser AI Agent</h1>
-      <button id="settingsBtn" class="icon-btn" title="Settings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v6m0 6v6m0-18a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3 3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"></path>
-          <path d="m19.07 4.93-1.41 1.41M6.34 17.66l-1.41 1.41M19.07 19.07l-1.41-1.41M6.34 6.34 4.93 4.93"></path>
-        </svg>
-      </button>
+      <h1>Browser AI</h1>
+      <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
     </header>
+
+    <div class="tabs">
+      <button id="agentTabBtn" class="tab-btn active" data-tab="agent">Agent</button>
+      <button id="deepInsightTabBtn" class="tab-btn" data-tab="deep-insight">Deep-Insight</button>
+    </div>
+
+    <!-- Agent Tab Content -->
+    <div id="agentView" class="tab-content">
+      <div id="chatInterface">
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="tool-timeline" id="toolTimeline"></div>
+      </div>
+      <div class="input-area">
+        <textarea id="userInput" placeholder="Type your message..."></textarea>
+        <button id="sendBtn" class="send-btn">Send</button>
+      </div>
+    </div>
+
+    <!-- Deep-Insight Tab Content -->
+    <div id="deepInsightView" class="tab-content hidden">
+      <div class="deep-insight-container">
+        <p class="insight-description">Perform detailed analysis on the current page:</p>
+        <div class="insight-actions">
+          <button class="insight-btn" data-prompt="Summarize the key points of the current page.">Summarize Page</button>
+          <button class="insight-btn" data-prompt="Extract all the main headings from this page.">Extract Headings</button>
+          <button class="insight-btn" data-prompt="Analyze the tone and sentiment of the text on this page.">Analyze Tone</button>
+          <button class="insight-btn" data-prompt="Extract all links (URLs and their text) from the current page content.">Extract Links</button>
+          <button class="insight-btn" data-prompt="Identify and list any questions that are asked in the page content.">Find Questions</button>
+        </div>
+        <div id="insight-output" class="insight-output">
+          <!-- Insight results will be displayed here -->
+        </div>
+      </div>
+    </div>
 
     <!-- Settings Panel -->
     <div id="settingsPanel" class="settings-panel hidden">
-      <h2>Configuration</h2>
-
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">AI PROVIDER</h3>
-
+      <h2>Settings</h2>
+      
       <div class="form-group">
-        <label for="provider">Provider</label>
+        <label for="provider">AI Provider</label>
         <select id="provider">
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
@@ -37,149 +62,68 @@
 
       <div class="form-group">
         <label for="apiKey">API Key</label>
-        <input type="password" id="apiKey" placeholder="sk-...">
-        <small>Your API key is stored locally and never shared</small>
+        <input type="password" id="apiKey" placeholder="Enter your API key">
       </div>
 
       <div class="form-group">
         <label for="model">Model</label>
-        <input type="text" id="model" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
-        <small>Recommended: gpt-4o for OpenAI, claude-3-5-sonnet-20241022 for Anthropic</small>
+        <input type="text" id="model" placeholder="e.g., gpt-4o">
       </div>
 
-      <div class="form-group" id="customEndpointGroup" style="display: none;">
-        <label for="customEndpoint">Custom Endpoint</label>
-        <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1">
-        <small>Base URL for OpenAI-compatible API</small>
+      <div id="customEndpointGroup" class="form-group" style="display: none;">
+        <label for="customEndpoint">Custom Endpoint URL</label>
+        <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1/chat/completions">
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL PARAMETERS</h3>
+      <div class="form-group">
+        <label for="systemPrompt">System Prompt</label>
+        <textarea id="systemPrompt" rows="6"></textarea>
+      </div>
 
       <div class="form-group">
         <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
-        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-        <small>Controls randomness (0 = focused, 2 = creative)</small>
+        <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7">
       </div>
 
       <div class="form-group">
         <label for="maxTokens">Max Tokens</label>
-        <input type="number" id="maxTokens" min="1" max="4096" value="2048">
-        <small>Maximum response length</small>
+        <input type="number" id="maxTokens" value="2048">
       </div>
 
       <div class="form-group">
-        <label for="timeout">Request Timeout (ms)</label>
-        <input type="number" id="timeout" min="5000" step="1000" value="30000">
-        <small>Maximum time to wait for API response</small>
-      </div>
-
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SCREENSHOTS</h3>
-
-      <div class="form-group">
-        <label for="sendScreenshotsAsImages">Send screenshots as images</label>
-        <select id="sendScreenshotsAsImages">
-          <option value="true">Enabled (requires vision-capable model)</option>
-          <option value="false">Disabled (send as text)</option>
-        </select>
-        <small>When enabled, screenshots are sent as images to vision models like GPT-4o or Claude 3</small>
+        <label for="timeout">Timeout (ms)</label>
+        <input type="number" id="timeout" value="30000">
       </div>
 
       <div class="form-group">
-        <label for="screenshotQuality">Screenshot Quality</label>
-        <select id="screenshotQuality">
-          <option value="high">High (slower, better quality)</option>
-          <option value="low">Low (faster, smaller size)</option>
-        </select>
-      </div>
-
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">BEHAVIOR</h3>
-
-      <div class="form-group">
-        <label for="showThinking">Show AI thinking process</label>
+        <label for="showThinking">Show Thinking Process</label>
         <select id="showThinking">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
-        </select>
-        <small>Display the AI's reasoning before tool calls</small>
-      </div>
-
-      <div class="form-group">
-        <label for="autoScroll">Auto-scroll to latest message</label>
-        <select id="autoScroll">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
         </select>
       </div>
 
-      <div class="form-group">
-        <label for="confirmActions">Confirm dangerous actions</label>
-        <select id="confirmActions">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
-        </select>
-        <small>Show confirmation for actions like deleting history or closing tabs</small>
+      <hr>
+      <h3>Backup & Restore</h3>
+      <div class="form-group backup-restore">
+        <button id="exportSettingsBtn" class="btn">Export Settings</button>
+        <label class="btn" for="importSettingsInput">Import Settings</label>
+        <input type="file" id="importSettingsInput" accept=".json" style="display: none;">
       </div>
+      <hr>
 
-      <div class="form-group">
-        <label for="saveHistory">Save chat history</label>
-        <select id="saveHistory">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
-        </select>
-        <small>Store conversations locally (max 50 messages)</small>
-      </div>
-
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL CONFIGURATIONS</h3>
-
-      <div class="form-group">
-        <label>Active Configuration</label>
-        <div style="display: flex; gap: 8px;">
-          <select id="activeConfig" style="flex: 1;">
-            <option value="default">Default</option>
-          </select>
-          <button id="newConfigBtn" class="btn btn-secondary" style="min-width: 80px;">New</button>
-          <button id="deleteConfigBtn" class="btn btn-secondary" style="min-width: 80px;">Delete</button>
-        </div>
-        <small>Save and switch between different model configurations</small>
-      </div>
-
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SYSTEM PROMPT</h3>
-
-      <div class="form-group">
-        <label for="systemPrompt">System Prompt</label>
-        <textarea id="systemPrompt" rows="6" placeholder="You are a helpful browser automation assistant..."></textarea>
-        <small>Customize how the AI behaves and what tools it has access to</small>
-      </div>
-
-      <div class="button-group">
-        <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
-        <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+      <div class="settings-actions">
+        <button id="saveSettingsBtn" class="btn primary">Save</button>
+        <button id="cancelSettingsBtn" class="btn">Cancel</button>
       </div>
     </div>
 
-    <!-- Chat Interface -->
-    <div id="chatInterface" class="chat-interface">
-      <div id="statusBar" class="status-bar">
-        <span id="statusText">Ready</span>
-      </div>
-
-      <!-- Tool Timeline -->
-      <div id="toolTimeline" class="tool-timeline"></div>
-
-      <div id="chatMessages" class="chat-messages"></div>
-
-      <div class="input-area">
-        <textarea id="userInput" placeholder="Ask the AI to interact with the browser..." rows="3"></textarea>
-        <button id="sendBtn" class="icon-btn send-btn" title="Send message">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
-      </div>
-    </div>
+    <footer id="statusBar" class="status-bar">
+      <span id="statusText">Ready</span>
+    </footer>
   </div>
 
-  <script src="panel.js" type="module"></script>
+  <script src="lib/marked.min.js"></script>
+  <script src="panel.js"></script>
 </body>
 </html>

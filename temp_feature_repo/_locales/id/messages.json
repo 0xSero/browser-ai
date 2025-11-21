@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"Bahasa Indonesia"
+    },
+    "browserActionTitle": {
+        "message": "Asisten Penjelajahan Cerdas - cllama"
+    },
+    "cllamaDescription": {
+        "message": "Asisten Penjelajahan Cerdas: Analisis konten mendalam yang dapat disesuaikan + Dialog cerdas multi-skenario + Terjemahan multi-bahasa, mendukung layanan Ollama lokal dan AI(seperti OpenAI)."
+    },
+    "inputMessage": {
+        "message": "Masukkan pesan...",
+        "description": "Teks placeholder untuk kotak input pesan"
+    },
+    "Insightify": {
+        "message": "Wawasan Mendalam"
+    },
+    "urlCssSelector":{
+        "message": "Jangkar Konten"
+    },
+    "urlCssSelectorDesc":{
+        "message": "Jangkar konten adalah untuk mencocokkan konten inti halaman dengan lebih akurat dengan mengonfigurasi pemilih CSS"
+    },
+    "urlPrefix": {
+        "message": "Prefiks URL"
+    },
+    "cssSelector":{
+        "message": "Pemilih CSS"
+    },
+    "InsightRecipes":{
+        "message": "Resep Wawasan"
+    },
+    "name":{
+        "message": "Nama"
+    },
+    "Prompt":{
+        "message": "Prompt"
+    },
+    "wordsRemaining": {
+        "message": "Sisa Kata"
+    },
+    "chat": {
+        "message": "Dialog Cerdas"
+    },
+    "scenario": {
+        "message" : "Skenario"
+    },
+    "ScenarioManage": {
+        "message" : "Manajemen Skenario"
+    },
+    "inputSample": {
+        "message": "Contoh Input"
+    },
+    "chatOnly": {
+        "message": "Hanya obrolan..."
+    },
+    "translate": {
+        "message": "Terjemahkan"
+    },
+    "settings": {
+        "message": "Pengaturan"
+    },
+    "ollamaHostLabel": {
+        "message": "URL API"
+    },
+    "modelNameLabel": {
+        "message": "Nama Model"
+    },
+    "tranPromptLabel": {
+        "message": "Prompt Terjemahan"
+    },
+    "expBaseData": {
+        "message": "Konfigurasi Dasar"
+    },
+    "expInsightTasks": {
+        "message": "Konfigurasi Resep Wawasan"
+    },
+    "expCssSelector": {
+        "message": "Konfigurasi Jangkar Konten"
+    },
+    "expScenarioPresets": {
+        "message": "Konfigurasi Skenario Obrolan"
+    },
+    "expInsightData": {
+        "message": "Data Wawasan Mendalam"
+    },
+    "expChatRecords": {
+        "message": "Riwayat Obrolan"
+    },
+    "save": {
+        "message": "Simpan"
+    },
+    "close": {
+        "message": "Tutup"
+    },
+    "add": {
+        "message": "Tambah"
+    },
+    "import": {
+        "message": "Impor"
+    },
+    "export" :{
+        "message": "Ekspor"
+    },
+    "clear" : {
+        "message": "Bersihkan"
+    },
+    "confirm": {
+        "message": "Konfirmasi"
+    },
+    "cancel":{
+        "message": "Batal"
+    },
+    "saveSuccessMessage": {
+        "message": "Berhasil disimpan"
+    },
+    "importSuccessMessage": {
+        "message": "Berhasil diimpor"
+    },
+    "importFailMessage": {
+        "message": "Gagal mengimpor"
+    },
+    "getModuleListFailMessage":{
+        "message": "Gagal mendapatkan daftar model"
+    },
+    "tranPrompt": {
+        "message": "Harap tulis ulang kalimat atau kata yang diberikan oleh pengguna. Jika pengguna memberikan dalam bahasa selain {localLanguage}, tulis ulang konten yang diberikan oleh pengguna dalam {localLanguage}, jika tidak, tulis ulang dalam bahasa Inggris. Catatan: Saat menulis ulang, makna asli harus dihormati."
+    },
+    "translateWaitMessage": {
+        "message": "Sedang menerjemahkan, harap tunggu..."
+    },
+    "cllamaError": {
+        "message": "Maaf, saya mengalami beberapa masalah, silakan coba lagi nanti atau periksa apakah informasi konfigurasi cllama Anda benar."
+    },
+    "urlPrefixError":{
+        "message": "Prefiks URL salah, harus dimulai dengan http atau https"
+    },
+    "waitMessage": {
+        "message": "Sedang berpikir, harap tunggu..."
+    },
+    "confirmClearChat": {
+        "message": "Anda yakin ingin menghapus riwayat percakapan ini?"
+    },
+    "insightifyPageError1": {
+        "message": "Judul dan konten kosong, tidak dapat menghasilkan informasi terkait halaman."
+    },
+    "insightifyPageError2": {
+        "message": "Tidak dapat memproses informasi halaman ini, jika Anda mengonfirmasi bahwa halaman tidak ada masalah, Anda dapat menyegarkan dan mencoba lagi."
+    },
+    "summarizer": {
+        "message": "Ringkasan"
+    },
+    "summaryPrompt": {
+        "message": "Harap buat ringkasan singkat berdasarkan konten informasi halaman yang diberikan, persyaratan: 1. Maksimal 300 kata. 2. Selalu buat informasi ringkasan dalam {localLanguage}."
+    },
+    "requiredError":{
+        "message": "Item yang wajib diisi tidak boleh kosong"
+    },
+    "exportOptionEmptyError":{
+        "message": "Harap pilih setidaknya satu opsi ekspor"
+    },
+    "importPromptMsg1":{
+        "message": "Harap pilih file data cllama Anda untuk diproses impor"
+    },
+    "importPromptMsg2":{
+        "message": "Klik untuk memilih file"
+    },
+    "importPromptMsg3":{
+        "message": "Hanya mendukung file format \".json\""
+    },
+    "importWarnMsg1":{
+        "message": "Catatan: Impor akan menimpa sebagian data asli."
+    },
+    "importFailMsg1":{
+        "message": "Impor gagal: Data dalam file tidak memiliki data cllama."
+    },
+    "noUpdateDataError":{
+        "message": "Tidak ada data yang ditemukan untuk diperbarui"
+    },
+    "directorExample1_name":{
+        "message": "Pembuatan Prompt Model Bahasa Besar"
+    },
+    "directorExample1_prompt":{
+        "message": "Anda adalah ahli pembuatan prompt model bahasa besar, harap tulis prompt untuk asisten cerdas sesuai dengan kebutuhan pengguna untuk memandu model bahasa besar menghasilkan konten, persyaratan:\n 1. Output dalam format Markdown\n 2. Sesuai dengan kebutuhan pengguna, jelaskan posisi, kemampuan, cadangan pengetahuan asisten cerdas\n 3. Prompt harus jelas, akurat, mudah dipahami, dan sesingkat mungkin sambil tetap menjaga kualitas\n 4. Hanya output prompt, jangan output penjelasan tambahan"
+    },
+    "directorExample1_sample":{
+        "message": "Harap bantu saya membuat prompt untuk 'penasihat hukum'"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "Kreativitas (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "Nilai lebih tinggi membuat respons lebih acak dan kreatif; nilai lebih rendah membuatnya lebih stabil dan fokus."
+    },
+    "apiSettingsFocusLabel": {
+        "message": "Fokus (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "Nilai lebih tinggi membuat respons lebih tidak konvensional; nilai lebih rendah membuatnya lebih konservatif dan konvensional."
+    },
+    "apiSettingsResetButton": {
+        "message": "Atur Ulang"
+    },
+    "apiSettingsSaveButton": {
+        "message": "Simpan Pengaturan"
+    },
+    "confirmDelete": {
+        "message": "Apakah Anda yakin ingin menghapus? Catatan: Tindakan ini tidak dapat dibatalkan."
+    },
+    "fish_title": {
+        "message": "Mode Percakapan Tanpa Memori"
+    },
+    "copy": {
+        "message": "Salin",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "Hapus",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "Disalin!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "Jika dipilih, kirim file ini ke layanan AI",
+        "description": "Activate button title"
+    }
+}

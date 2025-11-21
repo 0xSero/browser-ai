@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"Türkçe"
+    },
+    "browserActionTitle": {
+        "message": "Akıllı Tarama Asistanı - cllama"
+    },
+    "cllamaDescription": {
+        "message": "Akıllı Tarama Asistanı: Özelleştirilebilir derin içerik analizi + Çok senaryolu akıllı diyalog + Çok dilli çeviri, yerel Ollama ve ana akım AI (OpenAI, DeepSeek, Zhipu gibi)."
+    },
+    "inputMessage": {
+        "message": "Mesaj girin...",
+        "description": "Mesaj giriş kutusu için yer tutucu metin"
+    },
+    "Insightify": {
+        "message": "Derin İçgörü"
+    },
+    "urlCssSelector":{
+        "message": "İçerik Bağlantısı"
+    },
+    "urlCssSelectorDesc":{
+        "message": "İçerik bağlantısı, CSS seçicileri yapılandırarak sayfa çekirdek içeriğini daha doğru bir şekilde eşleştirmektir."
+    },
+    "urlPrefix": {
+        "message": "URL Öneki"
+    },
+    "cssSelector":{
+        "message": "CSS Seçici"
+    },
+    "InsightRecipes":{
+        "message": "İçgörü Tarifleri"
+    },
+    "name":{
+        "message": "Ad"
+    },
+    "Prompt":{
+        "message": "İstem"
+    },
+    "wordsRemaining": {
+        "message": "Kalan Kelime"
+    },
+    "chat": {
+        "message": "Akıllı Diyalog"
+    },
+    "scenario": {
+        "message" : "Senaryo"
+    },
+    "ScenarioManage": {
+        "message" : "Senaryo Yönetimi"
+    },
+    "inputSample": {
+        "message": "Giriş Örneği"
+    },
+    "chatOnly": {
+        "message": "Sadece sohbet..."
+    },
+    "translate": {
+        "message": "Çevir"
+    },
+    "settings": {
+        "message": "Ayarlar"
+    },
+    "ollamaHostLabel": {
+        "message": "API URL'si"
+    },
+    "modelNameLabel": {
+        "message": "Model Adı"
+    },
+    "tranPromptLabel": {
+        "message": "Çeviri İstem"
+    },
+    "expBaseData": {
+        "message": "Temel Yapılandırma"
+    },
+    "expInsightTasks": {
+        "message": "İçgörü Tarifleri Yapılandırması"
+    },
+    "expCssSelector": {
+        "message": "İçerik Bağlantısı Yapılandırması"
+    },
+    "expScenarioPresets": {
+        "message": "Sohbet Senaryoları Yapılandırması"
+    },
+    "expInsightData": {
+        "message": "Derin İçgörü Verileri"
+    },
+    "expChatRecords": {
+        "message": "Sohbet Kayıtları"
+    },
+    "save": {
+        "message": "Kaydet"
+    },
+    "close": {
+        "message": "Kapat"
+    },
+    "add": {
+        "message": "Ekle"
+    },
+    "import": {
+        "message": "İçe Aktar"
+    },
+    "export" :{
+        "message": "Dışa Aktar"
+    },
+    "clear" : {
+        "message": "Temizle"
+    },
+    "confirm": {
+        "message": "Onayla"
+    },
+    "cancel":{
+        "message": "İptal"
+    },
+    "saveSuccessMessage": {
+        "message": "Başarıyla kaydedildi"
+    },
+    "importSuccessMessage": {
+        "message": "Başarıyla içe aktarıldı"
+    },
+    "importFailMessage": {
+        "message": "İçe aktarma başarısız"
+    },
+    "getModuleListFailMessage":{
+        "message": "Model listesi alınamadı"
+    },
+    "tranPrompt": {
+        "message": "Lütfen kullanıcının verdiği cümleyi veya kelimeyi yeniden yazın. Kullanıcı {localLanguage} dışında bir dilde verdiyse, kullanıcının verdiği içeriği {localLanguage} olarak yeniden yazın, aksi takdirde İngilizce olarak yeniden yazın. Not: Yeniden yazarken orijinal anlam korunmalıdır."
+    },
+    "translateWaitMessage": {
+        "message": "Çevriliyor, lütfen bekleyin..."
+    },
+    "cllamaError": {
+        "message": "Üzgünüm, bazı sorunlar yaşadım, lütfen daha sonra tekrar deneyin veya cllama yapılandırma bilgilerinizin doğru olup olmadığını kontrol edin."
+    },
+    "urlPrefixError":{
+        "message": "URL öneki yanlış, http veya https ile başlamalıdır."
+    },
+    "waitMessage": {
+        "message": "Düşünüyorum, lütfen bekleyin..."
+    },
+    "confirmClearChat": {
+        "message": "Bu sohbet geçmişini silmek istediğinizi onaylıyor musunuz?"
+    },
+    "insightifyPageError1": {
+        "message": "Başlık ve içerik boş, sayfa ile ilgili bilgi oluşturulamıyor."
+    },
+    "insightifyPageError2": {
+        "message": "Bu sayfa bilgisi işlenemiyor, sayfanın sorunsuz olduğunu onaylarsanız yenileyip tekrar deneyebilirsiniz."
+    },
+    "summarizer": {
+        "message": "Özet"
+    },
+    "summaryPrompt": {
+        "message": "Verilen sayfa bilgi içeriğine göre kısa bir özet oluşturun, gereksinimler: 1. En fazla 300 kelime. 2. Her zaman {localLanguage} olarak özet bilgisi oluşturun."
+    },
+    "requiredError":{
+        "message": "Gerekli öğe boş olamaz"
+    },
+    "exportOptionEmptyError":{
+        "message": "Lütfen en az bir dışa aktarma seçeneği seçin"
+    },
+    "importPromptMsg1":{
+        "message": "Lütfen içe aktarma işlemi için cllama veri dosyanızı seçin"
+    },
+    "importPromptMsg2":{
+        "message": "Dosya seçmek için tıklayın"
+    },
+    "importPromptMsg3":{
+        "message": "Yalnızca \".json\" formatındaki dosyalar desteklenir."
+    },
+    "importWarnMsg1":{
+        "message": "Not: İçe aktarma, orijinal verilerin bir kısmını üzerine yazacaktır."
+    },
+    "importFailMsg1":{
+        "message": "İçe aktarma başarısız: Dosyadaki verilerde cllama verisi yok."
+    },
+    "noUpdateDataError":{
+        "message": "Güncellenecek veri bulunamadı"
+    },
+    "directorExample1_name":{
+        "message": "Büyük Dil Modeli İstem Oluşturma"
+    },
+    "directorExample1_prompt":{
+        "message": "Siz büyük dil modeli istem oluşturma uzmanısınız, lütfen kullanıcının ihtiyaçlarına göre akıllı asistan için bir istem yazarak büyük dil modelini içerik oluşturmaya yönlendirin, gereksinimler:\n 1. Markdown formatında çıktı\n 2. Kullanıcının ihtiyaçlarına uygun, akıllı asistanın konumunu, yeteneklerini, bilgi birikimini açıklayın\n 3. İstem açık, doğru, anlaşılır ve kaliteyi korurken mümkün olduğunca kısa olmalıdır.\n 4. Yalnızca istemi çıktılayın, gereksiz açıklamaları çıktılamayın."
+    },
+    "directorExample1_sample":{
+        "message": "'Hukuk danışmanı' için bir istem oluşturmama yardım edin."
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "Yaratıcılık (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "Daha yüksek değerler yanıtları daha rastgele ve yaratıcı yapar; daha düşük değerler onları daha kararlı ve odaklanmış yapar."
+    },
+    "apiSettingsFocusLabel": {
+        "message": "Odak (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "Daha yüksek değerler yanıtları daha geleneksel olmayan yapar; daha düşük değerler onları daha muhafazakar ve geleneksel yapar."
+    },
+    "apiSettingsResetButton": {
+        "message": "Sıfırla"
+    },
+    "apiSettingsSaveButton": {
+        "message": "Ayarları Kaydet"
+    },
+    "confirmDelete": {
+        "message": "Silmek istediğinizden emin misiniz? Not: Bu işlem geri alınamaz."
+    },
+    "fish_title": {
+        "message": "Hafızasız Konuşma Modu"
+    },
+    "copy": {
+        "message": "Kopyala",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "Sil",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "Kopyalandı!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "Seçilirse, bu dosyayı AI hizmetine gönder",
+        "description": "Activate button title"
+    }
+}

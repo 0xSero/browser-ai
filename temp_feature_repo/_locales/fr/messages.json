@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"Français"
+    },
+    "browserActionTitle": {
+        "message": "Assistant de Navigation Intelligent - cllama"
+    },
+    "cllamaDescription": {
+        "message": "Analyse de contenu personnalisable + dialogue IA multi-scénarios + traduction multilingue. Prend en charge Ollama local et IA majeures (OpenAI/DeepSeek/Zhipu)."
+    },
+    "inputMessage": {
+        "message": "Saisissez un message...",
+        "description": "Texte indicatif pour le champ de saisie de message"
+    },
+    "Insightify": {
+        "message": "Analyse Approfondie"
+    },
+    "urlCssSelector":{
+        "message": "Ancre de Contenu"
+    },
+    "urlCssSelectorDesc":{
+        "message": "L'ancre de contenu utilise des sélecteurs CSS pour cibler précisément le contenu principal de la page"
+    },
+    "urlPrefix": {
+        "message": "Préfixe URL"
+    },
+    "cssSelector":{
+        "message": "Sélecteur CSS"
+    },
+    "InsightRecipes":{
+        "message": "Recettes d'Analyse"
+    },
+    "name":{
+        "message": "Nom"
+    },
+    "Prompt":{
+        "message": "Invite"
+    },
+    "wordsRemaining": {
+        "message": "Mots restants"
+    },
+    "chat": {
+        "message": "Chat Intelligent"
+    },
+    "scenario": {
+        "message" : "Scénario"
+    },
+    "ScenarioManage": {
+        "message" : "Gestion des Scénarios"
+    },
+    "inputSample": {
+        "message": "Exemple de saisie"
+    },
+    "chatOnly": {
+        "message": "Discuter librement..."
+    },
+    "translate": {
+        "message": "Traduire"
+    },
+    "settings": {
+        "message": "Paramètres"
+    },
+    "ollamaHostLabel": {
+        "message": "URL API"
+    },
+    "modelNameLabel": {
+        "message": "Nom du modèle"
+    },
+    "tranPromptLabel": {
+        "message": "Invite de Traduction"
+    },
+    "expBaseData": {
+        "message": "Configuration de Base"
+    },
+    "expInsightTasks": {
+        "message": "Configuration des Recettes d'Analyse"
+    },
+    "expCssSelector": {
+        "message": "Configuration de l'Ancre de Contenu"
+    },
+    "expScenarioPresets": {
+        "message": "Configuration des Scénarios de Chat"
+    },
+    "expInsightData": {
+        "message": "Données d'Analyse Approfondie"
+    },
+    "expChatRecords": {
+        "message": "Historique des Chats"
+    },
+    "save": {
+        "message": "Enregistrer"
+    },
+    "close": {
+        "message": "Fermer"
+    },
+    "add": {
+        "message": "Ajouter"
+    },
+    "import": {
+        "message": "Importer"
+    },
+    "export" :{
+        "message": "Exporter"
+    },
+    "clear" : {
+        "message": "Effacer"
+    },
+    "confirm": {
+        "message": "Confirmer"
+    },
+    "cancel":{
+        "message": "Annuler"
+    },
+    "saveSuccessMessage": {
+        "message": "Enregistrement réussi"
+    },
+    "importSuccessMessage": {
+        "message": "Importation réussie"
+    },
+    "importFailMessage": {
+        "message": "Échec de l'importation"
+    },
+    "getModuleListFailMessage":{
+        "message": "Échec de la récupération de la liste des modèles"
+    },
+    "tranPrompt": {
+        "message": "Veuillez reformuler la phrase ou le mot donné par l'utilisateur. Si l'utilisateur fournit une langue autre que {localLanguage}, reformulez le contenu en {localLanguage} ; sinon, reformulez-le en anglais. Remarque : Le sens original doit être respecté lors de la reformulation."
+    },
+    "translateWaitMessage": {
+        "message": "Traduction en cours, veuillez patienter..."
+    },
+    "cllamaError": {
+        "message": "Désolé, un problème est survenu. Veuillez réessayer plus tard ou vérifier votre configuration cllama."
+    },
+    "urlPrefixError":{
+        "message": "Préfixe URL incorrect, doit commencer par http ou https"
+    },
+    "waitMessage": {
+        "message": "Réflexion en cours, veuillez patienter..."
+    },
+    "insightifyPageError1": {
+        "message": "Le titre et le contenu sont vides, impossible de générer des informations sur la page."
+    },
+    "insightifyPageError2": {
+        "message": "Impossible de traiter les informations de la page. Si vous confirmez que la page est correcte, actualisez et réessayez."
+    },
+    "summarizer": {
+        "message": "Résumé"
+    },
+    "summaryPrompt": {
+        "message": "Veuillez générer un bref résumé du contenu de la page fourni. Exigences : 1. Maximum 300 mots. 2. Toujours générer le résumé en {localLanguage}."
+    },
+    "requiredError":{
+        "message": "Le champ obligatoire ne peut pas être vide"
+    },
+    "exportOptionEmptyError":{
+        "message": "Veuillez sélectionner au moins une option d'exportation"
+    },
+    "importPromptMsg1":{
+        "message": "Veuillez sélectionner votre fichier de données cllama à importer"
+    },
+    "importPromptMsg2":{
+        "message": "Sélectionner un fichier"
+    },
+    "importPromptMsg3":{
+        "message": "Seuls les fichiers au format \".json\" sont pris en charge"
+    },
+    "importWarnMsg1":{
+        "message": "Remarque : L'importation écrasera partiellement les données existantes."
+    },
+    "importFailMsg1":{
+        "message": "Échec de l'importation : Aucune donnée cllama trouvée dans le fichier."
+    },
+    "noUpdateDataError":{
+        "message": "Aucune donnée à mettre à jour trouvée"
+    },
+    "directorExample1_name":{
+        "message": "Génération d'Invites pour LLM"
+    },
+    "directorExample1_prompt":{
+        "message": "Vous êtes un expert en génération d'invites pour LLM. Veuillez créer une invite d'assistant intelligent basée sur les exigences de l'utilisateur, guidant le LLM dans la génération de contenu. Exigences :\n 1. Sortie au format Markdown\n 2. Aligné sur les besoins de l'utilisateur, décrivant le positionnement, les capacités et la base de connaissances de l'assistant\n 3. L'invite doit être claire, précise et facile à comprendre, aussi concise que possible tout en maintenant la qualité\n 4. Ne produire que l'invite, sans explications supplémentaires"
+    },
+    "directorExample1_sample":{
+        "message": "Veuillez m'aider à générer une invite de 'conseiller juridique'"
+    },
+    "confirmClearChat": {
+        "message": "Effacer l'historique de cette conversation ?"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "Créativité (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "Des valeurs plus élevées rendent les réponses plus aléatoires et créatives ; des valeurs plus basses les rendent plus stables et ciblées."
+    },
+    "apiSettingsFocusLabel": {
+        "message": "Focus (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "Des valeurs plus élevées rendent les réponses plus non conventionnelles ; des valeurs plus basses les rendent plus conservatrices et conventionnelles."
+    },
+    "apiSettingsResetButton": {
+        "message": "Réinitialiser"
+    },
+    "apiSettingsSaveButton": {
+        "message": "Enregistrer les paramètres"
+    },
+    "confirmDelete": {
+        "message": "Voulez-vous vraiment supprimer ? Remarque : Cette action est irréversible."
+    },
+    "fish_title": {
+        "message": "Mode conversation sans mémoire"
+    },
+    "copy": {
+        "message": "Copier",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "Supprimer",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "Copié !",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "Si sélectionné, envoyer ce fichier au service d'IA",
+        "description": "Activate button title"
+    }
+}

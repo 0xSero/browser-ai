@@ -1,0 +1,18 @@
+import{i18n,DB_KEY}from"../js/cllama.js";import{marked}from"../js/marked.mjs";import{getLanguageCode,htmlEncode,replaceElementContent}from"../js/util.js";document.addEventListener("DOMContentLoaded",()=>{let o="undefined"!=typeof chrome?chrome:o;var e=0<=navigator.userAgent.indexOf("Firefox");let n=document.getElementById("config-list"),d=new bootstrap.Modal(document.getElementById("addConfigModal")),a=o.i18n.getMessage("wordsRemaining"),r=[],i=new DOMParser;function c(){document.querySelectorAll("#name, #prompt").forEach(t=>{let n=t.closest(".mb-3").querySelector(".character-counter");var e=()=>{var e=t.getAttribute("maxlength")-t.value.length;n.textContent=a+"："+e,n.style.color=e<10?"#dc3545":"#6c757d"};t.addEventListener("input",e),e()})}function l(t,e,n){var d;1<e.length&&1<n.length?(0<t?(d=r.find(e=>e.id==t))?(d.name=e,d.prompt=n,(d=document.getElementById("ac_"+t))&&(d.getElementsByClassName("card-title")[0].innerText=e,replaceElementContent(d.getElementsByClassName("card-text")[0],n))):alert(o.i18n.getMessage("noUpdateDataError")):(d={id:Date.now(),name:e,prompt:n},r.push(d),s(d)),o.storage.local.set({[DB_KEY.actionList]:r})):alert(o.i18n.getMessage("requiredError"))}function m(){document.getElementById("add-config-form").reset(),document.querySelectorAll(".character-counter").forEach(e=>e.textContent="")}function s(t){var e=`
+            <div class="col-12" id="ac_${t.id}">
+                <div class="config-card card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title">${t.name}</h5>
+                                <div class="card-text card-cust-height text-muted markdown-body">${htmlEncode(t.prompt)}</div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-secondary">✘</button>
+                                <button class="btn btn-sm btn-outline-secondary">✍</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,e=i.parseFromString(e,"text/html").body.firstChild.cloneNode(!0);e.getElementsByTagName("button")[0].addEventListener("click",()=>{r=r.filter(e=>e.id!=t.id),o.storage.local.set({[DB_KEY.actionList]:r}),document.getElementById("ac_"+t.id).remove()}),e.getElementsByTagName("button")[1].addEventListener("click",()=>{m(),document.getElementById("acId").value=t.id,document.getElementById("name").value=t.name,document.getElementById("prompt").value=t.prompt,d.show(),setTimeout(c,100)}),n.appendChild(e)}document.getElementById("save-config-btn").addEventListener("click",()=>{l(+document.getElementById("acId").value.trim(),document.getElementById("name").value.trim(),document.getElementById("prompt").value.trim()),d.hide(),m()}),document.getElementById("add-config-btn").addEventListener("click",()=>{m(),document.getElementById("acId").value="",d.show(),setTimeout(c,100)}),o.storage.local.get(DB_KEY.actionList,function(e){for(var t of r=(r=e[DB_KEY.actionList])||[])s(t)}),e?document.getElementById("b_import").setAttribute("href","https://fxdq.net/"+getLanguageCode()+"/insight.html"):document.getElementById("b_import").addEventListener("click",e=>{o.tabs.create({url:"https://fxdq.net/"+getLanguageCode()+"/insight.html"}),e.preventDefault()}),i18n(),o.runtime.onMessage.addListener((e,t,n)=>("callImportInsightPrompt"===e.action&&(l(0,(e=e.data).name,e.prompt),window.scrollTo(0,document.body.scrollHeight),n({success:!0,data:e.sid})),!0))});

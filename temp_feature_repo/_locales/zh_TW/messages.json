@@ -1,0 +1,229 @@
+{
+    "localLanguage":{
+        "message":"繁體中文"
+    },
+    "browserActionTitle": {
+        "message": "智能瀏覽助手 - cllama"
+    },
+    "cllamaDescription": {
+        "message": "智能瀏覽助手：自訂深度內容分析+多場景智能對話+多語言翻譯，支援本地Ollama與主流AI服務(如OpenAI、DeepSeek、智譜)，保障安全與隱私。"
+    },
+    "inputMessage": {
+        "message": "請輸入訊息...",
+        "description": "訊息輸入框佔位符文字"
+    },
+    "Insightify": {
+        "message": "深度洞察"
+    },
+    "urlCssSelector":{
+        "message": "內容錨點"
+    },
+    "urlCssSelectorDesc":{
+        "message": "內容錨點是通過配置CSS選擇器來更精準匹配頁面核心內容"
+    },
+    "urlPrefix": {
+        "message": "網址前綴"
+    },
+    "cssSelector":{
+        "message": "CSS選擇器"
+    },
+    "InsightRecipes":{
+        "message": "洞察配方"
+    },
+    "name":{
+        "message": "名稱"
+    },
+    "Prompt":{
+        "message": "提示語"
+    },
+    "wordsRemaining": {
+        "message": "剩餘字數"
+    },
+    "chat": {
+        "message": "智能對話"
+    },
+    "scenario": {
+        "message" : "場景"
+    },
+    "ScenarioManage": {
+        "message" : "場景管理"
+    },
+    "inputSample": {
+        "message": "輸入範例"
+    },
+    "chatOnly": {
+        "message": "隨便聊..."
+    },
+    "translate": {
+        "message": "翻譯"
+    },
+    "settings": {
+        "message": "設定"
+    },
+    "ollamaHostLabel": {
+        "message": "API網址"
+    },
+    "modelNameLabel": {
+        "message": "模型名稱"
+    },
+    "tranPromptLabel": {
+        "message": "翻譯Prompt"
+    },
+    "expBaseData": {
+        "message": "基礎配置"
+    },
+    "expInsightTasks": {
+        "message": "洞察配方配置"
+    },
+    "expCssSelector": {
+        "message": "內容錨點配置"
+    },
+    "expScenarioPresets": {
+        "message": "聊天場景配置"
+    },
+    "expInsightData": {
+        "message": "深度洞察數據"
+    },
+    "expChatRecords": {
+        "message": "聊天記錄"
+    },
+    "save": {
+        "message": "儲存"
+    },
+    "close": {
+        "message": "關閉"
+    },
+    "add": {
+        "message": "新增"
+    },
+    "import": {
+        "message": "匯入"
+    },
+    "export" :{
+        "message": "匯出"
+    },
+    "clear" : {
+        "message": "清空"
+    },
+    "confirm": {
+        "message": "確定"
+    },
+    "cancel":{
+        "message": "取消"
+    },
+    "saveSuccessMessage": {
+        "message": "儲存成功"
+    },
+    "importSuccessMessage": {
+        "message": "匯入成功"
+    },
+    "importFailMessage": {
+        "message": "匯入失敗"
+    },
+    "getModuleListFailMessage":{
+        "message": "取得模型列表失敗"
+    },
+    "tranPrompt": {
+        "message": "請重寫用戶給定的句子或單詞，如果用戶給出的是{localLanguage}之外的其他語言則用{localLanguage}重寫用戶給定的內容，否則用英文重寫。注意：重寫時必須尊重原意。"
+    },
+    "translateWaitMessage": {
+        "message": "正在翻譯，請稍候..."
+    },
+    "cllamaError": {
+        "message": "很抱歉，我遇到了一些問題，請稍後再試或者檢查一下您的cllama配置信息是否正確。"
+    },
+    "urlPrefixError":{
+        "message": "網址前綴輸入不正確，必須以http或https開頭"
+    },
+    "waitMessage": {
+        "message": "思考中，請稍候......"
+    },
+    "insightifyPageError1": {
+        "message": "標題和內容為空，不能生成頁面相關信息。"
+    },
+    "insightifyPageError2": {
+        "message": "無法處理該頁面信息，如確認頁面沒有問題可刷新重試。"
+    },
+    "summarizer": {
+        "message": "要"
+    },
+    "summaryPrompt": {
+        "message": "請根據給定頁面信息內容生成簡短摘要，要求：1、最多300字。2、一律用{localLanguage}生成摘要信息。"
+    },
+    "requiredError":{
+        "message": "必填項不能為空"
+    },
+    "exportOptionEmptyError":{
+        "message": "請至少選擇一個匯出選項"
+    },
+    "importPromptMsg1":{
+        "message": "請選擇您的cllama數據文件進行匯入處理"
+    },
+    "importPromptMsg2":{
+        "message": "點擊選擇文件"
+    },
+    "importPromptMsg3":{
+        "message": "僅支援\".json\"格式文件"
+    },
+    "importWarnMsg1":{
+        "message": "注意：匯入將覆蓋部分原有數據。"
+    },
+    "importFailMsg1":{
+        "message": "匯入失敗：文件中的數據沒有cllama數據。"
+    },
+    "noUpdateDataError":{
+        "message": "沒有找到要更新的數據"
+    },
+    "directorExample1_name":{
+        "message": "語言大模型提示詞生成"
+    },
+    "directorExample1_prompt":{
+        "message": "你是一位大模型提示詞生成專家，請根據用戶的需求編寫一個智能助手的提示詞，來指導大模型進行內容生成，要求：\n 1. 以 Markdown 格式輸出\n 2. 貼合用戶需求，描述智能助手的定位、能力、知識儲備\n 3. 提示詞應清晰、精確、易於理解，在保持質量的同時，盡可能簡潔\n 4. 只輸出提示詞，不要輸出多餘解釋"
+    },
+    "directorExample1_sample":{
+        "message": "請幫我生成一個'法律顧問'的提示詞"
+    },
+    "confirmClearChat": {
+        "message": "確定要删除這段對話記錄？"
+    },
+    "apiSettingsCreativityLabel": {
+        "message": "創造力 (0-2)"
+    },
+    "apiSettingsCreativityDesc": {
+        "message": "較高的值會使回應更隨機和有創造力；較低的值會使回應更穩定和集中。"
+    },
+    "apiSettingsFocusLabel": {
+        "message": "專注度 (0-1)"
+    },
+    "apiSettingsFocusDesc": {
+        "message": "較高的值會使回應更非傳統；較低的值會使回應更保守和傳統。"
+    },
+    "apiSettingsResetButton": {
+        "message": "重設"
+    },
+    "apiSettingsSaveButton": {
+        "message": "儲存設定"
+    },
+    "confirmDelete": {
+        "message": "您確定要刪除嗎？注意：此操作無法復原。"
+    },
+    "fish_title": {
+        "message": "無記憶對話模式"
+    },
+    "copy": {
+        "message": "複製",
+        "description": "Copy button title"
+    },
+    "delete": {
+        "message": "刪除",
+        "description": "Delete button title"
+    },
+    "copied": {
+        "message": "已複製!",
+        "description": "Copied message"
+    },
+    "activate": {
+        "message": "若選中則發送該文件給AI服務",
+        "description": "Activate button title"
+    }
+}

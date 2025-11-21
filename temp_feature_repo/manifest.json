@@ -1,0 +1,63 @@
+{
+  "manifest_version": 2,
+  "name": "cllama",
+  "version": "2.3.4",
+  "description": "__MSG_cllamaDescription__",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus"
+  ],
+  "homepage_url": "https://fxdq.net/cllama/en/index.html",
+  "browser_action": {
+    "browser_style": true,
+    "default_popup": "popup/popup.html",
+    "default_title": "__MSG_browserActionTitle__",
+    "default_icon": {
+      "48": "logo/48.png",
+      "96": "logo/96.png"
+    }
+  },
+  "sidebar_action": {
+    "default_title": "cllama",
+    "default_panel": "insightify/insightify.html",
+    "default_icon": "logo/48.png",
+    "open_at_install": false
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "type": "module",
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content_script.js"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "option/options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "48": "logo/48.png",
+    "96": "logo/96.png"
+  },
+  "web_accessible_resources": [
+    "viewer/viewer.html",
+    "viewer/viewer.js"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "default_locale": "en",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{5d77c7a5-ee1b-4068-b15d-e23224533775}"
+    }
+  }
+}
