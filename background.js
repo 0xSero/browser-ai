@@ -101,26 +101,48 @@ class BackgroundService {
       let currentResponse = response;
       let toolIterations = 0;
       const maxIterations = 10; // Safety limit to prevent infinite loops
+      let followupAttempts = 0;
+      const maxFollowups = 2;
 
-      // Keep executing tools until AI is done
-      while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
-        toolIterations++;
+      const hasUsableContent = (resp) =>
+        resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
 
-        if (toolIterations > maxIterations) {
-          console.warn('Reached maximum tool execution iterations');
-          this.sendToSidePanel({
-            type: 'warning',
-            message: 'Reached maximum tool execution limit. Task may be incomplete.'
-          });
+      while (true) {
+        // Execute tools until none remain
+        while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
+          toolIterations++;
+
+          if (toolIterations > maxIterations) {
+            console.warn('Reached maximum tool execution iterations');
+            this.sendToSidePanel({
+              type: 'warning',
+              message: 'Reached maximum tool execution limit. Task may be incomplete.'
+            });
+            currentResponse.toolCalls = [];
+            break;
+          }
+
+          for (const toolCall of currentResponse.toolCalls) {
+            await this.executeToolCall(toolCall);
+          }
+
+          currentResponse = await this.aiProvider.continueConversation();
+        }
+
+        if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
+          if (!hasUsableContent(currentResponse)) {
+            currentResponse.content = currentResponse.content && currentResponse.content.trim()
+              ? currentResponse.content
+              : 'I completed the requested actions but could not produce a final summary. Please try again.';
+          }
           break;
         }
 
-        // Execute all tool calls in this round
-        for (const toolCall of currentResponse.toolCalls) {
-          await this.executeToolCall(toolCall);
-        }
-
-        // Continue conversation and check if AI wants to call more tools
+        // Ask the model to finish the task with a final summary before exiting
+        this.aiProvider.requestFinalResponse(
+          'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.'
+        );
+        followupAttempts++;
         currentResponse = await this.aiProvider.continueConversation();
       }
 
