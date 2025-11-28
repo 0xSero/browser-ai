@@ -33,7 +33,7 @@ class BackgroundService {
     try {
       switch (message.type) {
         case 'user_message':
-          await this.processUserMessage(message.message, message.conversationHistory);
+          await this.processUserMessage(message.message, message.conversationHistory, message.selectedTabs || []);
           break;
 
         case 'execute_tool':
@@ -54,7 +54,7 @@ class BackgroundService {
     }
   }
 
-  async processUserMessage(userMessage, conversationHistory) {
+  async processUserMessage(userMessage, conversationHistory, selectedTabs = []) {
     try {
       // Get settings
       const settings = await chrome.storage.local.get([
@@ -65,7 +65,8 @@ class BackgroundService {
         'systemPrompt',
         'sendScreenshotsAsImages',
         'screenshotQuality',
-        'showThinking'
+        'showThinking',
+        'streamResponses'
       ]);
 
       if (!settings.apiKey) {
@@ -76,6 +77,15 @@ class BackgroundService {
         return;
       }
 
+      try {
+        await this.browserTools.configureSessionTabs(selectedTabs || [], {
+          title: 'Browser AI',
+          color: 'blue'
+        });
+      } catch (error) {
+        console.warn('Failed to configure session tabs:', error);
+      }
+
       // Initialize AI provider
       this.aiProvider = new AIProvider(settings);
 
@@ -84,43 +94,81 @@ class BackgroundService {
 
       // Get current tab info for context
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const sessionTabs = this.browserTools.getSessionTabSummaries();
+      const workingTabId = this.browserTools.getCurrentSessionTabId() || activeTab?.id;
+      const workingTab = sessionTabs.find(tab => tab.id === workingTabId);
       const context = {
-        currentUrl: activeTab?.url || 'unknown',
-        currentTitle: activeTab?.title || 'unknown',
-        tabId: activeTab?.id
+        currentUrl: workingTab?.url || activeTab?.url || 'unknown',
+        currentTitle: workingTab?.title || activeTab?.title || 'unknown',
+        tabId: workingTabId,
+        availableTabs: sessionTabs
       };
 
       // Call AI with tools
+      const supportsStreaming = typeof this.aiProvider.supportsStreaming === 'function'
+        ? this.aiProvider.supportsStreaming()
+        : (settings.provider !== 'anthropic');
+      const streamEnabled = supportsStreaming && settings.streamResponses !== false;
       const response = await this.aiProvider.chat(
         conversationHistory,
         tools,
-        context
+        context,
+        {
+          stream: streamEnabled,
+          streamCallbacks: streamEnabled ? {
+            onStart: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'start' }),
+            onDelta: (payload) => this.sendToSidePanel({ type: 'assistant_stream', status: 'delta', content: payload?.content || '' }),
+            onComplete: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'stop' })
+          } : null
+        }
       );
 
       // Process response and handle tool execution loop
       let currentResponse = response;
       let toolIterations = 0;
       const maxIterations = 10; // Safety limit to prevent infinite loops
+      let followupAttempts = 0;
+      const maxFollowups = 2;
 
-      // Keep executing tools until AI is done
-      while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
-        toolIterations++;
+      const hasUsableContent = (resp) =>
+        resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
 
-        if (toolIterations > maxIterations) {
-          console.warn('Reached maximum tool execution iterations');
-          this.sendToSidePanel({
-            type: 'warning',
-            message: 'Reached maximum tool execution limit. Task may be incomplete.'
-          });
+      while (true) {
+        // Execute tools until none remain
+        while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
+          toolIterations++;
+
+          if (toolIterations > maxIterations) {
+            console.warn('Reached maximum tool execution iterations');
+            this.sendToSidePanel({
+              type: 'warning',
+              message: 'Reached maximum tool execution limit. Task may be incomplete.'
+            });
+            currentResponse.toolCalls = [];
+            break;
+          }
+
+          for (const toolCall of currentResponse.toolCalls) {
+            await this.executeToolCall(toolCall);
+          }
+
+          currentResponse = await this.aiProvider.continueConversation();
+        }
+
+        if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
+          if (!hasUsableContent(currentResponse)) {
+            currentResponse.content = currentResponse.content && currentResponse.content.trim()
+              ? currentResponse.content
+              : 'I completed the requested actions but could not produce a final summary. Please try again.';
+          }
           break;
         }
 
-        // Execute all tool calls in this round
-        for (const toolCall of currentResponse.toolCalls) {
-          await this.executeToolCall(toolCall);
-        }
-
-        // Continue conversation and check if AI wants to call more tools
+        // Ask the model to finish the task with a final summary before exiting
+        this.aiProvider.requestFinalResponse(
+          'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.'
+        );
+        followupAttempts++;
         currentResponse = await this.aiProvider.continueConversation();
       }
 

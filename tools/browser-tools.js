@@ -2,6 +2,9 @@
 export class BrowserTools {
   constructor() {
     this.tools = this.initializeTools();
+    this.sessionTabs = [];
+    this.sessionTabGroups = [];
+    this.currentTabId = null;
   }
 
   initializeTools() {
@@ -9,302 +12,36 @@ export class BrowserTools {
       navigate: this.navigate.bind(this),
       click: this.click.bind(this),
       type: this.type.bind(this),
+      pressKey: this.pressKey.bind(this),
       scroll: this.scroll.bind(this),
       screenshot: this.screenshot.bind(this),
-      getPageContent: this.getPageContent.bind(this),
+      getContent: this.getContent.bind(this),
       openTab: this.openTab.bind(this),
       closeTab: this.closeTab.bind(this),
       switchTab: this.switchTab.bind(this),
-      createTabGroup: this.createTabGroup.bind(this),
-      ungroupTabs: this.ungroupTabs.bind(this),
-      fillForm: this.fillForm.bind(this),
-      waitForElement: this.waitForElement.bind(this),
-      getAllTabs: this.getAllTabs.bind(this),
-      goBack: this.goBack.bind(this),
-      goForward: this.goForward.bind(this),
-      refresh: this.refresh.bind(this),
-      // History management
-      searchHistory: this.searchHistory.bind(this),
-      getRecentHistory: this.getRecentHistory.bind(this),
-      deleteHistoryItem: this.deleteHistoryItem.bind(this),
-      deleteHistoryRange: this.deleteHistoryRange.bind(this),
-      getVisitCount: this.getVisitCount.bind(this)
+      getTabs: this.getTabs.bind(this),
+      groupTabs: this.groupTabs.bind(this),
+      focusTab: this.focusTab.bind(this),
+      describeSessionTabs: this.describeSessionTabs.bind(this)
     };
   }
 
   getToolDefinitions() {
     return [
-      {
-        name: 'navigate',
-        description: 'Navigate to a URL in the current tab or a specific tab',
-        input_schema: {
-          type: 'object',
-          properties: {
-            url: { type: 'string', description: 'The URL to navigate to' },
-            tabId: { type: 'number', description: 'Optional tab ID. If not provided, uses active tab' }
-          },
-          required: ['url']
-        }
-      },
-      {
-        name: 'click',
-        description: 'Click on an element on the page using a CSS selector or text content',
-        input_schema: {
-          type: 'object',
-          properties: {
-            selector: { type: 'string', description: 'CSS selector for the element to click. If not provided, text must be provided.' },
-            text: { type: 'string', description: 'Text content to search for in clickable elements (buttons, links, etc.). If provided, this will be used instead of selector.' },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'type',
-        description: 'Type text into an input field',
-        input_schema: {
-          type: 'object',
-          properties: {
-            selector: { type: 'string', description: 'CSS selector for the input element' },
-            text: { type: 'string', description: 'Text to type' },
-            clear: { type: 'boolean', description: 'Clear existing text first (default: true)' },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: ['selector', 'text']
-        }
-      },
-      {
-        name: 'scroll',
-        description: 'Scroll the page',
-        input_schema: {
-          type: 'object',
-          properties: {
-            direction: { type: 'string', enum: ['up', 'down', 'top', 'bottom'], description: 'Scroll direction' },
-            amount: { type: 'number', description: 'Amount to scroll in pixels (for up/down)' },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: ['direction']
-        }
-      },
-      {
-        name: 'screenshot',
-        description: 'Take a screenshot of the current visible area of the page',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'getPageContent',
-        description: 'Get the text content, HTML, or specific information from the current page',
-        input_schema: {
-          type: 'object',
-          properties: {
-            type: { type: 'string', enum: ['text', 'html', 'title', 'url', 'links'], description: 'Type of content to get' },
-            selector: { type: 'string', description: 'Optional CSS selector to get content from specific element' },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: ['type']
-        }
-      },
-      {
-        name: 'openTab',
-        description: 'Open a new tab with a URL',
-        input_schema: {
-          type: 'object',
-          properties: {
-            url: { type: 'string', description: 'URL to open' },
-            active: { type: 'boolean', description: 'Whether to switch to the new tab (default: true)' }
-          },
-          required: ['url']
-        }
-      },
-      {
-        name: 'closeTab',
-        description: 'Close a tab',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Tab ID to close. If not provided, closes current tab' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'switchTab',
-        description: 'Switch to a different tab',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Tab ID to switch to' }
-          },
-          required: ['tabId']
-        }
-      },
-      {
-        name: 'getAllTabs',
-        description: 'Get information about all open tabs',
-        input_schema: {
-          type: 'object',
-          properties: {},
-          required: []
-        }
-      },
-      {
-        name: 'createTabGroup',
-        description: 'Create a tab group with specified tabs',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabIds: { type: 'array', items: { type: 'number' }, description: 'Array of tab IDs to group' },
-            title: { type: 'string', description: 'Title for the tab group' },
-            color: { type: 'string', enum: ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'], description: 'Color for the tab group' }
-          },
-          required: ['tabIds']
-        }
-      },
-      {
-        name: 'ungroupTabs',
-        description: 'Remove tabs from their group',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabIds: { type: 'array', items: { type: 'number' }, description: 'Array of tab IDs to ungroup' }
-          },
-          required: ['tabIds']
-        }
-      },
-      {
-        name: 'fillForm',
-        description: 'Fill multiple form fields at once',
-        input_schema: {
-          type: 'object',
-          properties: {
-            fields: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  selector: { type: 'string' },
-                  value: { type: 'string' }
-                }
-              },
-              description: 'Array of field objects with selector and value'
-            },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: ['fields']
-        }
-      },
-      {
-        name: 'waitForElement',
-        description: 'Wait for an element to appear on the page',
-        input_schema: {
-          type: 'object',
-          properties: {
-            selector: { type: 'string', description: 'CSS selector to wait for' },
-            timeout: { type: 'number', description: 'Timeout in milliseconds (default: 5000)' },
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: ['selector']
-        }
-      },
-      {
-        name: 'goBack',
-        description: 'Navigate back in browser history',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'goForward',
-        description: 'Navigate forward in browser history',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'refresh',
-        description: 'Refresh the current page',
-        input_schema: {
-          type: 'object',
-          properties: {
-            tabId: { type: 'number', description: 'Optional tab ID' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'searchHistory',
-        description: 'Search browser history for URLs matching a text query',
-        input_schema: {
-          type: 'object',
-          properties: {
-            text: { type: 'string', description: 'Search query text' },
-            maxResults: { type: 'number', description: 'Maximum number of results (default: 100)' },
-            startTime: { type: 'number', description: 'Optional start time in milliseconds since epoch' },
-            endTime: { type: 'number', description: 'Optional end time in milliseconds since epoch' }
-          },
-          required: ['text']
-        }
-      },
-      {
-        name: 'getRecentHistory',
-        description: 'Get recently visited pages from browser history',
-        input_schema: {
-          type: 'object',
-          properties: {
-            maxResults: { type: 'number', description: 'Maximum number of results (default: 50)' },
-            hoursAgo: { type: 'number', description: 'Number of hours to look back (default: 24)' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'deleteHistoryItem',
-        description: 'Delete a specific URL from browser history',
-        input_schema: {
-          type: 'object',
-          properties: {
-            url: { type: 'string', description: 'URL to delete from history' }
-          },
-          required: ['url']
-        }
-      },
-      {
-        name: 'deleteHistoryRange',
-        description: 'Delete all history items within a time range',
-        input_schema: {
-          type: 'object',
-          properties: {
-            startTime: { type: 'number', description: 'Start time in milliseconds since epoch' },
-            endTime: { type: 'number', description: 'End time in milliseconds since epoch' }
-          },
-          required: ['startTime', 'endTime']
-        }
-      },
-      {
-        name: 'getVisitCount',
-        description: 'Get the number of times a URL has been visited',
-        input_schema: {
-          type: 'object',
-          properties: {
-            url: { type: 'string', description: 'URL to check visit count' }
-          },
-          required: ['url']
-        }
-      }
+      { name: 'navigate', description: 'Go to URL', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] } },
+      { name: 'click', description: 'Click element', input_schema: { type: 'object', properties: { selector: { type: 'string' }, text: { type: 'string' }, timeoutMs: { type: 'number', minimum: 250 } }, required: [] } },
+      { name: 'type', description: 'Type text into element', input_schema: { type: 'object', properties: { selector: { type: 'string' }, text: { type: 'string' } }, required: ['selector', 'text'] } },
+      { name: 'pressKey', description: 'Press keyboard key', input_schema: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] } },
+      { name: 'scroll', description: 'Scroll page', input_schema: { type: 'object', properties: { direction: { type: 'string', enum: ['up', 'down', 'top', 'bottom'] } }, required: ['direction'] } },
+      { name: 'screenshot', description: 'Capture page', input_schema: { type: 'object', properties: {}, required: [] } },
+      { name: 'getContent', description: 'Get page content', input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['text', 'html', 'title', 'url', 'links'] } }, required: ['type'] } },
+      { name: 'openTab', description: 'Open tab', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] } },
+      { name: 'closeTab', description: 'Close tab', input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: [] } },
+      { name: 'switchTab', description: 'Switch tab', input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: ['tabId'] } },
+      { name: 'getTabs', description: 'List tabs', input_schema: { type: 'object', properties: {}, required: [] } },
+      { name: 'groupTabs', description: 'Group/ungroup tabs', input_schema: { type: 'object', properties: { tabIds: { type: 'array', items: { type: 'number' } }, title: { type: 'string' }, color: { type: 'string' }, ungroup: { type: 'boolean' } }, required: ['tabIds'] } },
+      { name: 'focusTab', description: 'Set which tab future actions target', input_schema: { type: 'object', properties: { tabId: { type: 'number' }, titleContains: { type: 'string' }, urlContains: { type: 'string' }, direction: { type: 'string', enum: ['next', 'previous'] } }, required: [] } },
+      { name: 'describeSessionTabs', description: 'List the tabs selected for this automation session', input_schema: { type: 'object', properties: {}, required: [] } }
     ];
   }
 
@@ -317,9 +54,83 @@ export class BrowserTools {
   }
 
   async getActiveTabId(providedTabId) {
-    if (providedTabId) return providedTabId;
+    if (providedTabId) {
+      this.currentTabId = providedTabId;
+      return providedTabId;
+    }
+
+    if (this.currentTabId) {
+      try {
+        const tab = await chrome.tabs.get(this.currentTabId);
+        return tab.id;
+      } catch (error) {
+        this.currentTabId = null;
+      }
+    }
+
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return tab.id;
+    this.currentTabId = tab?.id || null;
+    return this.currentTabId;
+  }
+
+  async configureSessionTabs(tabs = [], options = {}) {
+    this.sessionTabs = Array.isArray(tabs) ? tabs.filter(tab => typeof tab.id === 'number') : [];
+    this.currentTabId = this.sessionTabs[0]?.id || null;
+
+    await this.clearSessionTabGroups();
+
+    if (!this.sessionTabs.length) {
+      return;
+    }
+
+    const tabsByWindow = new Map();
+    this.sessionTabs.forEach(tab => {
+      const key = tab.windowId ?? 'unknown';
+      if (!tabsByWindow.has(key)) tabsByWindow.set(key, []);
+      tabsByWindow.get(key).push(tab.id);
+    });
+
+    for (const [windowKey, tabIds] of tabsByWindow.entries()) {
+      if (windowKey === 'unknown' || !tabIds.length) continue;
+      try {
+        const groupId = await chrome.tabs.group({ tabIds });
+        await chrome.tabGroups.update(groupId, {
+          title: options.title || 'Browser AI',
+          color: options.color || 'blue'
+        });
+        this.sessionTabGroups.push({ groupId, tabIds: [...tabIds] });
+      } catch (error) {
+        console.warn('Failed to group tabs for session:', error);
+      }
+    }
+  }
+
+  async clearSessionTabGroups() {
+    if (!this.sessionTabGroups.length) return;
+    for (const group of this.sessionTabGroups) {
+      try {
+        if (group.tabIds?.length) {
+          await chrome.tabs.ungroup(group.tabIds);
+        }
+      } catch (error) {
+        console.warn('Failed to ungroup tabs:', error);
+      }
+    }
+    this.sessionTabGroups = [];
+  }
+
+  getSessionTabSummaries() {
+    return this.sessionTabs.map(tab => ({
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+      windowId: tab.windowId,
+      groupId: tab.groupId
+    }));
+  }
+
+  getCurrentSessionTabId() {
+    return this.currentTabId;
   }
 
   // Tool implementations
@@ -330,161 +141,120 @@ export class BrowserTools {
     return { success: true, url, tabId: targetTabId };
   }
 
-  async click({ selector, text, tabId }) {
+  async click({ selector, text, tabId, timeoutMs = 2500 }) {
     const targetTabId = await this.getActiveTabId(tabId);
 
-    // Validate that at least one of selector or text is provided
     if ((!selector || typeof selector !== 'string') && (!text || typeof text !== 'string')) {
       return {
         success: false,
         error: 'Either selector or text must be provided as a non-empty string',
-        selector: selector,
-        text: text
+        selector,
+        text
       };
     }
 
     try {
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
-        func: (sel, txt) => {
-          try {
-            let element = null;
+        func: async (sel, txt, waitMs) => {
+          const timeout = typeof waitMs === 'number' ? waitMs : 2500;
+          const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-            // If text is provided, search for elements by text content
-            if (txt) {
-              // Search in clickable elements first (buttons, links, inputs)
-              const clickableSelectors = ['button', 'a', 'input[type="button"]', 'input[type="submit"]', '[role="button"]', '[onclick]'];
-              const clickableElements = document.querySelectorAll(clickableSelectors.join(','));
+          const searchableSelectors = ['button', 'a', 'input[type="button"]', 'input[type="submit"]', '[role="button"]', '[role="menuitem"]', '[role="tab"]', '[onclick]', '[tabindex="0"]', 'summary'];
 
-              // Find exact match first
-              for (const el of clickableElements) {
+          const findByText = () => {
+            const clickableElements = document.querySelectorAll(searchableSelectors.join(','));
+
+            const normalized = txt.toLowerCase();
+
+            const attemptMatch = (elements, exact = false) => {
+              for (const el of elements) {
                 const elementText = el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '';
-                if (elementText.toLowerCase() === txt.toLowerCase()) {
-                  element = el;
-                  break;
+                if (!elementText) continue;
+                const candidate = exact ? elementText.toLowerCase() === normalized : elementText.toLowerCase().includes(normalized);
+                if (candidate) return el;
+              }
+              return null;
+            };
+
+            const exactMatch = attemptMatch(clickableElements, true);
+            if (exactMatch) return exactMatch;
+
+            const partialMatch = attemptMatch(clickableElements, false);
+            if (partialMatch) return partialMatch;
+
+            // Final fallback: tree walker to find elements with matching visible text
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+              acceptNode(node) {
+                if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP;
+                const content = node.textContent?.trim();
+                if (!content) return NodeFilter.FILTER_SKIP;
+                if (!content.toLowerCase().includes(normalized)) return NodeFilter.FILTER_SKIP;
+                const style = window.getComputedStyle(node);
+                if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                  return NodeFilter.FILTER_SKIP;
                 }
+                return NodeFilter.FILTER_ACCEPT;
               }
-
-              // If no exact match, find partial match
-              if (!element) {
-                for (const el of clickableElements) {
-                  const elementText = el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '';
-                  if (elementText.toLowerCase().includes(txt.toLowerCase())) {
-                    element = el;
-                    break;
-                  }
-                }
-              }
-
-              if (!element) {
-                // Get suggestions
-                const suggestions = Array.from(clickableElements).slice(0, 10).map(el => ({
-                  tagName: el.tagName,
-                  text: (el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '').substring(0, 50),
-                  id: el.id || '',
-                  className: el.className || ''
-                }));
-
-                return {
-                  success: false,
-                  error: `No clickable element found with text: "${txt}"`,
-                  text: txt,
-                  found: false,
-                  suggestions: suggestions
-                };
-              }
-            } else if (sel) {
-              // Use CSS selector
-              element = document.querySelector(sel);
-              if (!element) {
-                // Try to find similar elements for debugging
-                const allElements = document.querySelectorAll('*');
-                const matching = Array.from(allElements).filter(el =>
-                  el.textContent && el.textContent.includes(sel.replace(/['"]/g, ''))
-                );
-                return {
-                  success: false,
-                  error: 'Element not found',
-                  selector: sel,
-                  found: false,
-                  suggestions: matching.slice(0, 5).map(el => ({
-                    tagName: el.tagName,
-                    text: el.textContent?.substring(0, 50) || '',
-                    id: el.id || '',
-                    className: el.className || ''
-                  }))
-                };
+            });
+            while (walker.nextNode()) {
+              if (walker.currentNode instanceof HTMLElement) {
+                return walker.currentNode;
               }
             }
+            return null;
+          };
 
-            // Bring into view for visible feedback
-            try { element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch {}
+          const findBySelector = () => {
+            if (!sel) return null;
+            return document.querySelector(sel);
+          };
 
-            // Determine visibility and viewport intersection
-            const rect = element.getBoundingClientRect();
-            const style = window.getComputedStyle(element);
-            const isDisplayed = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-            const hasSize = rect.width > 0 && rect.height > 0;
-            const inViewport = rect.bottom > 0 && rect.right > 0 && rect.top < (window.innerHeight || document.documentElement.clientHeight) && rect.left < (window.innerWidth || document.documentElement.clientWidth);
-            const isClickable = isDisplayed && hasSize && element.offsetParent !== null;
-
-            if (!isClickable) {
-              return {
-                success: false,
-                error: 'Element exists but is not visible or clickable',
-                selector: sel,
-                text: txt,
-                found: true,
-                element: {
-                  tagName: element.tagName,
-                  text: element.textContent?.substring(0, 50) || '',
-                  id: element.id || '',
-                  className: element.className || ''
-                }
-              };
+          const locateElement = async () => {
+            const end = Date.now() + timeout;
+            while (Date.now() < end) {
+              const el = txt ? findByText() : findBySelector();
+              if (el) return el;
+              await sleep(120);
             }
+            return null;
+          };
 
-            // Add a temporary highlight for feedback
-            const prevOutline = element.style.outline;
-            const prevOffset = element.style.outlineOffset;
-            element.style.outline = '2px solid #22c55e';
-            element.style.outlineOffset = '2px';
-            setTimeout(() => { element.style.outline = prevOutline; element.style.outlineOffset = prevOffset; }, 700);
+          const element = await locateElement();
 
-            // Try standard click first
-            let clickedVia = 'element.click';
-            try {
-              element.click();
-            } catch (e) {
-              // Fallback to event sequence at element center
-              clickedVia = 'pointer-events';
-              const cx = Math.max(1, Math.floor(rect.left + rect.width / 2));
-              const cy = Math.max(1, Math.floor(rect.top + rect.height / 2));
-              const opts = { view: window, bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 };
-              try {
-                element.dispatchEvent(new PointerEvent('pointerdown', opts));
-              } catch {}
-              try {
-                element.dispatchEvent(new MouseEvent('mousedown', opts));
-              } catch {}
-              try {
-                element.dispatchEvent(new PointerEvent('pointerup', opts));
-              } catch {}
-              try {
-                element.dispatchEvent(new MouseEvent('mouseup', opts));
-              } catch {}
-              try {
-                element.dispatchEvent(new MouseEvent('click', opts));
-              } catch {}
-            }
-
+          if (!element) {
+            const sample = Array.from(document.querySelectorAll(searchableSelectors.join(','))).slice(0, 10).map(el => ({
+              tagName: el.tagName,
+              text: (el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '').substring(0, 50),
+              id: el.id || '',
+              className: el.className || ''
+            }));
             return {
-              success: true,
+              success: false,
+              error: txt ? `No clickable element found with text: "${txt}"` : 'Element not found',
+              selector: sel,
+              text: txt,
+              found: false,
+              suggestions: sample
+            };
+          }
+
+          try { element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch {}
+
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          const isDisplayed = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          const hasSize = rect.width > 0 && rect.height > 0;
+          const inViewport = rect.bottom > 0 && rect.right > 0 && rect.top < (window.innerHeight || document.documentElement.clientHeight) && rect.left < (window.innerWidth || document.documentElement.clientWidth);
+          const isClickable = isDisplayed && hasSize && element.offsetParent !== null;
+
+          if (!isClickable) {
+            return {
+              success: false,
+              error: 'Element exists but is not visible or clickable',
               selector: sel,
               text: txt,
               found: true,
-              clickedVia,
-              inViewport,
               element: {
                 tagName: element.tagName,
                 text: element.textContent?.substring(0, 50) || '',
@@ -492,98 +262,209 @@ export class BrowserTools {
                 className: element.className || ''
               }
             };
-          } catch (error) {
-            return { success: false, error: error.message, selector: sel, text: txt };
           }
+
+          const highlight = document.createElement('div');
+          highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 4}px;
+            left: ${rect.left - 4}px;
+            width: ${rect.width + 8}px;
+            height: ${rect.height + 8}px;
+            border: 3px solid #f97316;
+            border-radius: 6px;
+            background: rgba(249, 115, 22, 0.1);
+            pointer-events: none;
+            z-index: 999999;
+            animation: ai-pulse 0.6s ease-out;
+          `;
+          const pulseStyle = document.createElement('style');
+          pulseStyle.textContent = `
+            @keyframes ai-pulse {
+              0% { transform: scale(1); opacity: 1; }
+              100% { transform: scale(1.05); opacity: 0; }
+            }
+          `;
+          document.head.appendChild(pulseStyle);
+          document.body.appendChild(highlight);
+          setTimeout(() => { highlight.remove(); pulseStyle.remove(); }, 600);
+
+          element.focus({ preventScroll: true });
+
+          let clickedVia = 'element.click';
+          try {
+            element.click();
+          } catch (e) {
+            clickedVia = 'pointer-events';
+            const cx = Math.max(1, Math.floor(rect.left + rect.width / 2));
+            const cy = Math.max(1, Math.floor(rect.top + rect.height / 2));
+            const opts = { view: window, bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 };
+            try {
+              element.dispatchEvent(new PointerEvent('pointerdown', opts));
+            } catch {}
+            try {
+              element.dispatchEvent(new MouseEvent('mousedown', opts));
+            } catch {}
+            try {
+              element.dispatchEvent(new PointerEvent('pointerup', opts));
+            } catch {}
+            try {
+              element.dispatchEvent(new MouseEvent('mouseup', opts));
+            } catch {}
+            try {
+              element.dispatchEvent(new MouseEvent('click', opts));
+            } catch {}
+          }
+
+          return {
+            success: true,
+            selector: sel,
+            text: txt,
+            found: true,
+            clickedVia,
+            inViewport,
+            element: {
+              tagName: element.tagName,
+              text: element.textContent?.substring(0, 50) || '',
+              id: element.id || '',
+              className: element.className || ''
+            }
+          };
         },
-        // Ensure undefined values are not passed to Chrome (they're unserializable)
-        args: [selector ?? null, text ?? null]
+        args: [selector ?? null, text ?? null, timeoutMs ?? 2500]
       });
 
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
-      } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          selector: selector,
-          text: text
-        };
+      const scriptResult = result?.[0]?.result;
+      if (scriptResult) {
+        return scriptResult;
       }
+      return {
+        success: false,
+        error: 'Script execution failed or returned no result',
+        selector,
+        text
+      };
     } catch (error) {
       return {
         success: false,
         error: `Execution failed: ${error.message}`,
-        selector: selector,
-        text: text
+        selector,
+        text
       };
     }
   }
 
-  async type({ selector, text, clear = true, tabId }) {
+  async type({ selector, text, tabId }) {
     const targetTabId = await this.getActiveTabId(tabId);
 
-    // Validate parameters
     if (!selector || typeof selector !== 'string') {
-      return {
-        success: false,
-        error: 'Invalid selector: must be a non-empty string',
-        selector: selector
-      };
-    }
-
-    if (typeof text !== 'string') {
-      return {
-        success: false,
-        error: 'Invalid text: must be a string',
-        selector: selector,
-        text: text
-      };
+      return { success: false, error: 'Invalid selector' };
     }
 
     try {
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
-        func: (sel, txt, clr) => {
-          try {
-            const element = document.querySelector(sel);
-            if (!element) {
-              return { success: false, error: 'Element not found', selector: sel };
-            }
+        func: (sel, txt) => {
+          const element = document.querySelector(sel);
+          if (!element) return { success: false, error: 'Element not found' };
 
-            element.focus();
-            if (clr) element.value = '';
-            element.value = txt;
+          // Visual highlight
+          const rect = element.getBoundingClientRect();
+          const highlight = document.createElement('div');
+          highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 4}px;
+            left: ${rect.left - 4}px;
+            width: ${rect.width + 8}px;
+            height: ${rect.height + 8}px;
+            border: 3px solid #f97316;
+            border-radius: 6px;
+            background: rgba(249, 115, 22, 0.1);
+            pointer-events: none;
+            z-index: 999999;
+            transition: opacity 0.3s;
+          `;
+          document.body.appendChild(highlight);
 
-            // Trigger input event
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-            element.dispatchEvent(new Event('change', { bubbles: true }));
+          element.focus();
+          element.value = '';
+          element.value = txt;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
 
-            return { success: true, selector: sel, text: txt };
-          } catch (error) {
-            return { success: false, error: error.message, selector: sel };
-          }
+          setTimeout(() => { highlight.style.opacity = '0'; }, 400);
+          setTimeout(() => highlight.remove(), 700);
+
+          return { success: true };
         },
-        args: [selector ?? null, text ?? null, clear ?? true]
+        args: [selector, text ?? '']
       });
-
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
-      } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          selector: selector
-        };
-      }
+      return result?.[0]?.result || { success: false, error: 'Script failed' };
     } catch (error) {
-      return {
-        success: false,
-        error: `Execution failed: ${error.message}`,
-        selector: selector
-      };
+      return { success: false, error: error.message };
+    }
+  }
+
+  async pressKey({ key, tabId }) {
+    const targetTabId = await this.getActiveTabId(tabId);
+
+    if (!key || typeof key !== 'string') {
+      return { success: false, error: 'Invalid key' };
+    }
+
+    try {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: targetTabId },
+        func: (k) => {
+          const target = document.activeElement || document.body;
+
+          // Map common key names
+          const keyMap = {
+            'Enter': { key: 'Enter', code: 'Enter', keyCode: 13 },
+            'Tab': { key: 'Tab', code: 'Tab', keyCode: 9 },
+            'Escape': { key: 'Escape', code: 'Escape', keyCode: 27 },
+            'ArrowDown': { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+            'ArrowUp': { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+            'Backspace': { key: 'Backspace', code: 'Backspace', keyCode: 8 },
+          };
+
+          const keyInfo = keyMap[k] || { key: k, code: k, keyCode: 0 };
+          const opts = {
+            key: keyInfo.key,
+            code: keyInfo.code,
+            keyCode: keyInfo.keyCode,
+            which: keyInfo.keyCode,
+            bubbles: true,
+            cancelable: true
+          };
+
+          // Dispatch keyboard events
+          target.dispatchEvent(new KeyboardEvent('keydown', opts));
+          target.dispatchEvent(new KeyboardEvent('keypress', opts));
+          target.dispatchEvent(new KeyboardEvent('keyup', opts));
+
+          // Special handling for Enter - try to submit form
+          if (k === 'Enter') {
+            const form = target.closest('form');
+            if (form) {
+              // Try submitting the form
+              const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+              if (submitBtn) {
+                submitBtn.click();
+              } else {
+                form.requestSubmit ? form.requestSubmit() : form.submit();
+              }
+              return { success: true, key: k, action: 'form_submitted' };
+            }
+          }
+
+          return { success: true, key: k };
+        },
+        args: [key]
+      });
+      return result?.[0]?.result || { success: false, error: 'Script failed' };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   }
 
@@ -661,82 +542,35 @@ export class BrowserTools {
     return { success: true, dataUrl, tabId: targetTabId };
   }
 
-  async getPageContent({ type, selector, tabId }) {
+  async getContent({ type, selector, tabId }) {
     const targetTabId = await this.getActiveTabId(tabId);
-
-    // Validate parameters
-    if (!type || typeof type !== 'string') {
-      return {
-        success: false,
-        error: 'Invalid type: must be a non-empty string',
-        type: type
-      };
-    }
-
-    const validTypes = ['text', 'html', 'title', 'url', 'links'];
-    if (!validTypes.includes(type)) {
-      return {
-        success: false,
-        error: `Invalid type. Must be one of: ${validTypes.join(', ')}`,
-        type: type
-      };
-    }
 
     try {
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: (contentType, sel) => {
-          try {
-            const getContent = () => {
-              switch (contentType) {
-                case 'text':
-                  return sel ? document.querySelector(sel)?.innerText : document.body.innerText;
-                case 'html':
-                  return sel ? document.querySelector(sel)?.innerHTML : document.documentElement.outerHTML;
-                case 'title':
-                  return document.title;
-                case 'url':
-                  return window.location.href;
-                case 'links':
-                  return Array.from(document.querySelectorAll('a')).map(a => ({
-                    text: a.innerText || '',
-                    href: a.href || ''
-                  }));
-                default:
-                  return null;
-              }
-            };
-
-            const content = getContent();
-            return { success: true, type: contentType, content };
-          } catch (error) {
-            return { success: false, error: error.message, type: contentType };
+          switch (contentType) {
+            case 'text': return { success: true, content: sel ? document.querySelector(sel)?.innerText : document.body.innerText };
+            case 'html': return { success: true, content: sel ? document.querySelector(sel)?.innerHTML : document.documentElement.outerHTML };
+            case 'title': return { success: true, content: document.title };
+            case 'url': return { success: true, content: window.location.href };
+            case 'links': return { success: true, content: Array.from(document.querySelectorAll('a')).map(a => ({ text: a.innerText, href: a.href })) };
+            default: return { success: false, error: 'Invalid type' };
           }
         },
-        args: [type ?? null, selector ?? null]
+        args: [type, selector ?? null]
       });
-
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
-      } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          type: type
-        };
-      }
+      return result?.[0]?.result || { success: false, error: 'Script failed' };
     } catch (error) {
-      return {
-        success: false,
-        error: `Execution failed: ${error.message}`,
-        type: type
-      };
+      return { success: false, error: error.message };
     }
   }
 
   async openTab({ url, active = true }) {
     const tab = await chrome.tabs.create({ url, active });
+    if (active) {
+      this.currentTabId = tab.id;
+    }
     return { success: true, tabId: tab.id, url: tab.url };
   }
 
@@ -748,344 +582,68 @@ export class BrowserTools {
 
   async switchTab({ tabId }) {
     await chrome.tabs.update(tabId, { active: true });
+    this.currentTabId = tabId;
     return { success: true, tabId };
   }
 
-  async getAllTabs() {
+  async focusTab({ tabId, titleContains, urlContains, direction }) {
+    let targetId = tabId;
+
+    if (!targetId && (titleContains || urlContains)) {
+      const entries = this.sessionTabs;
+      const term = (titleContains || urlContains || '').toLowerCase();
+      const prop = titleContains ? 'title' : 'url';
+      const candidate = entries.find(tab => (tab[prop] || '').toLowerCase().includes(term));
+      if (candidate) targetId = candidate.id;
+    }
+
+    if (!targetId && direction && this.sessionTabs.length > 0) {
+      const currentIndex = this.sessionTabs.findIndex(tab => tab.id === this.currentTabId);
+      if (currentIndex !== -1) {
+        if (direction === 'next') {
+          targetId = this.sessionTabs[(currentIndex + 1) % this.sessionTabs.length].id;
+        } else if (direction === 'previous') {
+          targetId = this.sessionTabs[(currentIndex - 1 + this.sessionTabs.length) % this.sessionTabs.length].id;
+        }
+      }
+    }
+
+    if (!targetId) {
+      return { success: false, error: 'No matching tab found. Provide a tabId or a title/url fragment.' };
+    }
+
+    try {
+      const tab = await chrome.tabs.get(targetId);
+      await chrome.tabs.update(targetId, { active: true });
+      this.currentTabId = targetId;
+      return { success: true, tabId: targetId, title: tab.title, url: tab.url };
+    } catch (error) {
+      return { success: false, error: error.message, tabId: targetId };
+    }
+  }
+
+  async getTabs() {
     const tabs = await chrome.tabs.query({});
     return {
       success: true,
-      tabs: tabs.map(tab => ({
-        id: tab.id,
-        title: tab.title,
-        url: tab.url,
-        active: tab.active,
-        groupId: tab.groupId
-      }))
+      tabs: tabs.map(tab => ({ id: tab.id, title: tab.title, url: tab.url, active: tab.active, groupId: tab.groupId }))
     };
   }
 
-  async createTabGroup({ tabIds, title, color = 'grey' }) {
+  describeSessionTabs() {
+    return { success: true, tabs: this.getSessionTabSummaries() };
+  }
+
+  async groupTabs({ tabIds, title, color = 'grey', ungroup = false }) {
+    if (ungroup) {
+      await chrome.tabs.ungroup(tabIds);
+      return { success: true, ungrouped: tabIds };
+    }
     const groupId = await chrome.tabs.group({ tabIds });
     if (title || color) {
-      await chrome.tabGroups.update(groupId, {
-        title: title || '',
-        color: color
-      });
+      await chrome.tabGroups.update(groupId, { title: title || '', color });
     }
     return { success: true, groupId, tabIds };
   }
 
-  async ungroupTabs({ tabIds }) {
-    await chrome.tabs.ungroup(tabIds);
-    return { success: true, tabIds };
-  }
-
-  async fillForm({ fields, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-
-    // Validate parameters
-    if (!Array.isArray(fields) || fields.length === 0) {
-      return {
-        success: false,
-        error: 'Invalid fields: must be a non-empty array',
-        fields: fields
-      };
-    }
-
-    // Validate each field
-    for (const field of fields) {
-      if (!field.selector || typeof field.selector !== 'string') {
-        return {
-          success: false,
-          error: 'Each field must have a valid selector string',
-          field: field
-        };
-      }
-      if (typeof field.value !== 'string') {
-        return {
-          success: false,
-          error: `Each field must have a valid string value for selector: ${field.selector}`,
-          field: field
-        };
-      }
-    }
-
-    try {
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: (fieldList) => {
-          try {
-            const results = [];
-            for (const field of fieldList) {
-              const element = document.querySelector(field.selector);
-              if (element) {
-                element.value = field.value;
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-                results.push({ selector: field.selector, success: true });
-              } else {
-                results.push({ selector: field.selector, success: false, error: 'Element not found' });
-              }
-            }
-            return { success: true, results };
-          } catch (error) {
-            return { success: false, error: error.message };
-          }
-        },
-        args: [fields ?? []]
-      });
-
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
-      } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          fields: fields
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Execution failed: ${error.message}`,
-        fields: fields
-      };
-    }
-  }
-
-  async waitForElement({ selector, timeout = 5000, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-
-    // Validate parameters
-    if (!selector || typeof selector !== 'string') {
-      return {
-        success: false,
-        error: 'Invalid selector: must be a non-empty string',
-        selector: selector
-      };
-    }
-
-    if (!timeout || typeof timeout !== 'number' || timeout <= 0) {
-      return {
-        success: false,
-        error: 'Invalid timeout: must be a positive number',
-        timeout: timeout
-      };
-    }
-
-    try {
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: async (sel, maxWait) => {
-          try {
-            const startTime = Date.now();
-            while (Date.now() - startTime < maxWait) {
-              const element = document.querySelector(sel);
-              if (element) {
-                return { success: true, selector: sel, found: true };
-              }
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            return { success: false, selector: sel, found: false, error: 'Timeout waiting for element' };
-          } catch (error) {
-            return { success: false, error: error.message, selector: sel };
-          }
-        },
-        args: [selector ?? null, timeout ?? 5000]
-      });
-
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
-      } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          selector: selector
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Execution failed: ${error.message}`,
-        selector: selector
-      };
-    }
-  }
-
-  async goBack({ tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    await chrome.scripting.executeScript({
-      target: { tabId: targetTabId },
-      func: () => window.history.back()
-    });
-    return { success: true };
-  }
-
-  async goForward({ tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    await chrome.scripting.executeScript({
-      target: { tabId: targetTabId },
-      func: () => window.history.forward()
-    });
-    return { success: true };
-  }
-
-  async refresh({ tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    await chrome.tabs.reload(targetTabId);
-    return { success: true, tabId: targetTabId };
-  }
-
-  // History Management Methods
-
-  async searchHistory({ text, maxResults = 100, startTime, endTime }) {
-    const query = {
-      text,
-      maxResults
-    };
-
-    if (startTime) query.startTime = startTime;
-    if (endTime) query.endTime = endTime;
-
-    const results = await chrome.history.search(query);
-
-    return {
-      success: true,
-      count: results.length,
-      results: results.map(item => ({
-        url: item.url,
-        title: item.title,
-        lastVisitTime: item.lastVisitTime,
-        visitCount: item.visitCount,
-        typedCount: item.typedCount
-      }))
-    };
-  }
-
-  async getRecentHistory({ maxResults = 50, hoursAgo = 24 }) {
-    const endTime = Date.now();
-    const startTime = endTime - (hoursAgo * 60 * 60 * 1000);
-
-    const results = await chrome.history.search({
-      text: '',
-      startTime,
-      endTime,
-      maxResults
-    });
-
-    // Sort by most recent first
-    results.sort((a, b) => b.lastVisitTime - a.lastVisitTime);
-
-    return {
-      success: true,
-      count: results.length,
-      timeRange: {
-        from: new Date(startTime).toISOString(),
-        to: new Date(endTime).toISOString()
-      },
-      results: results.map(item => ({
-        url: item.url,
-        title: item.title,
-        lastVisitTime: item.lastVisitTime,
-        visitCount: item.visitCount,
-        lastVisitDate: new Date(item.lastVisitTime).toISOString()
-      }))
-    };
-  }
-
-  async deleteHistoryItem({ url }) {
-    // First check if URL exists in history
-    const results = await chrome.history.search({ text: url, maxResults: 1 });
-
-    if (results.length === 0) {
-      return {
-        success: false,
-        error: 'URL not found in history',
-        url
-      };
-    }
-
-    // Delete all visits to this URL
-    await chrome.history.deleteUrl({ url });
-
-    return {
-      success: true,
-      url,
-      message: 'URL deleted from history'
-    };
-  }
-
-  async deleteHistoryRange({ startTime, endTime }) {
-    // Validate time range
-    if (startTime >= endTime) {
-      return {
-        success: false,
-        error: 'startTime must be before endTime'
-      };
-    }
-
-    // Get count before deletion (for reporting)
-    const beforeResults = await chrome.history.search({
-      text: '',
-      startTime,
-      endTime,
-      maxResults: 10000
-    });
-
-    // Delete the range
-    await chrome.history.deleteRange({
-      startTime,
-      endTime
-    });
-
-    return {
-      success: true,
-      deletedCount: beforeResults.length,
-      timeRange: {
-        from: new Date(startTime).toISOString(),
-        to: new Date(endTime).toISOString()
-      },
-      message: `Deleted ${beforeResults.length} history items`
-    };
-  }
-
-  async getVisitCount({ url }) {
-    const results = await chrome.history.search({
-      text: url,
-      maxResults: 1
-    });
-
-    if (results.length === 0) {
-      return {
-        success: true,
-        url,
-        visitCount: 0,
-        found: false,
-        message: 'URL not found in history'
-      };
-    }
-
-    const item = results[0];
-
-    // Get detailed visits
-    const visits = await chrome.history.getVisits({ url });
-
-    return {
-      success: true,
-      url,
-      visitCount: item.visitCount,
-      typedCount: item.typedCount,
-      lastVisitTime: item.lastVisitTime,
-      lastVisitDate: new Date(item.lastVisitTime).toISOString(),
-      found: true,
-      visits: visits.slice(0, 10).map(visit => ({
-        visitTime: visit.visitTime,
-        visitDate: new Date(visit.visitTime).toISOString(),
-        transition: visit.transition
-      }))
-    };
-  }
 }

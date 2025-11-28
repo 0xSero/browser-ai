@@ -18,6 +18,7 @@ class SidePanelUI {
       sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
       screenshotQuality: document.getElementById('screenshotQuality'),
       showThinking: document.getElementById('showThinking'),
+      streamResponses: document.getElementById('streamResponses'),
       autoScroll: document.getElementById('autoScroll'),
       confirmActions: document.getElementById('confirmActions'),
       saveHistory: document.getElementById('saveHistory'),
@@ -31,7 +32,13 @@ class SidePanelUI {
       sendBtn: document.getElementById('sendBtn'),
       statusBar: document.getElementById('statusBar'),
       statusText: document.getElementById('statusText'),
-      toolTimeline: document.getElementById('toolTimeline')
+      statusMeta: document.getElementById('statusMeta'),
+      toolTimeline: document.getElementById('toolTimeline'),
+      tabSelectorBtn: document.getElementById('tabSelectorBtn'),
+      tabSelector: document.getElementById('tabSelector'),
+      tabList: document.getElementById('tabList'),
+      closeTabSelector: document.getElementById('closeTabSelector'),
+      selectedTabsBar: document.getElementById('selectedTabsBar')
     };
 
     this.conversationHistory = [];
@@ -39,6 +46,10 @@ class SidePanelUI {
     this.configs = { default: {} };
     this.toolCallViews = new Map();
     this.timelineItems = new Map();
+    this.selectedTabs = new Map();
+    this.pendingToolCount = 0;
+    this.isStreaming = false;
+    this.streamingState = null;
     this.init();
   }
 
@@ -92,21 +103,32 @@ class SidePanelUI {
       }
     });
 
+    // Tab selector
+    this.elements.tabSelectorBtn.addEventListener('click', () => this.toggleTabSelector());
+    this.elements.closeTabSelector.addEventListener('click', () => this.closeTabSelector());
+
     // Listen for messages from background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'tool_execution') {
         if (!message.result) {
+          this.pendingToolCount += 1;
+          this.updateActivityState();
           this.addTimelineItem(message.id, message.tool, message.args);
         } else {
+          this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
+          this.updateActivityState();
           this.updateTimelineItem(message.id, message.result);
         }
         this.displayToolExecution(message.tool, message.args, message.result, message.id);
       } else if (message.type === 'assistant_response') {
+        this.finishStreamingMessage();
         this.displayAssistantMessage(message.content, message.thinking);
       } else if (message.type === 'error') {
         this.updateStatus(message.message, 'error');
       } else if (message.type === 'warning') {
         this.updateStatus(message.message, 'warning');
+      } else if (message.type === 'assistant_stream') {
+        this.handleAssistantStream(message);
       }
     });
   }
@@ -133,6 +155,7 @@ class SidePanelUI {
       'sendScreenshotsAsImages',
       'screenshotQuality',
       'showThinking',
+      'streamResponses',
       'autoScroll',
       'confirmActions',
       'saveHistory',
@@ -151,7 +174,8 @@ class SidePanelUI {
     this.elements.timeout.value = settings.timeout || 30000;
     this.elements.sendScreenshotsAsImages.value = settings.sendScreenshotsAsImages !== undefined ? settings.sendScreenshotsAsImages : 'true';
     this.elements.screenshotQuality.value = settings.screenshotQuality || 'high';
-    this.elements.showThinking.value = settings.showThinking !== undefined ? settings.showThinking : 'true';
+    this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
+    this.elements.streamResponses.value = settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
     this.elements.autoScroll.value = settings.autoScroll !== undefined ? settings.autoScroll : 'true';
     this.elements.confirmActions.value = settings.confirmActions !== undefined ? settings.confirmActions : 'true';
     this.elements.saveHistory.value = settings.saveHistory !== undefined ? settings.saveHistory : 'true';
@@ -176,6 +200,7 @@ class SidePanelUI {
       sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
       screenshotQuality: this.elements.screenshotQuality.value,
       showThinking: this.elements.showThinking.value === 'true',
+      streamResponses: this.elements.streamResponses.value === 'true',
       autoScroll: this.elements.autoScroll.value === 'true',
       confirmActions: this.elements.confirmActions.value === 'true',
       saveHistory: this.elements.saveHistory.value === 'true',
@@ -189,27 +214,17 @@ class SidePanelUI {
   }
 
   getDefaultSystemPrompt() {
-    return `You are a browser automation assistant. You can interact with web pages using the available tools.
+    return `You are a browser automation agent with tools to browse, click, type, scroll, capture screenshots, manage tabs, read content, and fill forms.
 
-Available actions:
-- Navigate to URLs
-- Click on elements
-- Type text into inputs
-- Scroll pages
-- Take screenshots
-- Manage tabs and windows
-- Extract page content
-- Fill forms
+Workflow:
+1. Turn every request into a short numbered list of observable tasks before taking action.
+2. Work the list in order, updating it as you learn more. After any scroll, navigation, or tab change, call getPageContent again before marking a task complete.
+3. Do not finish until each task has a concrete outcome or a clear explanation of what blocked it.
 
-Execution protocol:
-1. Immediately translate the user request into a short numbered task list before taking action. Keep tasks focused on observable work you can perform in the browser.
-2. Act through the tasks in order, updating the plan as new information appears. If you scroll or change context, always re-read via getPageContent before marking a task complete.
-3. Never finish until each task has an explicit outcome. If something cannot be completed, state why and what would be needed.
-
-Response requirements:
-- Clearly summarize the results for every task, then provide the final answer the user requested in your own words.
-- Reference the specific evidence you gathered (e.g., which page section, headline, or element) when describing findings.
-- Always confirm before performing destructive actions. Be precise and describe what you're doing.`;
+Responses:
+- Summarize the result of each task, then answer the user plainly.
+- Cite the specific evidence you gathered (section, headline, element, etc.).
+- Confirm before destructive actions and describe exactly what you will do.`;
   }
 
   async createNewConfig() {
@@ -231,7 +246,8 @@ Response requirements:
       maxTokens: parseInt(this.elements.maxTokens.value),
       timeout: parseInt(this.elements.timeout.value),
       sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
-      screenshotQuality: this.elements.screenshotQuality.value
+      screenshotQuality: this.elements.screenshotQuality.value,
+      streamResponses: this.elements.streamResponses.value === 'true'
     };
 
     this.currentConfig = name;
@@ -271,6 +287,7 @@ Response requirements:
     this.elements.timeout.value = config.timeout;
     this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages ? 'true' : 'false';
     this.elements.screenshotQuality.value = config.screenshotQuality;
+    this.elements.streamResponses.value = config.streamResponses !== false ? 'true' : 'false';
 
     this.currentConfig = newConfig;
     this.toggleCustomEndpoint();
@@ -297,27 +314,38 @@ Response requirements:
     // Clear input
     this.elements.userInput.value = '';
 
-    // Display user message
+    this.pendingToolCount = 0;
+    this.isStreaming = false;
+    this.updateActivityState();
+
+    // Get selected tabs context
+    const tabsContext = this.getSelectedTabsContext();
+    const fullMessage = userMessage + tabsContext;
+
+    // Display user message (show original without context)
     this.displayUserMessage(userMessage);
 
-    // Add to conversation history
+    // Add to conversation history (include context)
     this.conversationHistory.push({
       role: 'user',
-      content: userMessage
+      content: fullMessage
     });
 
-    // Update status
+    // Update status and input area
     this.updateStatus('Processing...', 'active');
+    document.querySelector('.input-area').classList.add('running');
 
     // Send to background for processing
     try {
       chrome.runtime.sendMessage({
         type: 'user_message',
-        message: userMessage,
-        conversationHistory: this.conversationHistory
+        message: fullMessage,
+        conversationHistory: this.conversationHistory,
+        selectedTabs: Array.from(this.selectedTabs.values())
       });
     } catch (error) {
       this.updateStatus('Error: ' + error.message, 'error');
+      document.querySelector('.input-area').classList.remove('running');
       this.displayAssistantMessage('Sorry, an error occurred: ' + error.message);
     }
   }
@@ -369,6 +397,8 @@ Response requirements:
       return;
     }
 
+    this.finishStreamingMessage();
+
     // Add to conversation history
     this.conversationHistory.push({
       role: 'assistant',
@@ -384,7 +414,7 @@ Response requirements:
       const cleanedThinking = this.deduplicateThinking(thinking);
       html += `
         <div class="thinking-block">
-          <div class="thinking-header">🤔 Thinking...</div>
+          <div class="thinking-header">Thinking</div>
           <div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>
         </div>
       `;
@@ -392,129 +422,272 @@ Response requirements:
 
     // Only add content div if content is not empty
     if (content && content.trim() !== '') {
-      html += `<div class="message-content">${this.escapeHtml(content)}</div>`;
+      const renderedContent = this.renderMarkdown(content);
+      html += `<div class="message-content markdown-body">${renderedContent}</div>`;
     }
 
     messageDiv.innerHTML = html;
     this.elements.chatMessages.appendChild(messageDiv);
     this.scrollToBottom();
     this.updateStatus('Ready', 'success');
+    document.querySelector('.input-area').classList.remove('running');
+    this.pendingToolCount = 0;
+    this.updateActivityState();
+  }
+
+  renderMarkdown(text) {
+    if (!text) return '';
+
+    const escape = (value = '') => this.escapeHtmlBasic(value);
+    const escapeAttr = (value = '') => this.escapeAttribute(value);
+
+    let working = String(text).replace(/\r\n/g, '\n');
+    const codeBlocks = [];
+    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+    working = working.replace(codeBlockRegex, (_, lang = '', body = '') => {
+      const placeholder = `@@CODE_BLOCK_${codeBlocks.length}@@`;
+      const languageClass = lang ? ` class="language-${escapeAttr(lang.toLowerCase())}"` : '';
+      codeBlocks.push(`<pre><code${languageClass}>${escape(body)}</code></pre>`);
+      return placeholder;
+    });
+
+    const applyInline = (value = '') => {
+      let html = escape(value);
+      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) =>
+        `<img alt="${escape(alt)}" src="${escapeAttr(url)}">`
+      );
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) =>
+        `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+      );
+      html = html.replace(/`([^`]+)`/g, (_, code) => `<code>${escape(code)}</code>`);
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+      html = html.replace(/(?<!\*)\*(?!\s)(.+?)\*(?!\*)/g, '<em>$1</em>');
+      html = html.replace(/(?<!_)_(?!\s)(.+?)_(?!_)/g, '<em>$1</em>');
+      return html;
+    };
+
+    const lines = working.split('\n');
+    const blocks = [];
+    let paragraph = [];
+    let inUl = false;
+    let inOl = false;
+
+    const closeLists = () => {
+      if (inUl) {
+        blocks.push('</ul>');
+        inUl = false;
+      }
+      if (inOl) {
+        blocks.push('</ol>');
+        inOl = false;
+      }
+    };
+
+    const flushParagraph = () => {
+      if (!paragraph.length) return;
+      blocks.push(`<p>${applyInline(paragraph.join('\n'))}</p>`);
+      paragraph = [];
+    };
+
+    for (const rawLine of lines) {
+      const line = rawLine;
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        flushParagraph();
+        closeLists();
+        continue;
+      }
+
+      const placeholderMatch = trimmed.match(/^@@CODE_BLOCK_(\d+)@@$/);
+      if (placeholderMatch) {
+        flushParagraph();
+        closeLists();
+        blocks.push(trimmed);
+        continue;
+      }
+
+      if (/^([-*_])(\s*\1){2,}$/.test(trimmed)) {
+        flushParagraph();
+        closeLists();
+        blocks.push('<hr>');
+        continue;
+      }
+
+      const headingMatch = line.match(/^\s*(#{1,6})\s+(.*)$/);
+      if (headingMatch) {
+        flushParagraph();
+        closeLists();
+        const level = headingMatch[1].length;
+        blocks.push(`<h${level}>${applyInline(headingMatch[2])}</h${level}>`);
+        continue;
+      }
+
+      if (/^\s*>\s*/.test(line)) {
+        flushParagraph();
+        closeLists();
+        blocks.push(`<blockquote>${applyInline(line.replace(/^\s*>\s?/, ''))}</blockquote>`);
+        continue;
+      }
+
+      if (/^\s*[-*]\s+/.test(line)) {
+        flushParagraph();
+        if (inOl) {
+          blocks.push('</ol>');
+          inOl = false;
+        }
+        if (!inUl) {
+          blocks.push('<ul>');
+          inUl = true;
+        }
+        blocks.push(`<li>${applyInline(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
+        continue;
+      }
+
+      if (/^\s*\d+[.)]\s+/.test(line)) {
+        flushParagraph();
+        if (inUl) {
+          blocks.push('</ul>');
+          inUl = false;
+        }
+        if (!inOl) {
+          blocks.push('<ol>');
+          inOl = true;
+        }
+        blocks.push(`<li>${applyInline(line.replace(/^\s*\d+[.)]\s+/, ''))}</li>`);
+        continue;
+      }
+
+      paragraph.push(line);
+    }
+
+    flushParagraph();
+    closeLists();
+
+    let html = blocks.join('');
+    codeBlocks.forEach((block, index) => {
+      const placeholder = `@@CODE_BLOCK_${index}@@`;
+      html = html.split(placeholder).join(block);
+    });
+
+    return html;
+  }
+
+  handleAssistantStream(event) {
+    if (event.status === 'start') {
+      this.isStreaming = true;
+      this.startStreamingMessage();
+      this.updateStatus('Model is thinking...', 'active');
+    } else if (event.status === 'delta') {
+      this.isStreaming = true;
+      this.updateStreamingMessage(event.content || '');
+    } else if (event.status === 'stop') {
+      this.isStreaming = false;
+      this.finishStreamingMessage();
+    }
+    this.updateActivityState();
+  }
+
+  startStreamingMessage() {
+    if (this.streamingState) return;
+    const container = document.createElement('div');
+    container.className = 'message assistant streaming';
+    container.innerHTML = `
+      <div class="message-content streaming-content markdown-body">
+        <div class="typing-indicator"><span></span><span></span><span></span></div>
+        <div class="streaming-text markdown-body"></div>
+      </div>
+    `;
+    this.elements.chatMessages.appendChild(container);
+    this.streamingState = {
+      container,
+      textEl: container.querySelector('.streaming-text')
+    };
+    this.scrollToBottom();
+  }
+
+  updateStreamingMessage(content) {
+    if (!this.streamingState) {
+      this.startStreamingMessage();
+    }
+    if (this.streamingState?.textEl) {
+      this.streamingState.textEl.innerHTML = this.renderMarkdown(content || '');
+    }
+    this.scrollToBottom();
+  }
+
+  finishStreamingMessage() {
+    if (this.streamingState?.container) {
+      this.streamingState.container.remove();
+    }
+    this.streamingState = null;
+    this.isStreaming = false;
+    this.updateActivityState();
   }
 
   displayToolExecution(toolName, args, result, toolCallId = null) {
-    // Find or create tool call element
     let toolDiv = null;
-    const lastMessage = this.elements.chatMessages.lastElementChild;
 
     if (result === null || result === undefined) {
-      // First message - just show the tool being called
-      toolDiv = document.createElement('div');
-      toolDiv.className = 'tool-call';
+      // Create a simple chip for the running tool
+      toolDiv = document.createElement('span');
+      toolDiv.className = 'tool-call running';
+      toolDiv.dataset.toolId = toolCallId || `temp-${Date.now()}`;
 
+      const argsPreview = this.getArgsPreview(args);
       toolDiv.innerHTML = `
-        <div class="tool-call-header">
-          <svg class="tool-call-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-          </svg>
-          <span>🔧 ${toolName}</span>
-        </div>
-        <div class="tool-call-body">
-          <div class="tool-call-section">
-            <div class="tool-call-label">Arguments</div>
-            <div class="tool-call-args">${this.escapeHtml(JSON.stringify(args, null, 2))}</div>
-          </div>
-          <div class="tool-call-section">
-            <div class="tool-call-label">Result</div>
-            <div class="tool-call-result">⏳ Running...</div>
-          </div>
-        </div>
+        <svg class="tool-call-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+        </svg>
+        <span>${toolName}</span>
+        ${argsPreview ? `<span style="opacity:0.6">${argsPreview}</span>` : ''}
       `;
 
-      // Make it collapsible (start expanded by default)
-      const header = toolDiv.querySelector('.tool-call-header');
-      const body = toolDiv.querySelector('.tool-call-body');
-      body.style.display = 'block'; // Start expanded
-      let isExpanded = true;
+      // Find or create container for tool calls
+      let container = this.elements.chatMessages.querySelector('.tool-calls-container:last-child');
+      const lastElement = this.elements.chatMessages.lastElementChild;
 
-      // Add expand/collapse indicator
-      const indicator = document.createElement('span');
-      indicator.textContent = '▼';
-      indicator.style.marginLeft = 'auto';
-      indicator.style.transition = 'transform 0.2s ease';
-      header.appendChild(indicator);
-
-      header.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        body.style.display = isExpanded ? 'block' : 'none';
-        indicator.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-      });
-
-      if (lastMessage && lastMessage.classList.contains('assistant')) {
-        lastMessage.appendChild(toolDiv);
-      } else {
-        this.elements.chatMessages.appendChild(toolDiv);
+      if (!container || (lastElement && !lastElement.classList.contains('tool-calls-container'))) {
+        container = document.createElement('div');
+        container.className = 'tool-calls-container';
+        this.elements.chatMessages.appendChild(container);
       }
+
+      container.appendChild(toolDiv);
+
       if (toolCallId) {
         this.toolCallViews.set(toolCallId, toolDiv);
       }
     } else {
-      // Second message - update with result
+      // Update existing tool chip with result
       if (toolCallId && this.toolCallViews.has(toolCallId)) {
         toolDiv = this.toolCallViews.get(toolCallId);
       } else {
-        // Fallback to last tool-call in chat
-        const toolCallElements = this.elements.chatMessages.querySelectorAll('.tool-call');
-        if (toolCallElements.length === 0) {
-          console.warn('No tool-call element found to update with result');
-          return;
-        }
-        toolDiv = toolCallElements[toolCallElements.length - 1];
-      }
-      let resultDiv = toolDiv.querySelector('.tool-call-result');
-      if (!resultDiv) {
-        // Create a result container defensively if missing
-        resultDiv = document.createElement('div');
-        resultDiv.className = 'tool-call-result';
-        toolDiv.appendChild(resultDiv);
+        const toolChips = this.elements.chatMessages.querySelectorAll('.tool-call.running');
+        toolDiv = toolChips[toolChips.length - 1];
       }
 
-      const isError = (result && (result.error || result.success === false));
-      resultDiv.className = `tool-call-result ${isError ? 'error' : ''}`;
-
-      // Special handling for results with dataUrl (screenshots)
-      if (result && result.dataUrl && result.dataUrl.startsWith('data:image/')) {
-        const metaData = { ...result };
-        delete metaData.dataUrl; // Avoid rendering massive base64 in metadata block
-
-        // Use a safe innerHTML with only our own generated content
-        resultDiv.innerHTML = `
-          <div style="margin-bottom: 12px;">
-            <img src="${result.dataUrl}" alt="Screenshot" style="max-width: 100%; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;" />
-          </div>
-          <div style="font-size: 10px; color: #888; opacity: 0.7;">
-            Click image to open in new tab
-          </div>
-          <pre style="margin-top: 8px; font-size: 10px;">${this.escapeHtml(JSON.stringify(metaData, null, 2))}</pre>
-        `;
-
-        // Add click handler programmatically to avoid inline JS being blocked by CSP
-        const img = resultDiv.querySelector('img');
-        if (img) {
-          img.addEventListener('click', () => {
-            try {
-              window.open(result.dataUrl, '_blank');
-            } catch (e) {
-              console.warn('Failed to open screenshot in new tab:', e);
-            }
-          });
-        }
-      } else {
-        // Fallback to plain JSON rendering
-        resultDiv.textContent = JSON.stringify(result, null, 2);
+      if (toolDiv) {
+        const isError = result && (result.error || result.success === false);
+        toolDiv.classList.remove('running');
+        toolDiv.classList.add(isError ? 'error' : 'success');
       }
     }
 
     this.scrollToBottom();
+  }
+
+  getArgsPreview(args) {
+    if (!args) return '';
+    if (args.url) return args.url.substring(0, 30) + (args.url.length > 30 ? '...' : '');
+    if (args.text) return `"${args.text.substring(0, 20)}${args.text.length > 20 ? '...' : ''}"`;
+    if (args.selector) return args.selector.substring(0, 25);
+    if (args.key) return args.key;
+    if (args.direction) return args.direction;
+    if (args.type) return args.type;
+    return '';
   }
 
   addTimelineItem(id, toolName, args) {
@@ -527,7 +700,7 @@ Response requirements:
       <span class="tool-timeline-status running"></span>
       <span class="tool-timeline-name">${this.escapeHtml(toolName)}</span>
       <span class="tool-timeline-args" style="opacity:0.8;">${this.escapeHtml(JSON.stringify(args))}</span>
-      <span class="tool-timeline-meta">Running…</span>
+      <span class="tool-timeline-meta">Running...</span>
     `;
     this.elements.toolTimeline.appendChild(row);
     while (this.elements.toolTimeline.children.length > 30) {
@@ -551,16 +724,141 @@ Response requirements:
   updateStatus(text, type = 'default') {
     this.elements.statusText.textContent = text;
     this.elements.statusBar.className = 'status-bar ' + type;
+    this.updateActivityState();
+  }
+
+  updateActivityState() {
+    if (!this.elements.statusMeta) return;
+    const labels = [];
+    if (this.pendingToolCount > 0) {
+      labels.push(`${this.pendingToolCount} action${this.pendingToolCount > 1 ? 's' : ''} running`);
+    }
+    if (this.isStreaming) {
+      labels.push('Streaming response');
+    }
+    if (labels.length > 0) {
+      this.elements.statusMeta.textContent = labels.join(' · ');
+      this.elements.statusMeta.classList.remove('hidden');
+    } else {
+      this.elements.statusMeta.textContent = '';
+      this.elements.statusMeta.classList.add('hidden');
+    }
   }
 
   scrollToBottom() {
-    this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+    });
+  }
+
+  escapeHtmlBasic(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : text;
+    return div.innerHTML;
   }
 
   escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, '<br>');
+    return this.escapeHtmlBasic(text).replace(/\n/g, '<br>');
+  }
+
+  escapeAttribute(value) {
+    return this.escapeHtmlBasic(value).replace(/"/g, '&quot;');
+  }
+
+  async toggleTabSelector() {
+    const isHidden = this.elements.tabSelector.classList.contains('hidden');
+    if (isHidden) {
+      await this.loadTabs();
+      this.elements.tabSelector.classList.remove('hidden');
+    } else {
+      this.closeTabSelector();
+    }
+  }
+
+  closeTabSelector() {
+    this.elements.tabSelector.classList.add('hidden');
+  }
+
+  async loadTabs() {
+    const tabs = await chrome.tabs.query({});
+    this.elements.tabList.innerHTML = '';
+
+    tabs.forEach(tab => {
+      const isSelected = this.selectedTabs.has(tab.id);
+      const item = document.createElement('div');
+      item.className = `tab-item${isSelected ? ' selected' : ''}`;
+      item.innerHTML = `
+        <div class="tab-item-checkbox"></div>
+        <img class="tab-item-favicon" src="${tab.favIconUrl || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
+        <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
+      `;
+      item.addEventListener('click', () => this.toggleTabSelection(tab, item));
+      this.elements.tabList.appendChild(item);
+    });
+  }
+
+  toggleTabSelection(tab, itemElement) {
+    if (this.selectedTabs.has(tab.id)) {
+      this.selectedTabs.delete(tab.id);
+      itemElement.classList.remove('selected');
+    } else {
+      this.selectedTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url, windowId: tab.windowId });
+      itemElement.classList.add('selected');
+    }
+    this.updateSelectedTabsBar();
+    this.updateTabSelectorButton();
+  }
+
+  updateSelectedTabsBar() {
+    if (this.selectedTabs.size === 0) {
+      this.elements.selectedTabsBar.classList.add('hidden');
+      return;
+    }
+
+    this.elements.selectedTabsBar.classList.remove('hidden');
+    this.elements.selectedTabsBar.innerHTML = '';
+
+    this.selectedTabs.forEach((tab, tabId) => {
+      const chip = document.createElement('div');
+      chip.className = 'selected-tab-chip';
+      chip.innerHTML = `
+        <span>${this.escapeHtml(tab.title?.substring(0, 25) || 'Tab')}${tab.title?.length > 25 ? '...' : ''}</span>
+        <button title="Remove">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `;
+      chip.querySelector('button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectedTabs.delete(tabId);
+        this.updateSelectedTabsBar();
+        this.updateTabSelectorButton();
+        this.loadTabs();
+      });
+      this.elements.selectedTabsBar.appendChild(chip);
+    });
+  }
+
+  updateTabSelectorButton() {
+    if (this.selectedTabs.size > 0) {
+      this.elements.tabSelectorBtn.classList.add('has-selection');
+    } else {
+      this.elements.tabSelectorBtn.classList.remove('has-selection');
+    }
+  }
+
+  getSelectedTabsContext() {
+    if (this.selectedTabs.size === 0) return '';
+
+    let context = '\n\n[Context from selected tabs:]\n';
+    this.selectedTabs.forEach(tab => {
+      const tabTitle = tab.title || 'Untitled';
+      context += `- Tab [${tab.id}] "${tabTitle}": ${tab.url}\n`;
+    });
+    return context;
   }
 }
 
