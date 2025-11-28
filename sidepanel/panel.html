@@ -12,10 +12,9 @@
     <header class="header">
       <h1>Browser AI Agent</h1>
       <button id="settingsBtn" class="icon-btn" title="Settings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v6m0 6v6m0-18a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3 3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"></path>
-          <path d="m19.07 4.93-1.41 1.41M6.34 17.66l-1.41 1.41M19.07 19.07l-1.41-1.41M6.34 6.34 4.93 4.93"></path>
         </svg>
       </button>
     </header>
@@ -24,7 +23,7 @@
     <div id="settingsPanel" class="settings-panel hidden">
       <h2>Configuration</h2>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">AI PROVIDER</h3>
+      <h3>AI Provider</h3>
 
       <div class="form-group">
         <label for="provider">Provider</label>
@@ -53,7 +52,7 @@
         <small>Base URL for OpenAI-compatible API</small>
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL PARAMETERS</h3>
+      <h3>Model Parameters</h3>
 
       <div class="form-group">
         <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
@@ -73,7 +72,7 @@
         <small>Maximum time to wait for API response</small>
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SCREENSHOTS</h3>
+      <h3>Screenshots</h3>
 
       <div class="form-group">
         <label for="sendScreenshotsAsImages">Send screenshots as images</label>
@@ -92,7 +91,7 @@
         </select>
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">BEHAVIOR</h3>
+      <h3>Behavior</h3>
 
       <div class="form-group">
         <label for="showThinking">Show AI thinking process</label>
@@ -101,6 +100,15 @@
           <option value="false">Disabled</option>
         </select>
         <small>Display the AI's reasoning before tool calls</small>
+      </div>
+
+      <div class="form-group">
+        <label for="streamResponses">Stream responses</label>
+        <select id="streamResponses">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+        <small>See partial responses while the model is still generating</small>
       </div>
 
       <div class="form-group">
@@ -129,21 +137,21 @@
         <small>Store conversations locally (max 50 messages)</small>
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">MODEL CONFIGURATIONS</h3>
+      <h3>Configurations</h3>
 
       <div class="form-group">
         <label>Active Configuration</label>
-        <div style="display: flex; gap: 8px;">
-          <select id="activeConfig" style="flex: 1;">
+        <div class="config-row">
+          <select id="activeConfig">
             <option value="default">Default</option>
           </select>
-          <button id="newConfigBtn" class="btn btn-secondary" style="min-width: 80px;">New</button>
-          <button id="deleteConfigBtn" class="btn btn-secondary" style="min-width: 80px;">Delete</button>
+          <button id="newConfigBtn" class="btn btn-secondary">New</button>
+          <button id="deleteConfigBtn" class="btn btn-secondary">Delete</button>
         </div>
         <small>Save and switch between different model configurations</small>
       </div>
 
-      <h3 style="margin: 20px 0 10px 0; font-size: 14px; color: var(--text-secondary);">SYSTEM PROMPT</h3>
+      <h3>System Prompt</h3>
 
       <div class="form-group">
         <label for="systemPrompt">System Prompt</label>
@@ -160,7 +168,9 @@
     <!-- Chat Interface -->
     <div id="chatInterface" class="chat-interface">
       <div id="statusBar" class="status-bar">
+        <span id="statusDot" class="status-dot"></span>
         <span id="statusText">Ready</span>
+        <span id="statusMeta" class="status-meta hidden"></span>
       </div>
 
       <!-- Tool Timeline -->
@@ -168,7 +178,31 @@
 
       <div id="chatMessages" class="chat-messages"></div>
 
+      <!-- Tab Selector -->
+      <div id="tabSelector" class="tab-selector hidden">
+        <div class="tab-selector-header">
+          <span>Select tabs to include</span>
+          <button id="closeTabSelector" class="icon-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div id="tabList" class="tab-list"></div>
+      </div>
+
+      <!-- Selected Tabs Display -->
+      <div id="selectedTabsBar" class="selected-tabs-bar hidden"></div>
+
       <div class="input-area">
+        <button id="tabSelectorBtn" class="icon-btn tab-selector-btn" title="Select tabs to include">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+          </svg>
+        </button>
         <textarea id="userInput" placeholder="Ask the AI to interact with the browser..." rows="3"></textarea>
         <button id="sendBtn" class="icon-btn send-btn" title="Send message">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

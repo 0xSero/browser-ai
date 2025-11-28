@@ -33,7 +33,7 @@ class BackgroundService {
     try {
       switch (message.type) {
         case 'user_message':
-          await this.processUserMessage(message.message, message.conversationHistory);
+          await this.processUserMessage(message.message, message.conversationHistory, message.selectedTabs || []);
           break;
 
         case 'execute_tool':
@@ -54,7 +54,7 @@ class BackgroundService {
     }
   }
 
-  async processUserMessage(userMessage, conversationHistory) {
+  async processUserMessage(userMessage, conversationHistory, selectedTabs = []) {
     try {
       // Get settings
       const settings = await chrome.storage.local.get([
@@ -65,7 +65,8 @@ class BackgroundService {
         'systemPrompt',
         'sendScreenshotsAsImages',
         'screenshotQuality',
-        'showThinking'
+        'showThinking',
+        'streamResponses'
       ]);
 
       if (!settings.apiKey) {
@@ -76,6 +77,15 @@ class BackgroundService {
         return;
       }
 
+      try {
+        await this.browserTools.configureSessionTabs(selectedTabs || [], {
+          title: 'Browser AI',
+          color: 'blue'
+        });
+      } catch (error) {
+        console.warn('Failed to configure session tabs:', error);
+      }
+
       // Initialize AI provider
       this.aiProvider = new AIProvider(settings);
 
@@ -84,17 +94,33 @@ class BackgroundService {
 
       // Get current tab info for context
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const sessionTabs = this.browserTools.getSessionTabSummaries();
+      const workingTabId = this.browserTools.getCurrentSessionTabId() || activeTab?.id;
+      const workingTab = sessionTabs.find(tab => tab.id === workingTabId);
       const context = {
-        currentUrl: activeTab?.url || 'unknown',
-        currentTitle: activeTab?.title || 'unknown',
-        tabId: activeTab?.id
+        currentUrl: workingTab?.url || activeTab?.url || 'unknown',
+        currentTitle: workingTab?.title || activeTab?.title || 'unknown',
+        tabId: workingTabId,
+        availableTabs: sessionTabs
       };
 
       // Call AI with tools
+      const supportsStreaming = typeof this.aiProvider.supportsStreaming === 'function'
+        ? this.aiProvider.supportsStreaming()
+        : (settings.provider !== 'anthropic');
+      const streamEnabled = supportsStreaming && settings.streamResponses !== false;
       const response = await this.aiProvider.chat(
         conversationHistory,
         tools,
-        context
+        context,
+        {
+          stream: streamEnabled,
+          streamCallbacks: streamEnabled ? {
+            onStart: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'start' }),
+            onDelta: (payload) => this.sendToSidePanel({ type: 'assistant_stream', status: 'delta', content: payload?.content || '' }),
+            onComplete: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'stop' })
+          } : null
+        }
       );
 
       // Process response and handle tool execution loop
