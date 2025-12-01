@@ -6,12 +6,16 @@ export class AIProvider {
     this.model = settings.model;
     this.customEndpoint = settings.customEndpoint;
     this.systemPrompt = settings.systemPrompt;
-    this.sendScreenshotsAsImages = settings.sendScreenshotsAsImages !== undefined ? settings.sendScreenshotsAsImages : true;
+    this.sendScreenshotsAsImages = settings.sendScreenshotsAsImages !== undefined ? settings.sendScreenshotsAsImages : false;
     this.screenshotQuality = settings.screenshotQuality || 'high';
     this.showThinking = settings.showThinking !== undefined ? settings.showThinking : true;
+    this.maxTokens = settings.maxTokens || 2048;
+    this.temperature = typeof settings.temperature === 'number' ? settings.temperature : 0.7;
+    this.requestTimeout = settings.timeout || 30000;
     this.messages = [];
     this.streamEnabled = false;
     this.streamCallbacks = null;
+    this.maxModelTokens = settings.maxTokens || 2048;
   }
 
   async chat(conversationHistory, tools, context, options = {}) {
@@ -60,6 +64,14 @@ Tool discipline:
 4. With multiple tabs, announce the active tab via focusTab/switchTab and use describeSessionTabs to recall IDs.
 Example: to inspect a footer → scroll('bottom') then getPageContent({ type: 'text' }) for that section before summarizing.
 
+Safety:
+- Do not install software, extensions, or change browser/system settings.
+- Avoid destructive actions (deleting history, logging out, posting messages) unless the user explicitly asked.
+- Stay within the provided tabs; do not open unknown or suspicious URLs. Ask for confirmation if unsure.
+- Preserve existing user-created tab groups and content (e.g., docs, HackMD) — avoid overwriting without confirmation.
+- Prefer gentle edits: use type/focus tools instead of wholesale replacements when editing text areas.
+- Keep tool calls concise to prevent context overrun; prefer batching small actions.
+
 Base every answer strictly on real tool output.`;
   }
 
@@ -68,11 +80,17 @@ Base every answer strictly on real tool output.`;
       ? this.customEndpoint
       : 'https://api.openai.com/v1';
 
+    // Always sanitize messages to ensure tool calls have matching results
+    // This helps with both native OpenAI and proxy endpoints (OpenRouter, etc.)
+    let messages = this.sanitizeForProxy(this.messages);
+
     const payload = {
       model: this.model,
-      messages: this.messages,
+      messages: messages,
       tools: this.convertToolsToOpenAI(tools),
-      tool_choice: 'auto'
+      tool_choice: 'auto',
+      temperature: this.temperature,
+      max_tokens: this.maxTokens
     };
 
     if (options.stream) {
@@ -82,18 +100,64 @@ Base every answer strictly on real tool output.`;
       }
     }
 
-    const response = await fetch(`${endpoint}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
+    let response;
+    let retries = 0;
+    const maxRetries = 2;
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    while (retries <= maxRetries) {
+      try {
+        response = await fetch(`${endpoint}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined
+        });
+
+        if (response.ok) break;
+
+        const errorText = await response.text();
+
+        // Handle tool ordering errors (from OpenAI, Anthropic proxies, or any endpoint)
+        const isToolOrderingError = errorText.includes('tool call result does not follow tool call') ||
+          errorText.includes('tool_call_id') ||
+          errorText.includes('invalid_request_error') && errorText.includes('tool');
+
+        if (isToolOrderingError && retries < maxRetries) {
+          console.warn(`Tool ordering error, attempt ${retries + 1}/${maxRetries}`, errorText.slice(0, 200));
+
+          if (retries === 0) {
+            // First retry: sanitize messages for Anthropic compatibility
+            messages = this.sanitizeForProxy(this.messages);
+          } else {
+            // Second retry: aggressive cleanup - remove tool interactions
+            console.warn('Aggressive cleanup for proxy endpoint...');
+            messages = this.messages.map(msg => {
+              if (msg.role === 'assistant' && msg.tool_calls) {
+                // Keep only content, remove tool_calls
+                return { role: 'assistant', content: msg.content || '...' };
+              }
+              if (msg.role === 'tool') {
+                return null; // Remove tool result messages
+              }
+              return msg;
+            }).filter(Boolean);
+            messages = this.ensureAlternatingRoles(messages);
+          }
+
+          payload.messages = messages;
+          retries++;
+          continue;
+        }
+
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      } catch (err) {
+        if (err.message?.includes('OpenAI API error') || retries >= maxRetries) throw err;
+        retries++;
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
 
     if (options.stream) {
@@ -103,7 +167,88 @@ Base every answer strictly on real tool output.`;
     const data = await response.json();
     const message = data.choices?.[0]?.message || {};
     this.messages.push(message);
-    return this.formatOpenAIMessage(message);
+
+    // Extract usage from OpenAI response
+    const usage = data.usage ? {
+      inputTokens: data.usage.prompt_tokens || 0,
+      outputTokens: data.usage.completion_tokens || 0,
+      totalTokens: data.usage.total_tokens || 0
+    } : null;
+
+    return this.formatOpenAIMessage(message, usage);
+  }
+
+  // Sanitize messages for proxy endpoints that might route to Anthropic
+  sanitizeForProxy(messages) {
+    const result = [];
+    let i = 0;
+
+    while (i < messages.length) {
+      const msg = messages[i];
+      if (!msg) { i++; continue; }
+
+      // Handle assistant with tool_calls (OpenAI format)
+      if (msg.role === 'assistant' && msg.tool_calls?.length > 0) {
+        result.push(msg);
+
+        // Collect all following tool results
+        const toolResults = [];
+        let j = i + 1;
+        while (j < messages.length && messages[j]?.role === 'tool') {
+          toolResults.push(messages[j]);
+          j++;
+        }
+
+        // Ensure we have results for all tool calls
+        const callIds = new Set(msg.tool_calls.map(tc => tc.id));
+        const resultIds = new Set(toolResults.map(tr => tr.tool_call_id));
+
+        for (const id of callIds) {
+          if (!resultIds.has(id)) {
+            // Add placeholder for missing result
+            toolResults.push({
+              role: 'tool',
+              tool_call_id: id,
+              content: 'Tool execution was skipped'
+            });
+          }
+        }
+
+        result.push(...toolResults);
+        i = j;
+        continue;
+      }
+
+      result.push(msg);
+      i++;
+    }
+
+    return this.ensureAlternatingRolesOpenAI(result);
+  }
+
+  // Ensure proper message ordering for OpenAI format
+  ensureAlternatingRolesOpenAI(messages) {
+    const result = [];
+    for (const msg of messages) {
+      // Tool messages can follow assistant messages
+      if (msg.role === 'tool') {
+        result.push(msg);
+        continue;
+      }
+
+      // For user/assistant, check alternation
+      const last = result[result.length - 1];
+      if (last && last.role === msg.role && msg.role !== 'tool') {
+        // Merge consecutive same-role messages
+        if (typeof last.content === 'string' && typeof msg.content === 'string') {
+          last.content += '\n' + msg.content;
+        }
+        continue;
+      }
+
+      result.push(msg);
+    }
+    return result;
   }
 
   async callAnthropic(tools) {
@@ -111,29 +256,80 @@ Base every answer strictly on real tool output.`;
 
     // Extract system message
     const systemMessage = this.messages.find(m => m.role === 'system');
-    const conversationMessages = this.messages.filter(m => m.role !== 'system');
+    let conversationMessages = this.messages.filter(m => m.role !== 'system');
+
+    // Sanitize messages for Anthropic format
+    conversationMessages = this.sanitizeAnthropicMessages(conversationMessages);
 
     const payload = {
       model: this.model,
-      max_tokens: 4096,
+      max_tokens: this.maxTokens,
       system: systemMessage ? systemMessage.content : '',
       messages: conversationMessages,
       tools: this.convertToolsToAnthropic(tools)
     };
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(payload)
-    });
+    let response;
+    let retries = 0;
+    const maxRetries = 2;
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+    while (retries <= maxRetries) {
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': this.apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined
+        });
+
+        if (response.ok) break;
+
+        const errorText = await response.text();
+
+        // If it's a tool call ordering error, try re-sanitizing and retry
+        if (errorText.includes('tool call result does not follow tool call') && retries < maxRetries) {
+          console.warn(`Tool ordering error, attempt ${retries + 1}/${maxRetries}, re-sanitizing messages...`);
+
+          if (retries === 0) {
+            // First retry: re-sanitize normally
+            conversationMessages = this.sanitizeAnthropicMessages(this.messages.filter(m => m.role !== 'system'));
+          } else {
+            // Second retry: aggressive cleanup - strip all tool interactions, keep only text
+            console.warn('Aggressive cleanup: stripping tool interactions...');
+            conversationMessages = this.messages
+              .filter(m => m.role !== 'system')
+              .map(msg => {
+                if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+                  const textContent = msg.content.filter(c => c?.type === 'text');
+                  if (textContent.length === 0) return null;
+                  return { role: 'assistant', content: textContent };
+                }
+                if (msg.role === 'user' && Array.isArray(msg.content)) {
+                  const nonToolContent = msg.content.filter(c => c?.type !== 'tool_result');
+                  if (nonToolContent.length === 0) return null;
+                  return { role: 'user', content: nonToolContent };
+                }
+                return msg;
+              })
+              .filter(Boolean);
+            conversationMessages = this.ensureAlternatingRoles(conversationMessages);
+          }
+
+          payload.messages = conversationMessages;
+          retries++;
+          continue;
+        }
+
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      } catch (err) {
+        if (retries >= maxRetries) throw err;
+        retries++;
+        await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+      }
     }
 
     const data = await response.json();
@@ -162,10 +358,18 @@ Base every answer strictly on real tool output.`;
       content = '';
     }
 
+    // Extract usage info from Anthropic response
+    const usage = data.usage ? {
+      inputTokens: data.usage.input_tokens || 0,
+      outputTokens: data.usage.output_tokens || 0,
+      totalTokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
+    } : null;
+
     if (toolUseBlocks.length > 0) {
       return {
         content: content,
         thinking: thinking,
+        usage: usage,
         toolCalls: toolUseBlocks.map(block => ({
           id: block.id,
           name: block.name,
@@ -177,55 +381,51 @@ Base every answer strictly on real tool output.`;
     return {
       content: content,
       thinking: thinking,
+      usage: usage,
       toolCalls: []
     };
   }
 
   addToolResult(toolCallId, result) {
     if (this.provider === 'anthropic') {
-      // Anthropic format
+      // Anthropic format - tool results must be in a user message
+      // Check if we need to append to existing user message with tool_results
+      const lastMsg = this.messages[this.messages.length - 1];
+      const isExistingToolResultMsg = lastMsg?.role === 'user' &&
+        Array.isArray(lastMsg.content) &&
+        lastMsg.content.some(c => c.type === 'tool_result');
+
+      let toolResultContent;
       if (this.shouldSendAsImage(result)) {
-        // For Anthropic, we can include the image directly in the tool_result content array
         const base64Data = result.dataUrl.split(',')[1];
-        this.messages.push({
-          role: 'user',
+        toolResultContent = {
+          type: 'tool_result',
+          tool_use_id: toolCallId,
           content: [
-            {
-              type: 'tool_result',
-              tool_use_id: toolCallId,
-              content: [
-                {
-                  type: 'text',
-                  text: `Screenshot captured successfully from tab ${result.tabId}:`
-                },
-                {
-                  type: 'image',
-                  source: {
-                    type: 'base64',
-                    media_type: 'image/png',
-                    data: base64Data
-                  }
-                }
-              ]
-            }
+            { type: 'text', text: `Screenshot captured successfully from tab ${result.tabId}:` },
+            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: base64Data } }
           ]
-        });
+        };
       } else {
-        // Regular tool result
-        // If result contains a large dataUrl, strip it to avoid sending massive data
         const resultToSend = { ...result };
         if (resultToSend.dataUrl) {
           delete resultToSend.dataUrl;
-          resultToSend.message = 'Screenshot captured successfully. (Image data not included in this format)';
+          resultToSend.message = 'Screenshot captured successfully. (Image data not included)';
         }
+        toolResultContent = {
+          type: 'tool_result',
+          tool_use_id: toolCallId,
+          content: JSON.stringify(resultToSend)
+        };
+      }
 
+      // Append to existing tool_result message or create new one
+      if (isExistingToolResultMsg) {
+        lastMsg.content.push(toolResultContent);
+      } else {
         this.messages.push({
           role: 'user',
-          content: [{
-            type: 'tool_result',
-            tool_use_id: toolCallId,
-            content: JSON.stringify(resultToSend)
-          }]
+          content: [toolResultContent]
         });
       }
     } else {
@@ -312,6 +512,7 @@ Base every answer strictly on real tool output.`;
       return {
         content: response.content,
         thinking: response.thinking,
+        usage: response.usage,
         toolCalls: response.toolCalls || []
       };
     } else {
@@ -322,6 +523,7 @@ Base every answer strictly on real tool output.`;
       return {
         content: response.content,
         thinking: response.thinking,
+        usage: response.usage,
         toolCalls: response.toolCalls || []
       };
     }
@@ -346,8 +548,229 @@ Base every answer strictly on real tool output.`;
     }));
   }
 
+  // Sanitize and fix message ordering for Anthropic
+  sanitizeAnthropicMessages(messages) {
+    // Phase 1: Collect ALL tool_use IDs and ALL tool_result entries from the entire history
+    const allToolResults = new Map(); // tool_use_id -> tool_result content
+
+    for (const msg of messages) {
+      if (msg?.role === 'user' && Array.isArray(msg.content)) {
+        for (const block of msg.content) {
+          if (block?.type === 'tool_result' && block.tool_use_id) {
+            allToolResults.set(block.tool_use_id, block);
+          }
+        }
+      }
+    }
+
+    // Phase 2: Build clean message sequence
+    const result = [];
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg || !msg.role) continue;
+
+      // Handle assistant messages with tool_use
+      if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        const toolUseBlocks = msg.content.filter(c => c?.type === 'tool_use');
+
+        if (toolUseBlocks.length > 0) {
+          // Add the assistant message
+          result.push(msg);
+
+          // Build tool_result array - match by ID, add placeholders for missing
+          const toolResultsForThis = [];
+          for (const toolUse of toolUseBlocks) {
+            const matchingResult = allToolResults.get(toolUse.id);
+            if (matchingResult) {
+              toolResultsForThis.push(matchingResult);
+              allToolResults.delete(toolUse.id); // Mark as used
+            } else {
+              // No matching result - add placeholder
+              toolResultsForThis.push({
+                type: 'tool_result',
+                tool_use_id: toolUse.id,
+                content: 'Tool execution was skipped or failed'
+              });
+            }
+          }
+
+          // Add the tool results immediately after
+          result.push({
+            role: 'user',
+            content: toolResultsForThis
+          });
+          continue;
+        }
+      }
+
+      // Handle regular user messages (skip tool_result-only messages, they're handled above)
+      if (msg.role === 'user') {
+        if (Array.isArray(msg.content)) {
+          const nonToolContent = msg.content.filter(c => c?.type !== 'tool_result');
+          if (nonToolContent.length === 0) continue; // Skip tool_result-only messages
+          // Keep message but filter out tool_results
+          result.push({ ...msg, content: nonToolContent });
+        } else if (msg.content) {
+          result.push(msg);
+        } else {
+          result.push({ ...msg, content: '.' });
+        }
+        continue;
+      }
+
+      // Regular assistant messages (no tool_use)
+      result.push(msg);
+    }
+
+    // Phase 3: Ensure alternating user/assistant pattern
+    return this.ensureAlternatingRoles(result);
+  }
+
+  // Ensure messages alternate between user and assistant
+  ensureAlternatingRoles(messages) {
+    if (messages.length === 0) return messages;
+
+    const result = [];
+    let lastRole = null;
+
+    for (const msg of messages) {
+      if (msg.role === lastRole) {
+        // Same role twice - merge or skip
+        if (msg.role === 'user') {
+          // Merge user messages
+          const lastMsg = result[result.length - 1];
+          if (Array.isArray(lastMsg.content) && Array.isArray(msg.content)) {
+            lastMsg.content.push(...msg.content);
+          } else if (typeof lastMsg.content === 'string' && typeof msg.content === 'string') {
+            lastMsg.content += '\n' + msg.content;
+          }
+          continue;
+        }
+        // Skip duplicate assistant messages
+        continue;
+      }
+
+      result.push(msg);
+      lastRole = msg.role;
+    }
+
+    return result;
+  }
+
   supportsStreaming() {
     return this.provider !== 'anthropic';
+  }
+
+  // Force-clear tool-related messages from history (emergency recovery)
+  clearToolHistory() {
+    console.warn('Clearing tool history from conversation');
+    this.messages = this.messages.map(msg => {
+      // For assistant messages, remove tool_calls (OpenAI format)
+      if (msg.role === 'assistant') {
+        if (msg.tool_calls) {
+          return { role: 'assistant', content: msg.content || '...' };
+        }
+        // For Anthropic format, filter out tool_use blocks
+        if (Array.isArray(msg.content)) {
+          const textOnly = msg.content.filter(c => c?.type === 'text');
+          if (textOnly.length > 0) {
+            return { role: 'assistant', content: textOnly };
+          }
+          return { role: 'assistant', content: [{ type: 'text', text: '...' }] };
+        }
+      }
+      // Remove tool result messages entirely
+      if (msg.role === 'tool') return null;
+      // For user messages with tool_result, filter them out
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        const nonTool = msg.content.filter(c => c?.type !== 'tool_result');
+        if (nonTool.length === 0) return null;
+        return { ...msg, content: nonTool };
+      }
+      return msg;
+    }).filter(Boolean);
+
+    // Ensure alternating roles after cleanup
+    this.messages = this.ensureAlternatingRoles(this.messages);
+  }
+
+  async describeImage(dataUrl, prompt = 'Describe what is visible in this screenshot clearly and concisely.') {
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+      throw new Error('No valid image provided for vision description.');
+    }
+    const base64Data = dataUrl.split(',')[1];
+
+    if (this.provider === 'anthropic') {
+      const payload = {
+        model: this.model,
+        max_tokens: Math.min(this.maxTokens, 1024),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: base64Data } }
+          ]
+        }]
+      };
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic vision error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const textBlock = Array.isArray(data.content) ? data.content.find(block => block.type === 'text') : null;
+      return textBlock?.text || 'No description returned.';
+    }
+
+    // OpenAI or compatible vision
+    const endpoint = this.provider === 'custom'
+      ? this.customEndpoint
+      : 'https://api.openai.com/v1';
+
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        temperature: this.temperature,
+        max_tokens: Math.min(this.maxTokens, 800),
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } }
+            ]
+          }
+        ]
+      }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI vision error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const message = data.choices?.[0]?.message;
+    return this.extractMessageText(message?.content) || 'No description returned.';
   }
 
   parseArgs(raw) {
@@ -599,7 +1022,7 @@ Base every answer strictly on real tool output.`;
     return `implicit_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
   }
 
-  formatOpenAIMessage(message) {
+  formatOpenAIMessage(message, usage = null) {
     const textContent = this.extractMessageText(message?.content);
     const toolCalls = this.extractToolCalls(message);
 
@@ -607,6 +1030,7 @@ Base every answer strictly on real tool output.`;
       return {
         content: '',
         thinking: textContent,
+        usage: usage,
         toolCalls
       };
     }
@@ -614,6 +1038,7 @@ Base every answer strictly on real tool output.`;
     return {
       content: textContent,
       thinking: null,
+      usage: usage,
       toolCalls: []
     };
   }
@@ -683,6 +1108,7 @@ Base every answer strictly on real tool output.`;
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
     let aggregatedContent = '';
+    let streamUsage = null; // Track usage from streaming
     const toolCallMap = new Map();
     const invoke = (name, payload) => {
       try {
@@ -752,6 +1178,14 @@ Base every answer strictly on real tool output.`;
           }
           try {
             const parsed = JSON.parse(data);
+            // Capture usage if present (sent with stream_options.include_usage)
+            if (parsed.usage) {
+              streamUsage = {
+                inputTokens: parsed.usage.prompt_tokens || 0,
+                outputTokens: parsed.usage.completion_tokens || 0,
+                totalTokens: parsed.usage.total_tokens || 0
+              };
+            }
             const choice = parsed?.choices?.[0];
             const delta = choice?.delta || {};
             if (delta.content) {
@@ -775,6 +1209,14 @@ Base every answer strictly on real tool output.`;
         if (data && data !== '[DONE]') {
           try {
             const parsed = JSON.parse(data);
+            // Capture usage if present
+            if (parsed.usage) {
+              streamUsage = {
+                inputTokens: parsed.usage.prompt_tokens || 0,
+                outputTokens: parsed.usage.completion_tokens || 0,
+                totalTokens: parsed.usage.total_tokens || 0
+              };
+            }
             const choice = parsed?.choices?.[0];
             const delta = choice?.delta || {};
             if (delta.content) {
@@ -800,6 +1242,6 @@ Base every answer strictly on real tool output.`;
     };
 
     this.messages.push(assistantMessage);
-    return this.formatOpenAIMessage(assistantMessage);
+    return this.formatOpenAIMessage(assistantMessage, streamUsage);
   }
 }

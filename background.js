@@ -6,6 +6,9 @@ class BackgroundService {
   constructor() {
     this.browserTools = new BrowserTools();
     this.aiProvider = null;
+    this.visionProvider = null;
+    this.currentSettings = null;
+    this.subAgentCount = 0;
     this.init();
   }
 
@@ -66,8 +69,22 @@ class BackgroundService {
         'sendScreenshotsAsImages',
         'screenshotQuality',
         'showThinking',
-        'streamResponses'
+        'streamResponses',
+        'configs',
+        'activeConfig',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'visionProfile',
+        'visionBridge',
+        'enableScreenshots',
+        'temperature',
+        'maxTokens',
+        'timeout'
       ]);
+
+      if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
+      if (settings.sendScreenshotsAsImages === undefined) settings.sendScreenshotsAsImages = false;
+      if (settings.visionBridge === undefined) settings.visionBridge = true;
 
       if (!settings.apiKey) {
         this.sendToSidePanel({
@@ -76,6 +93,9 @@ class BackgroundService {
         });
         return;
       }
+
+      this.currentSettings = settings;
+      this.subAgentCount = 0;
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
@@ -86,11 +106,31 @@ class BackgroundService {
         console.warn('Failed to configure session tabs:', error);
       }
 
-      // Initialize AI provider
-      this.aiProvider = new AIProvider(settings);
+      // Resolve profiles
+      const activeProfileName = settings.activeConfig || 'default';
+      const orchestratorProfileName = settings.orchestratorProfile || activeProfileName;
+      const visionProfileName = settings.visionProfile || null;
+      const orchestratorEnabled = settings.useOrchestrator === true;
+
+      const activeProfile = this.resolveProfile(settings, activeProfileName);
+      const orchestratorProfile = orchestratorEnabled ? this.resolveProfile(settings, orchestratorProfileName) : activeProfile;
+      const visionProfile = settings.visionBridge !== false
+        ? this.resolveProfile(settings, visionProfileName || activeProfileName)
+        : null;
+
+      // Initialize AI providers
+      this.aiProvider = new AIProvider({
+        ...orchestratorProfile,
+        sendScreenshotsAsImages: Boolean(settings.enableScreenshots && settings.sendScreenshotsAsImages)
+      });
+
+      this.visionProvider = (visionProfile && visionProfile.apiKey) ? new AIProvider({
+        ...visionProfile,
+        sendScreenshotsAsImages: true
+      }) : null;
 
       // Get available tools
-      const tools = this.browserTools.getToolDefinitions();
+      const tools = this.getToolsForSession(settings, orchestratorEnabled);
 
       // Get current tab info for context
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -104,13 +144,15 @@ class BackgroundService {
         availableTabs: sessionTabs
       };
 
+      const compactedHistory = this.compactConversationHistory(conversationHistory || []);
+
       // Call AI with tools
       const supportsStreaming = typeof this.aiProvider.supportsStreaming === 'function'
         ? this.aiProvider.supportsStreaming()
         : (settings.provider !== 'anthropic');
       const streamEnabled = supportsStreaming && settings.streamResponses !== false;
       const response = await this.aiProvider.chat(
-        conversationHistory,
+        compactedHistory,
         tools,
         context,
         {
@@ -126,9 +168,11 @@ class BackgroundService {
       // Process response and handle tool execution loop
       let currentResponse = response;
       let toolIterations = 0;
-      const maxIterations = 10; // Safety limit to prevent infinite loops
+      const maxIterations = 1000; // Safety limit to prevent infinite loops
       let followupAttempts = 0;
       const maxFollowups = 2;
+      let apiRetryCount = 0;
+      const maxApiRetries = 3;
 
       const hasUsableContent = (resp) =>
         resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
@@ -148,11 +192,64 @@ class BackgroundService {
             break;
           }
 
+          // Execute all tool calls (errors are caught and returned to AI, not thrown)
+          const toolResults = [];
           for (const toolCall of currentResponse.toolCalls) {
-            await this.executeToolCall(toolCall);
+            try {
+              const result = await this.executeToolCall(toolCall, this.aiProvider, { silent: false, settings });
+              toolResults.push({ id: toolCall.id, success: !result?.error, result });
+            } catch (err) {
+              console.error('Tool execution error (continuing):', err);
+              // Still add the error result so the AI knows what happened
+              this.aiProvider.addToolResult(toolCall.id, {
+                success: false,
+                error: err.message || 'Tool execution failed'
+              });
+              toolResults.push({ id: toolCall.id, success: false, error: err.message });
+            }
           }
 
-          currentResponse = await this.aiProvider.continueConversation();
+          // Continue the conversation (AI will see tool results and decide next action)
+          try {
+            currentResponse = await this.aiProvider.continueConversation();
+            apiRetryCount = 0; // Reset on success
+          } catch (continueErr) {
+            console.error('Error continuing conversation:', continueErr);
+            apiRetryCount++;
+
+            const isToolOrderingError = continueErr.message?.includes('tool call result') ||
+              continueErr.message?.includes('tool_call_id');
+
+            if (apiRetryCount < maxApiRetries) {
+              // Silent retry with exponential backoff
+              console.log(`API error, retry attempt ${apiRetryCount}/${maxApiRetries}`);
+              await new Promise(r => setTimeout(r, 500 * apiRetryCount));
+
+              // If tool ordering error persists, try to fix by force-clearing tool history
+              if (isToolOrderingError && apiRetryCount >= 2) {
+                console.warn('Force-clearing tool history due to persistent errors');
+                this.aiProvider.clearToolHistory();
+              }
+
+              currentResponse = { content: '', toolCalls: [] };
+              // Don't break - let the loop continue and try again
+            } else {
+              // All retries exhausted - show error but still don't terminate
+              this.sendToSidePanel({
+                type: 'error',
+                message: 'API error after retries: ' + continueErr.message
+              });
+
+              // Force-clear tool history and try to get a final response
+              if (isToolOrderingError) {
+                console.warn('Final recovery: clearing all tool history');
+                this.aiProvider.clearToolHistory();
+              }
+
+              currentResponse = { content: '', toolCalls: [] };
+              // Don't break - try to get final response
+            }
+          }
         }
 
         if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
@@ -176,7 +273,8 @@ class BackgroundService {
       this.sendToSidePanel({
         type: 'assistant_response',
         content: currentResponse.content,
-        thinking: currentResponse.thinking
+        thinking: currentResponse.thinking,
+        usage: currentResponse.usage
       });
     } catch (error) {
       console.error('Error processing user message:', error);
@@ -187,7 +285,7 @@ class BackgroundService {
     }
   }
 
-  async executeToolCall(toolCall) {
+  async executeToolCall(toolCall, provider = this.aiProvider, options = {}) {
     // Declare in outer scope so catch can reference them safely
     let rawName = '';
     let toolName = '';
@@ -218,36 +316,102 @@ class BackgroundService {
       }
 
       console.info('[Browser AI] Executing tool:', toolName || rawName, args);
-      this.sendToSidePanel({
-        type: 'tool_execution',
-        tool: toolName || rawName,
-        id: toolCall.id,
-        args,
-        result: null
-      });
+      if (!options.silent) {
+        this.sendToSidePanel({
+          type: 'tool_execution',
+          tool: toolName || rawName,
+          id: toolCall.id,
+          args,
+          result: null
+        });
+      }
+
+      if (toolName === 'spawn_subagent') {
+        const result = await this.handleSpawnSubagent(toolCall);
+        if (provider) provider.addToolResult(toolCall.id, result);
+        if (!options.silent) {
+          this.sendToSidePanel({
+            type: 'tool_execution',
+            tool: toolName,
+            id: toolCall.id,
+            args,
+            result
+          });
+        }
+        return result;
+      }
+
+      if (toolName === 'subagent_complete') {
+        const result = { success: true, ack: true, details: args || {} };
+        if (provider) provider.addToolResult(toolCall.id, result);
+        if (!options.silent) {
+          this.sendToSidePanel({
+            type: 'tool_execution',
+            tool: toolName,
+            id: toolCall.id,
+            args,
+            result
+          });
+        }
+        return result;
+      }
 
       if (!toolName || !available.includes(toolName)) {
         throw new Error(`Unknown tool: ${toolName || ''}`);
       }
 
+      if (toolName === 'screenshot' && this.currentSettings && this.currentSettings.enableScreenshots === false) {
+        const blocked = { success: false, error: 'Screenshots are disabled in settings.' };
+        if (provider) provider.addToolResult(toolCall.id, blocked);
+        if (!options.silent) {
+          this.sendToSidePanel({
+            type: 'tool_execution',
+            tool: toolName,
+            id: toolCall.id,
+            args,
+            result: blocked
+          });
+        }
+        return blocked;
+      }
+
       const result = await this.browserTools.executeTool(toolName, args);
+
+      if (toolName === 'screenshot' && result?.success && result.dataUrl && this.currentSettings?.visionBridge && this.visionProvider) {
+        try {
+          const description = await this.visionProvider.describeImage(
+            result.dataUrl,
+            'Provide a concise description of this screenshot so a non-vision model can reason about it.'
+          );
+          result.visionDescription = description;
+          result.message = 'Screenshot captured and described by vision model.';
+          // Trim dataUrl when relaying as text to reduce payload
+          if (!this.aiProvider?.sendScreenshotsAsImages) {
+            delete result.dataUrl;
+          }
+        } catch (visionError) {
+          result.visionError = visionError.message;
+        }
+      }
 
       // Ensure result is not null
       const finalResult = result || { error: 'No result returned' };
 
       // Send result back to AI provider
-      if (this.aiProvider) {
-        this.aiProvider.addToolResult(toolCall.id, finalResult);
+      if (provider) {
+        provider.addToolResult(toolCall.id, finalResult);
       }
 
       // Also send result to side panel for display
-      this.sendToSidePanel({
-        type: 'tool_execution',
-        tool: toolName || rawName,
-        id: toolCall.id,
-        args,
-        result: finalResult
-      });
+      if (!options.silent) {
+        this.sendToSidePanel({
+          type: 'tool_execution',
+          tool: toolName || rawName,
+          id: toolCall.id,
+          args,
+          result: finalResult
+        });
+      }
       console.info('[Browser AI] Tool result:', toolName || rawName, finalResult);
 
       return finalResult;
@@ -279,6 +443,201 @@ class BackgroundService {
     chrome.runtime.sendMessage(message).catch(err => {
       console.log('Side panel not open:', err);
     });
+  }
+
+  resolveProfile(settings, name = 'default') {
+    const base = {
+      provider: settings.provider,
+      apiKey: settings.apiKey,
+      model: settings.model,
+      customEndpoint: settings.customEndpoint,
+      systemPrompt: settings.systemPrompt,
+      sendScreenshotsAsImages: settings.sendScreenshotsAsImages,
+      screenshotQuality: settings.screenshotQuality,
+      showThinking: settings.showThinking,
+      streamResponses: settings.streamResponses,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      timeout: settings.timeout
+    };
+    const profile = (settings.configs && settings.configs[name]) ? settings.configs[name] : {};
+    return { ...base, ...profile };
+  }
+
+  getToolsForSession(settings, includeOrchestrator = false) {
+    let tools = this.browserTools.getToolDefinitions();
+    if (settings && settings.enableScreenshots === false) {
+      tools = tools.filter(tool => tool.name !== 'screenshot');
+    }
+    if (includeOrchestrator) {
+      tools = tools.concat([
+        {
+          name: 'spawn_subagent',
+          description: 'Start a focused sub-agent with its own goal, prompt, and optional profile override.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              profile: { type: 'string', description: 'Name of saved profile to use' },
+              prompt: { type: 'string', description: 'System prompt for the sub-agent' },
+              tasks: { type: 'array', items: { type: 'string' }, description: 'Task list for the sub-agent' },
+              goal: { type: 'string', description: 'Single goal string if tasks not provided' }
+            }
+          }
+        },
+        {
+          name: 'subagent_complete',
+          description: 'Sub-agent calls this when finished to return a summary payload.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              summary: { type: 'string' },
+              data: { type: 'object' }
+            },
+            required: ['summary']
+          }
+        }
+      ]);
+    }
+    return tools;
+  }
+
+  compactConversationHistory(history = []) {
+    const maxMessages = 12;
+    const maxChars = 6000;
+    const safeHistory = Array.isArray(history) ? [...history] : [];
+
+    // Calculate total characters
+    const totalChars = safeHistory.reduce((acc, msg) => {
+      const content = msg?.content;
+      if (typeof content === 'string') return acc + content.length;
+      if (Array.isArray(content)) {
+        return acc + content.reduce((sum, part) => {
+          if (typeof part === 'string') return sum + part.length;
+          if (part?.text) return sum + part.text.length;
+          if (part?.content) return sum + JSON.stringify(part.content).length;
+          return sum;
+        }, 0);
+      }
+      return acc;
+    }, 0);
+
+    // If under limits, return as-is
+    if (safeHistory.length <= maxMessages && totalChars <= maxChars) {
+      return safeHistory;
+    }
+
+    // Keep the most recent messages
+    const preserveCount = Math.min(8, Math.floor(safeHistory.length / 2));
+    const preserved = safeHistory.slice(-preserveCount);
+    const trimmed = safeHistory.slice(0, safeHistory.length - preserveCount);
+
+    // Create compact summary of trimmed messages
+    const summaryPieces = [];
+    for (let i = 0; i < Math.min(trimmed.length, 8); i++) {
+      const msg = trimmed[trimmed.length - 1 - i]; // Start from most recent trimmed
+      const role = msg?.role || 'unknown';
+      let preview = '';
+      if (typeof msg?.content === 'string') {
+        preview = msg.content.slice(0, 100);
+      } else if (Array.isArray(msg?.content)) {
+        const textPart = msg.content.find(p => p?.text || typeof p === 'string');
+        preview = (textPart?.text || textPart || '').slice(0, 100);
+      }
+      if (preview) {
+        summaryPieces.unshift(`${role}: ${preview}${preview.length >= 100 ? '...' : ''}`);
+      }
+    }
+
+    const compactNote = {
+      role: 'user',
+      content: `[Context compacted: ${trimmed.length} earlier messages]\nRecent context:\n${summaryPieces.join('\n')}`
+    };
+
+    return [compactNote, ...preserved];
+  }
+
+  async handleSpawnSubagent(toolCall) {
+    if (this.subAgentCount >= 10) {
+      return { success: false, error: 'Sub-agent limit reached for this session (max 10).' };
+    }
+    this.subAgentCount += 1;
+    const subagentId = `subagent-${Date.now()}-${this.subAgentCount}`;
+    const args = toolCall?.args || {};
+    const profileName = args.profile || args.config || this.currentSettings?.activeConfig || 'default';
+    const profileSettings = this.resolveProfile(this.currentSettings || {}, profileName);
+
+    // Notify UI about new subagent
+    const subagentName = args.name || `Sub-Agent ${this.subAgentCount}`;
+    this.sendToSidePanel({
+      type: 'subagent_start',
+      id: subagentId,
+      name: subagentName,
+      tasks: args.tasks || [args.goal || args.task || 'Task']
+    });
+
+    // Create custom system prompt for sub-agent
+    const subAgentSystemPrompt = `${args.prompt || 'You are a focused sub-agent working under an orchestrator. Be concise and tool-driven.'}
+Always cite evidence from tools. Finish by calling subagent_complete with a short summary and any structured findings.`;
+
+    const subProvider = new AIProvider({
+      ...profileSettings,
+      systemPrompt: subAgentSystemPrompt,
+      sendScreenshotsAsImages: Boolean((this.currentSettings?.enableScreenshots) && profileSettings.sendScreenshotsAsImages)
+    });
+    const tools = this.getToolsForSession(this.currentSettings || {}, false);
+    const sessionTabs = this.browserTools.getSessionTabSummaries();
+    const taskLines = Array.isArray(args.tasks)
+      ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join('\n')
+      : (args.goal || args.task || args.prompt || '');
+
+    // Don't include system message in history - it's passed via provider settings
+    const subHistory = [
+      {
+        role: 'user',
+        content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`
+      }
+    ];
+
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const context = {
+      currentUrl: activeTab?.url || 'unknown',
+      currentTitle: activeTab?.title || 'unknown',
+      tabId: this.browserTools.getCurrentSessionTabId() || activeTab?.id,
+      availableTabs: sessionTabs
+    };
+
+    let response = await subProvider.chat(subHistory, tools, context, { stream: false });
+    let iterations = 0;
+    const maxIterations = 6;
+
+    while (response.toolCalls && response.toolCalls.length > 0 && iterations < maxIterations) {
+      for (const call of response.toolCalls) {
+        await this.executeToolCall(call, subProvider, { silent: true, settings: this.currentSettings });
+      }
+      iterations += 1;
+      response = await subProvider.continueConversation();
+    }
+
+    const summary = response.content || response.thinking || 'Sub-agent finished without a final summary.';
+
+    // Notify UI about subagent completion
+    this.sendToSidePanel({
+      type: 'subagent_complete',
+      id: subagentId,
+      success: true,
+      summary
+    });
+
+    return {
+      success: true,
+      source: 'subagent',
+      id: subagentId,
+      name: subagentName,
+      summary,
+      tasks: taskLines,
+      iterations,
+      transcriptLength: subProvider.messages.length
+    };
   }
 }
 

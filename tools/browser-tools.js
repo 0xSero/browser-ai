@@ -5,6 +5,7 @@ export class BrowserTools {
     this.sessionTabs = [];
     this.sessionTabGroups = [];
     this.currentTabId = null;
+    this.glowTabs = new Set();
   }
 
   initializeTools() {
@@ -77,30 +78,36 @@ export class BrowserTools {
     this.sessionTabs = Array.isArray(tabs) ? tabs.filter(tab => typeof tab.id === 'number') : [];
     this.currentTabId = this.sessionTabs[0]?.id || null;
 
-    await this.clearSessionTabGroups();
-
-    if (!this.sessionTabs.length) {
-      return;
-    }
+    // Don't disrupt existing user-created groups; only group ungrouped tabs we own
+    if (!this.sessionTabs.length) return;
 
     const tabsByWindow = new Map();
     this.sessionTabs.forEach(tab => {
       const key = tab.windowId ?? 'unknown';
       if (!tabsByWindow.has(key)) tabsByWindow.set(key, []);
-      tabsByWindow.get(key).push(tab.id);
+      tabsByWindow.get(key).push(tab);
     });
 
-    for (const [windowKey, tabIds] of tabsByWindow.entries()) {
-      if (windowKey === 'unknown' || !tabIds.length) continue;
-      try {
-        const groupId = await chrome.tabs.group({ tabIds });
-        await chrome.tabGroups.update(groupId, {
-          title: options.title || 'Browser AI',
-          color: options.color || 'blue'
-        });
-        this.sessionTabGroups.push({ groupId, tabIds: [...tabIds] });
-      } catch (error) {
-        console.warn('Failed to group tabs for session:', error);
+    for (const [windowKey, entries] of tabsByWindow.entries()) {
+      if (windowKey === 'unknown' || !entries.length) continue;
+      const alreadyGrouped = entries.filter(t => typeof t.groupId === 'number').map(t => t.id);
+      const toGroup = entries.filter(t => !t.groupId).map(t => t.id);
+
+      if (toGroup.length) {
+        try {
+          const groupId = await chrome.tabs.group({ tabIds: toGroup });
+          await chrome.tabGroups.update(groupId, {
+            title: options.title || 'Browser AI',
+            color: options.color || 'blue'
+          });
+          this.sessionTabGroups.push({ groupId, tabIds: [...toGroup] });
+        } catch (error) {
+          console.warn('Failed to group tabs for session:', error);
+        }
+      }
+
+      if (alreadyGrouped.length) {
+        this.sessionTabGroups.push({ groupId: 'existing', tabIds: [...alreadyGrouped] });
       }
     }
   }
@@ -137,6 +144,11 @@ export class BrowserTools {
 
   async navigate({ url, tabId }) {
     const targetTabId = await this.getActiveTabId(tabId);
+    const validation = this.validateUrl(url);
+    if (!validation.ok) {
+      return { success: false, error: validation.message, url };
+    }
+    await this.applyPageGlow(targetTabId);
     await chrome.tabs.update(targetTabId, { url });
     return { success: true, url, tabId: targetTabId };
   }
@@ -154,6 +166,7 @@ export class BrowserTools {
     }
 
     try {
+      await this.applyPageGlow(targetTabId);
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: async (sel, txt, waitMs) => {
@@ -362,6 +375,7 @@ export class BrowserTools {
     }
 
     try {
+      await this.applyPageGlow(targetTabId);
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: (sel, txt) => {
@@ -413,6 +427,7 @@ export class BrowserTools {
     }
 
     try {
+      await this.applyPageGlow(targetTabId);
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: (k) => {
@@ -490,6 +505,7 @@ export class BrowserTools {
     }
 
     try {
+      await this.applyPageGlow(targetTabId);
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: (dir, amt) => {
@@ -538,6 +554,7 @@ export class BrowserTools {
 
   async screenshot({ tabId }) {
     const targetTabId = await this.getActiveTabId(tabId);
+    await this.applyPageGlow(targetTabId);
     const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
     return { success: true, dataUrl, tabId: targetTabId };
   }
@@ -546,6 +563,7 @@ export class BrowserTools {
     const targetTabId = await this.getActiveTabId(tabId);
 
     try {
+      await this.applyPageGlow(targetTabId);
       const result = await chrome.scripting.executeScript({
         target: { tabId: targetTabId },
         func: (contentType, sel) => {
@@ -567,6 +585,10 @@ export class BrowserTools {
   }
 
   async openTab({ url, active = true }) {
+    const validation = this.validateUrl(url);
+    if (!validation.ok) {
+      return { success: false, error: validation.message, url };
+    }
     const tab = await chrome.tabs.create({ url, active });
     if (active) {
       this.currentTabId = tab.id;
@@ -644,6 +666,65 @@ export class BrowserTools {
       await chrome.tabGroups.update(groupId, { title: title || '', color });
     }
     return { success: true, groupId, tabIds };
+  }
+
+  async applyPageGlow(tabId) {
+    if (!tabId || this.glowTabs.has(tabId)) return;
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          if (document.body.dataset.browserAiGlow === 'on') return;
+          document.body.dataset.browserAiGlow = 'on';
+          const existing = document.getElementById('__browser_ai_glow');
+          if (existing) existing.remove();
+          const glow = document.createElement('div');
+          glow.id = '__browser_ai_glow';
+          glow.style.cssText = `
+            position: fixed;
+            inset: 10px;
+            border-radius: 16px;
+            pointer-events: none;
+            box-shadow:
+              0 0 0 2px rgba(135, 92, 55, 0.18),
+              0 18px 60px rgba(135, 92, 55, 0.16),
+              0 0 80px rgba(255, 219, 178, 0.08);
+            mix-blend-mode: screen;
+            z-index: 2147483646;
+            animation: __browser_ai_pulse 2.4s ease-in-out infinite;
+          `;
+          const style = document.createElement('style');
+          style.id = '__browser_ai_glow_style';
+          style.textContent = `
+            @keyframes __browser_ai_pulse {
+              0%, 100% { opacity: 0.55; transform: scale(1); }
+              50% { opacity: 0.9; transform: scale(1.01); }
+            }
+          `;
+          document.head.appendChild(style);
+          document.body.appendChild(glow);
+        }
+      });
+      this.glowTabs.add(tabId);
+    } catch (error) {
+      console.warn('Unable to apply page glow', error);
+    }
+  }
+
+  validateUrl(url) {
+    if (!url || typeof url !== 'string') {
+      return { ok: false, message: 'URL is required' };
+    }
+    const trimmed = url.trim();
+    const lowered = trimmed.toLowerCase();
+    const blockedSchemes = ['javascript:', 'data:', 'file:', 'chrome:', 'about:'];
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return { ok: false, message: 'Only http/https URLs are allowed for safety. Please provide a full URL.' };
+    }
+    if (blockedSchemes.some(s => lowered.startsWith(s))) {
+      return { ok: false, message: 'Navigation blocked for security (disallowed scheme).' };
+    }
+    return { ok: true };
   }
 
 }
