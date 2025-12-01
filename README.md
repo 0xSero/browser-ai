@@ -32,7 +32,9 @@ Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built f
 ### Orchestrator Mode
 - When enabled, exposes `spawn_subagent` and `subagent_complete` tools.
 - Orchestrator builds sub-agent histories that run tools independently, report progress, and return structured summaries.
-- Supports up to four simultaneous helpers, each respecting the same navigation/safety guardrails.
+- Supports up to ten simultaneous helpers, each respecting the same navigation/safety guardrails.
+- **Sub-agent navigation bar**: Visual navigation between main agent and sub-agents with status indicators.
+- **Live status indicators**: Green pulsing indicator shows active agent, completed sub-agents marked with checkmarks.
 
 ### Agent Teams
 - The Agent Teams panel lists every saved configuration, letting you tap rich pills to assign Main, Vision, Orchestrator, or Team roles with a single tap.
@@ -43,6 +45,15 @@ Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built f
 - Live/History tabs allow quick switching between the current conversation and saved sessions.
 - Tab selection preserves user choices, and the panel displays a glowing status ring plus tool timeline entries.
 - Thinking blocks render `<think>`/`<analysis>` snippets, and streaming updates show incremental thought-progress.
+- **Dark mode optimized**: Teal/cyan gradient message bubbles, clean styling without shadows for modern aesthetic.
+- **Context tracking**: Real-time token usage display with cumulative session tracking.
+
+### Error Recovery
+- **Multi-layer error recovery**: Automatic retry with exponential backoff for API errors.
+- **Tool ordering fixes**: Intelligent message sanitization prevents "tool call result does not follow tool call" errors.
+- **Silent retry**: Up to 3 automatic retries before surfacing errors to user.
+- **Emergency recovery**: Automatic tool history clearing for persistent ordering issues.
+- **Non-terminating errors**: Process continues gracefully after errors instead of stopping completely.
 
 ## Installation
 

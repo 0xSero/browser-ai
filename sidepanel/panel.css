@@ -22,6 +22,11 @@
   --font-mono: "Geist Mono", "SFMono-Regular", "Menlo", monospace;
   --ring: hsl(30, 20%, 25%);
   --ring-soft: rgba(105, 78, 45, 0.25);
+  /* Message & button colors - light mode */
+  --user-bubble: linear-gradient(135deg, hsl(180, 60%, 40%) 0%, hsl(200, 70%, 45%) 100%);
+  --assistant-bubble: hsl(40, 20%, 96%);
+  --btn-highlight: linear-gradient(135deg, hsl(170, 65%, 40%) 0%, hsl(200, 75%, 45%) 100%);
+  --btn-highlight-shadow: 0 8px 24px hsla(180, 60%, 35%, 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +43,11 @@
     --shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
     --ring: hsl(35, 15%, 70%);
     --ring-soft: rgba(229, 199, 150, 0.3);
+    /* Message & button colors */
+    --user-bubble: linear-gradient(135deg, hsl(175, 65%, 42%) 0%, hsl(195, 75%, 48%) 100%);
+    --assistant-bubble: hsl(240, 10%, 18%);
+    --btn-highlight: linear-gradient(135deg, hsl(170, 70%, 45%) 0%, hsl(200, 80%, 50%) 100%);
+    --btn-highlight-shadow: 0 8px 24px hsla(180, 70%, 40%, 0.4);
   }
 }
 
@@ -138,10 +148,15 @@ body {
 }
 
 .pill.active {
-  background: var(--accent-strong);
+  background: var(--btn-highlight, var(--accent-strong));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 10px 30px rgba(105, 78, 45, 0.18);
+}
+
+.pill.live-active {
+  background: linear-gradient(135deg, hsl(140, 70%, 42%) 0%, hsl(160, 65%, 38%) 100%);
+  color: #fff;
+  border-color: transparent;
 }
 
 .pill.subtle {
@@ -149,12 +164,41 @@ body {
 }
 
 .settings-panel {
-  padding: 18px 20px 20px;
+  padding: 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   height: calc(100vh - 112px);
   overflow-y: auto;
   animation: fade-in 0.2s ease;
+}
+
+.settings-panel h3 {
+  margin: 20px 0 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--btn-highlight, var(--accent-strong));
+}
+
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-section .form-group {
+  margin-bottom: 10px;
+}
+
+.settings-section .form-group:last-child {
+  margin-bottom: 0;
 }
 
 .settings-tabs {
@@ -225,15 +269,6 @@ body {
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 6px;
-}
-
-.settings-panel h3 {
-  margin: 16px 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .form-group {
@@ -592,18 +627,18 @@ body {
 }
 
 .message.user .message-content {
-  background: var(--accent-strong);
+  background: var(--user-bubble, var(--accent-strong));
   border: none;
   color: #fff;
-  border-radius: 14px 14px 4px 14px;
+  border-radius: 16px 16px 4px 16px;
   max-width: 85%;
 }
 
 .message.assistant .message-content {
-  background: var(--card);
+  background: var(--assistant-bubble, var(--card));
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 14px 14px 14px 4px;
+  border-radius: 16px 16px 16px 4px;
 }
 
 .message-content {
@@ -950,20 +985,25 @@ body {
 }
 
 .send-btn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--accent-strong);
+  background: var(--btn-highlight, var(--accent-strong));
   color: #fff;
   border: none;
   cursor: pointer;
   display: grid;
   place-items: center;
-  box-shadow: 0 15px 35px rgba(105, 78, 45, 0.3);
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .send-btn:hover {
-  transform: translateY(-1px);
+  transform: scale(1.08);
+  opacity: 0.9;
+}
+
+.send-btn:active {
+  transform: scale(0.95);
 }
 .file-input-hidden {
   display: none;
@@ -1136,4 +1176,101 @@ body {
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* Subagent Navigation & Indicators */
+.agent-nav {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.agent-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.agent-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.agent-nav-item:hover {
+  border-color: var(--accent-strong);
+  color: var(--text);
+}
+
+.agent-nav-item.active {
+  background: var(--btn-highlight, var(--accent-strong));
+  color: #fff;
+  border-color: transparent;
+}
+
+.agent-nav-item.main-agent {
+  background: linear-gradient(135deg, hsl(175, 65%, 42%) 0%, hsl(195, 75%, 48%) 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.agent-nav-item.sub-agent {
+  background: linear-gradient(135deg, hsl(30, 80%, 50%) 0%, hsl(45, 90%, 50%) 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.agent-nav-item .agent-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.agent-nav-item.running .agent-status {
+  background: hsl(140, 70%, 50%);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+.agent-nav-item.completed .agent-status {
+  background: hsl(140, 60%, 45%);
+}
+
+.agent-nav-item.error .agent-status {
+  background: hsl(0, 70%, 55%);
+}
+
+/* Subagent message styling */
+.message.subagent .message-content {
+  background: linear-gradient(135deg, hsl(30, 70%, 25%) 0%, hsl(40, 60%, 30%) 100%);
+  border-left: 3px solid hsl(40, 90%, 55%);
+}
+
+.message.subagent .message-header {
+  color: hsl(40, 80%, 60%);
+}
+
+.subagent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: linear-gradient(135deg, hsl(30, 80%, 50%) 0%, hsl(45, 90%, 50%) 100%);
+  color: #fff;
+  margin-left: 6px;
 }

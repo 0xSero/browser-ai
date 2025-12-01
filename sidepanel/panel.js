@@ -44,6 +44,7 @@ class SidePanelUI {
       statusText: document.getElementById('statusText'),
       statusMeta: document.getElementById('statusMeta'),
       toolTimeline: document.getElementById('toolTimeline'),
+      agentNav: document.getElementById('agentNav'),
       tabSelectorBtn: document.getElementById('tabSelectorBtn'),
       tabSelector: document.getElementById('tabSelector'),
       tabList: document.getElementById('tabList'),
@@ -101,6 +102,9 @@ class SidePanelUI {
     this.currentView = 'chat';
     this.currentSettingsTab = 'general';
     this.profileEditorTarget = 'default';
+    // Subagent tracking
+    this.subagents = new Map(); // id -> { name, status, messages }
+    this.activeAgent = 'main';
     this.init();
   }
 
@@ -249,7 +253,11 @@ class SidePanelUI {
         this.updateStatus('Error', 'error');
       } else if (message.type === 'warning') {
         this.showErrorBanner(message.message);
-        this.updateStatus('Warning', 'warning');
+      } else if (message.type === 'subagent_start') {
+        this.addSubagent(message.id, message.name, message.tasks);
+        this.updateStatus(`Sub-agent "${message.name}" started`, 'active');
+      } else if (message.type === 'subagent_complete') {
+        this.updateSubagentStatus(message.id, message.success ? 'completed' : 'error');
       } else if (message.type === 'assistant_stream') {
         this.handleAssistantStream(message);
       }
@@ -1426,11 +1434,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.chatInterface.classList.add('hidden');
       this.elements.historyPanel.classList.remove('hidden');
       this.elements.viewHistoryBtn?.classList.add('active');
-      this.elements.viewChatBtn?.classList.remove('active');
+      this.elements.viewChatBtn?.classList.remove('active', 'live-active');
     } else {
       this.elements.chatInterface.classList.remove('hidden');
       this.elements.historyPanel.classList.add('hidden');
-      this.elements.viewChatBtn?.classList.add('active');
+      this.elements.viewChatBtn?.classList.add('active', 'live-active');
       this.elements.viewHistoryBtn?.classList.remove('active');
     }
   }
@@ -1441,12 +1449,86 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.sessionStartedAt = Date.now();
     this.firstUserMessage = '';
     this.sessionTokensUsed = 0; // Reset context tracking
+    this.subagents.clear(); // Clear subagents
+    this.activeAgent = 'main';
     this.elements.chatMessages.innerHTML = '';
     this.elements.toolTimeline.innerHTML = ''; // Clear tool timeline
     this.timelineItems.clear();
+    this.hideAgentNav();
     this.updateStatus('Ready for a new session', 'success');
     this.switchView('chat');
     this.updateContextUsage();
+  }
+
+  // Subagent Management
+  addSubagent(id, name, tasks) {
+    this.subagents.set(id, {
+      name: name || `Sub-${this.subagents.size + 1}`,
+      tasks,
+      status: 'running',
+      messages: []
+    });
+    this.renderAgentNav();
+  }
+
+  updateSubagentStatus(id, status) {
+    const agent = this.subagents.get(id);
+    if (agent) {
+      agent.status = status;
+      this.renderAgentNav();
+    }
+  }
+
+  renderAgentNav() {
+    if (!this.elements.agentNav) return;
+
+    // Show nav if we have subagents
+    if (this.subagents.size === 0) {
+      this.hideAgentNav();
+      return;
+    }
+
+    this.elements.agentNav.classList.remove('hidden');
+
+    // Build nav items
+    let html = `
+      <div class="agent-nav-item main-agent ${this.activeAgent === 'main' ? 'active' : ''}" data-agent="main">
+        <span class="agent-status"></span>
+        <span>Main</span>
+      </div>
+    `;
+
+    this.subagents.forEach((agent, id) => {
+      const statusClass = agent.status === 'running' ? 'running' : (agent.status === 'completed' ? 'completed' : 'error');
+      html += `
+        <div class="agent-nav-item sub-agent ${statusClass} ${this.activeAgent === id ? 'active' : ''}" data-agent="${id}">
+          <span class="agent-status"></span>
+          <span>${agent.name}</span>
+        </div>
+      `;
+    });
+
+    this.elements.agentNav.innerHTML = html;
+
+    // Add click handlers
+    this.elements.agentNav.querySelectorAll('.agent-nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const agentId = item.dataset.agent;
+        this.switchAgent(agentId);
+      });
+    });
+  }
+
+  switchAgent(agentId) {
+    this.activeAgent = agentId;
+    this.renderAgentNav();
+    // Could filter messages by agent here if desired
+  }
+
+  hideAgentNav() {
+    if (this.elements.agentNav) {
+      this.elements.agentNav.classList.add('hidden');
+    }
   }
 
   updateScreenshotToggleState() {

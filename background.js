@@ -168,7 +168,7 @@ class BackgroundService {
       // Process response and handle tool execution loop
       let currentResponse = response;
       let toolIterations = 0;
-      const maxIterations = 100; // Safety limit to prevent infinite loops
+      const maxIterations = 1000; // Safety limit to prevent infinite loops
       let followupAttempts = 0;
       const maxFollowups = 2;
       let apiRetryCount = 0;
@@ -557,13 +557,23 @@ class BackgroundService {
   }
 
   async handleSpawnSubagent(toolCall) {
-    if (this.subAgentCount >= 4) {
-      return { success: false, error: 'Sub-agent limit reached for this session.' };
+    if (this.subAgentCount >= 10) {
+      return { success: false, error: 'Sub-agent limit reached for this session (max 10).' };
     }
     this.subAgentCount += 1;
+    const subagentId = `subagent-${Date.now()}-${this.subAgentCount}`;
     const args = toolCall?.args || {};
     const profileName = args.profile || args.config || this.currentSettings?.activeConfig || 'default';
     const profileSettings = this.resolveProfile(this.currentSettings || {}, profileName);
+
+    // Notify UI about new subagent
+    const subagentName = args.name || `Sub-Agent ${this.subAgentCount}`;
+    this.sendToSidePanel({
+      type: 'subagent_start',
+      id: subagentId,
+      name: subagentName,
+      tasks: args.tasks || [args.goal || args.task || 'Task']
+    });
 
     // Create custom system prompt for sub-agent
     const subAgentSystemPrompt = `${args.prompt || 'You are a focused sub-agent working under an orchestrator. Be concise and tool-driven.'}
@@ -609,9 +619,20 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
     }
 
     const summary = response.content || response.thinking || 'Sub-agent finished without a final summary.';
+
+    // Notify UI about subagent completion
+    this.sendToSidePanel({
+      type: 'subagent_complete',
+      id: subagentId,
+      success: true,
+      summary
+    });
+
     return {
       success: true,
       source: 'subagent',
+      id: subagentId,
+      name: subagentName,
       summary,
       tasks: taskLines,
       iterations,
