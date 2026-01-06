@@ -1,6 +1,7 @@
 // Background Service Worker
 import { BrowserTools } from './tools/browser-tools.js';
 import { AIProvider } from './ai/provider.js';
+import { normalizeConversationHistory, toProviderMessages } from './ai/message-schema.js';
 
 class BackgroundService {
   constructor() {
@@ -79,12 +80,24 @@ class BackgroundService {
         'enableScreenshots',
         'temperature',
         'maxTokens',
-        'timeout'
+        'timeout',
+        'toolPermissions',
+        'allowedDomains'
       ]);
 
       if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
       if (settings.sendScreenshotsAsImages === undefined) settings.sendScreenshotsAsImages = false;
       if (settings.visionBridge === undefined) settings.visionBridge = true;
+      if (!settings.toolPermissions) {
+        settings.toolPermissions = {
+          read: true,
+          interact: true,
+          navigate: true,
+          tabs: true,
+          screenshots: false
+        };
+      }
+      if (settings.allowedDomains === undefined) settings.allowedDomains = '';
 
       if (!settings.apiKey) {
         this.sendToSidePanel({
@@ -144,7 +157,9 @@ class BackgroundService {
         availableTabs: sessionTabs
       };
 
-      const compactedHistory = this.compactConversationHistory(conversationHistory || []);
+      const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
+      const providerHistory = toProviderMessages(normalizedHistory);
+      const compactedHistory = this.compactConversationHistory(providerHistory);
 
       // Call AI with tools
       const supportsStreaming = typeof this.aiProvider.supportsStreaming === 'function'
@@ -315,6 +330,10 @@ class BackgroundService {
         }
       }
 
+      if (toolName === 'getPageContent') {
+        toolName = 'getContent';
+      }
+
       console.info('[Browser AI] Executing tool:', toolName || rawName, args);
       if (!options.silent) {
         this.sendToSidePanel({
@@ -358,6 +377,22 @@ class BackgroundService {
 
       if (!toolName || !available.includes(toolName)) {
         throw new Error(`Unknown tool: ${toolName || ''}`);
+      }
+
+      const permissionCheck = await this.checkToolPermission(toolName, args);
+      if (!permissionCheck.allowed) {
+        const blocked = { success: false, error: permissionCheck.reason || 'Tool blocked by permissions.' };
+        if (provider) provider.addToolResult(toolCall.id, blocked);
+        if (!options.silent) {
+          this.sendToSidePanel({
+            type: 'tool_execution',
+            tool: toolName || rawName,
+            id: toolCall.id,
+            args,
+            result: blocked
+          });
+        }
+        return blocked;
       }
 
       if (toolName === 'screenshot' && this.currentSettings && this.currentSettings.enableScreenshots === false) {
@@ -436,6 +471,79 @@ class BackgroundService {
       // Don't throw - let the AI handle the error and potentially retry
       return errorResult;
     }
+  }
+
+  getToolPermissionCategory(toolName) {
+    const mapping = {
+      navigate: 'navigate',
+      openTab: 'navigate',
+      click: 'interact',
+      type: 'interact',
+      pressKey: 'interact',
+      scroll: 'interact',
+      getContent: 'read',
+      screenshot: 'screenshots',
+      getTabs: 'tabs',
+      closeTab: 'tabs',
+      switchTab: 'tabs',
+      groupTabs: 'tabs',
+      focusTab: 'tabs',
+      describeSessionTabs: 'tabs'
+    };
+    return mapping[toolName] || null;
+  }
+
+  parseAllowedDomains(value = '') {
+    return String(value)
+      .split(/[\n,]/)
+      .map(entry => entry.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  isUrlAllowed(url, allowlist) {
+    if (!allowlist.length) return true;
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return allowlist.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async resolveToolUrl(toolName, args) {
+    if (args?.url) return args.url;
+    const tabId = args?.tabId || this.browserTools.getCurrentSessionTabId();
+    try {
+      if (tabId) {
+        const tab = await chrome.tabs.get(tabId);
+        return tab?.url || '';
+      }
+    } catch (error) {
+      console.warn('Failed to resolve tab URL for permissions:', error);
+    }
+    const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return active?.url || '';
+  }
+
+  async checkToolPermission(toolName, args) {
+    if (!this.currentSettings) return { allowed: true };
+    const permissions = this.currentSettings.toolPermissions || {};
+    const category = this.getToolPermissionCategory(toolName);
+    if (category && permissions[category] === false) {
+      return { allowed: false, reason: `Permission blocked: ${category}` };
+    }
+
+    if (category === 'tabs') return { allowed: true };
+
+    const allowlist = this.parseAllowedDomains(this.currentSettings.allowedDomains || '');
+    if (!allowlist.length) return { allowed: true };
+
+    const targetUrl = await this.resolveToolUrl(toolName, args);
+    if (!this.isUrlAllowed(targetUrl, allowlist)) {
+      return { allowed: false, reason: 'Blocked by allowed domains list.' };
+    }
+
+    return { allowed: true };
   }
 
   sendToSidePanel(message) {

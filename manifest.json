@@ -1,25 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "Azzta Agent",
+  "name": "Parchi",
   "version": "1.0.0",
-  "description": "Warm-paper orchestration AI for browser automation with configurable LLM/vision profiles and enterprise-ready controls",
+  "description": "Warm-paper browser automation assistant with configurable LLM/vision profiles and enterprise-ready controls",
   "permissions": [
     "sidePanel",
     "activeTab",
     "scripting",
     "tabs",
     "tabGroups",
-    "storage",
-    "bookmarks",
-    "history",
-    "cookies",
-    "debugger"
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "action": {
-    "default_title": "Azzta Agent Panel"
+    "default_title": "Parchi Panel"
   },
   "background": {
     "service_worker": "background.js",

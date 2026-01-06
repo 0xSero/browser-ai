@@ -299,7 +299,7 @@ class ExtensionValidator {
 
   async run() {
     this.log('╔════════════════════════════════════════╗', 'info');
-    this.log('║  Browser AI Agent - Extension Validator  ║', 'info');
+    this.log('║  Parchi - Extension Validator  ║', 'info');
     this.log('╚════════════════════════════════════════╝', 'info');
 
     this.validateManifest();

@@ -1,8 +1,8 @@
-# Testing Guide for Browser AI Agent
+# Testing Guide for Parchi
 
 ## Overview
 
-This document provides comprehensive testing procedures for the Browser AI Agent extension.
+This document provides comprehensive testing procedures for the Parchi extension.
 
 ## Test Suite Architecture
 
@@ -71,7 +71,7 @@ npm run validate
 
 ```
 ╔════════════════════════════════════════╗
-║  Browser AI Agent - Extension Validator  ║
+║  Parchi - Extension Validator  ║
 ╚════════════════════════════════════════╝
 
 === Validating Manifest ===
@@ -164,14 +164,12 @@ Load `tests/integration/test-page.html` in your browser to access interactive te
 
 #### 1. Navigation Tests
 - Navigate to URLs
-- Browser history (back/forward)
-- Page refresh
+- Open tabs
 
 **Example Commands:**
 ```
 "Navigate to github.com"
-"Go back to the previous page"
-"Refresh this page"
+"Open github.com in a new tab"
 ```
 
 #### 2. Form Interaction Tests
@@ -246,19 +244,9 @@ Load `tests/integration/test-page.html` in your browser to access interactive te
 "Ungroup tabs 2 and 3"
 ```
 
-#### 8. History Management Tests (NEW)
-- Search browser history
-- Get recent history
-- Get visit counts
-- Delete history items (with confirmation)
-
-**Example Commands:**
-```
-"Search my history for 'github'"
-"Show me my browsing history from the last 24 hours"
-"How many times have I visited github.com?"
-"Delete this URL from my history"
-```
+#### 8. History Management Tests (Reserved)
+- Not shipped in the current extension build
+- Skip until history tooling is implemented
 
 #### 9. Dynamic Content Tests
 - Wait for elements to appear
@@ -278,7 +266,7 @@ Load `tests/integration/test-page.html` in your browser to access interactive te
 
 **Example Commands:**
 ```
-"Get my recent history from the last hour, find all GitHub links, and open them in new tabs"
+"Open example.com and wikipedia.org in new tabs, then group them with title 'Research' in green"
 "Fill out the form, click subscribe, and submit"
 ```
 
@@ -300,9 +288,7 @@ Load `tests/integration/test-page.html` in your browser to access interactive te
 - [ ] Content extraction works
 - [ ] Tabs can be managed
 - [ ] Tab groups work
-- [ ] History search works
-- [ ] Recent history retrieval works
-- [ ] Visit counts are accurate
+- [ ] History tools (reserved)
 - [ ] Screenshots capture properly
 - [ ] Dynamic content handling works
 - [ ] Error messages are clear
@@ -354,8 +340,7 @@ Load `tests/integration/test-page.html` in your browser to access interactive te
 - Verify permissions are granted
 
 **History tools not working:**
-- Ensure history permission is in manifest.json
-- Check that Chrome has history data
+- History tooling is reserved and not shipped in the current build
 - Verify URLs are valid
 
 ## Continuous Testing

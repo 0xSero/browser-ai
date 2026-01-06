@@ -1,10 +1,10 @@
-# Azzta Agent
+# Parchi
 
-Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built for professionals and teams who want brand-safe browser automation. Every detail – from the tactile UI to the safety prompts – is tuned for production distribution, paid plans, and tight visual identity. The Live/History panes, profile manager (including vision routes and orchestrator tools), and compacted context allow you to confidently surface Azzta as a monetizable feature inside your workflow toolkit.
+Parchi is a premium warm-paper inspired Chrome (Chromium) extension built for professionals and teams who want brand-safe browser automation. Every detail – from the tactile UI to the safety prompts – is tuned for production distribution, paid plans, and tight visual identity. The Live/History panes, profile manager (including vision routes and orchestrator tools), and compacted context allow you to confidently surface Parchi as a monetizable feature inside your workflow toolkit.
 
 ## Highlights
 
-- **Safe automation**: Unsafe actions (installing extensions, deleting history, visiting unknown schemes) are blocked unless explicitly requested, and tab groups created by the user are preserved.
+- **Safe automation**: Unsafe actions (installing extensions, logging out, closing tabs, visiting unknown schemes) are blocked unless explicitly requested, and tab groups created by the user are preserved.
 - **Vision & screenshot controls**: Screenshots stay off by default; enable them only when pairing the main agent with a vision-capable profile. Vision bridges automatically describe captures so non-vision models can continue reasoning.
 - **Orchestrator workflows**: Toggle orchestrator mode to expose `spawn_subagent`/`subagent_complete`, letting the orchestrator spin focused helpers for subtasks and gather sanitized summaries.
 - **Warm Paper UI**: Geist Sans typography, rounded cards, solid warm hues, card glow, and tab/history panes deliver a clean, tactile experience with subtle pulses and scrollbars.
@@ -12,8 +12,8 @@ Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built f
 
 ## Brand & Production Readiness
 
-- **Azzta identity**: Header copy, pill tabs, pill buttons, and status rings carry the brand narrative – the product never looks like a rough utility overlay but a curated experience you can safely charge for.
-- **Monetization-friendly controls**: Strict safety guardrails, orchestrator tooling, and history segmentation let you offer Azzta as a paid tier where customers rely on reliable outcomes.
+- **Parchi identity**: Header copy, pill tabs, pill buttons, and status rings carry the brand narrative – the product never looks like a rough utility overlay but a curated experience you can safely charge for.
+- **Monetization-friendly controls**: Strict safety guardrails, orchestrator tooling, and history segmentation let you offer Parchi as a paid tier where customers rely on reliable outcomes.
 - **Design system ready**: Warm Paper palette (solid creams, soft tans, charcoal text) plus Geist Sans/Mono fonts, subtle rings, and card shadows form a reusable system for future marketing or docs.
 
 ## Features
@@ -32,9 +32,7 @@ Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built f
 ### Orchestrator Mode
 - When enabled, exposes `spawn_subagent` and `subagent_complete` tools.
 - Orchestrator builds sub-agent histories that run tools independently, report progress, and return structured summaries.
-- Supports up to ten simultaneous helpers, each respecting the same navigation/safety guardrails.
-- **Sub-agent navigation bar**: Visual navigation between main agent and sub-agents with status indicators.
-- **Live status indicators**: Green pulsing indicator shows active agent, completed sub-agents marked with checkmarks.
+- Supports up to four simultaneous helpers, each respecting the same navigation/safety guardrails.
 
 ### Agent Teams
 - The Agent Teams panel lists every saved configuration, letting you tap rich pills to assign Main, Vision, Orchestrator, or Team roles with a single tap.
@@ -45,15 +43,6 @@ Azzta Agent is a premium warm-paper inspired Chrome (Chromium) extension built f
 - Live/History tabs allow quick switching between the current conversation and saved sessions.
 - Tab selection preserves user choices, and the panel displays a glowing status ring plus tool timeline entries.
 - Thinking blocks render `<think>`/`<analysis>` snippets, and streaming updates show incremental thought-progress.
-- **Dark mode optimized**: Teal/cyan gradient message bubbles, clean styling without shadows for modern aesthetic.
-- **Context tracking**: Real-time token usage display with cumulative session tracking.
-
-### Error Recovery
-- **Multi-layer error recovery**: Automatic retry with exponential backoff for API errors.
-- **Tool ordering fixes**: Intelligent message sanitization prevents "tool call result does not follow tool call" errors.
-- **Silent retry**: Up to 3 automatic retries before surfacing errors to user.
-- **Emergency recovery**: Automatic tool history clearing for persistent ordering issues.
-- **Non-terminating errors**: Process continues gracefully after errors instead of stopping completely.
 
 ## Installation
 
@@ -109,9 +98,12 @@ content.js    → DOM helpers for highlighting, hover simulation, metadata
 npm test         # Runs the full testing suite
 npm run validate # Validates extension files and manifest
 npm run test:unit # Unit tests
+
+# Corepack-free alternative
+node scripts/run-checks.mjs
 ```
 
-> `npm test` currently fails when corepack cannot fetch signatures on certain Node versions; rerun after ensuring corepack can update.
+> If `npm` fails with a Corepack signature error (Node 23+ bug), run `node scripts/run-checks.mjs` instead. It executes the same validation scripts without invoking Corepack. You can also run `corepack disable` or `corepack prepare npm@10.8.2 --activate` once to restore standard `npm` commands.
 
 ## Troubleshooting
 

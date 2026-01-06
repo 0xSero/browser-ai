@@ -5,6 +5,8 @@
  * Tests individual components without Chrome APIs
  */
 
+import { createMessage, normalizeConversationHistory, toProviderMessages } from '../../ai/message-schema.js';
+
 const colors = {
   info: '\x1b[36m',
   success: '\x1b[32m',
@@ -293,6 +295,49 @@ function testErrorHandling(runner) {
   });
 }
 
+// Test Message Schema
+function testMessageSchema(runner) {
+  log('\n=== Testing Message Schema ===', 'info');
+
+  runner.test('createMessage builds canonical message', () => {
+    const msg = createMessage({ role: 'user', content: 'hello' });
+    runner.assertTrue(typeof msg.id === 'string', 'Message should have id');
+    runner.assertTrue(typeof msg.createdAt === 'string', 'Message should have createdAt');
+    runner.assertEqual(msg.role, 'user');
+    runner.assertEqual(msg.content, 'hello');
+  });
+
+  runner.test('normalizeConversationHistory filters invalid messages', () => {
+    const normalized = normalizeConversationHistory([
+      { role: 'user', content: 'ok' },
+      { role: 'invalid', content: 'skip' },
+      null
+    ]);
+    runner.assertEqual(normalized.length, 1);
+    runner.assertEqual(normalized[0].role, 'user');
+  });
+
+  runner.test('toProviderMessages serializes tool calls and results', () => {
+    const history = [
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'call_1', name: 'click', args: { selector: '#a' } }]
+      },
+      {
+        role: 'tool',
+        content: { success: true },
+        toolCallId: 'call_1'
+      }
+    ];
+    const provider = toProviderMessages(history);
+    runner.assertTrue(Array.isArray(provider[0].tool_calls), 'tool_calls should be an array');
+    runner.assertTrue(typeof provider[0].tool_calls[0].function.arguments === 'string', 'tool args serialized');
+    runner.assertEqual(provider[1].role, 'tool');
+    runner.assertTrue(provider[1].content.includes('success'));
+  });
+}
+
 // Main test execution
 function main() {
   log('╔════════════════════════════════════════╗', 'info');
@@ -306,6 +351,7 @@ function main() {
   testToolSchemaConversion(runner);
   testInputValidation(runner);
   testErrorHandling(runner);
+  testMessageSchema(runner);
 
   const success = runner.printSummary();
   process.exit(success ? 0 : 1);

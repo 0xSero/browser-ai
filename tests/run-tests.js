@@ -39,7 +39,7 @@ async function runCommand(command, description) {
 
 async function main() {
   log('╔════════════════════════════════════════╗', 'info');
-  log('║    Browser AI Agent - Test Suite      ║', 'info');
+  log('║           Parchi - Test Suite         ║', 'info');
   log('╚════════════════════════════════════════╝', 'info');
 
   let allPassed = true;

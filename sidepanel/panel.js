@@ -1,10 +1,25 @@
+import { createMessage, normalizeConversationHistory } from '../ai/message-schema.js';
+
 // Side Panel UI Controller
 class SidePanelUI {
   constructor() {
     this.elements = {
       settingsBtn: document.getElementById('settingsBtn'),
+      accountBtn: document.getElementById('accountBtn'),
       settingsPanel: document.getElementById('settingsPanel'),
       chatInterface: document.getElementById('chatInterface'),
+      accessPanel: document.getElementById('accessPanel'),
+      authPanel: document.getElementById('authPanel'),
+      billingPanel: document.getElementById('billingPanel'),
+      authStartBtn: document.getElementById('authStartBtn'),
+      authVerifyBtn: document.getElementById('authVerifyBtn'),
+      authCopyBtn: document.getElementById('authCopyBtn'),
+      authCodeValue: document.getElementById('authCodeValue'),
+      authCodeWrap: document.getElementById('authCodeWrap'),
+      billingStartBtn: document.getElementById('billingStartBtn'),
+      billingManageBtn: document.getElementById('billingManageBtn'),
+      authLogoutBtn: document.getElementById('authLogoutBtn'),
+      planStatus: document.getElementById('planStatus'),
       provider: document.getElementById('provider'),
       apiKey: document.getElementById('apiKey'),
       model: document.getElementById('model'),
@@ -36,6 +51,7 @@ class SidePanelUI {
       saveSettingsBtn: document.getElementById('saveSettingsBtn'),
       cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
       chatMessages: document.getElementById('chatMessages'),
+      composer: document.getElementById('composer'),
       userInput: document.getElementById('userInput'),
       fileBtn: document.getElementById('fileBtn'),
       fileInput: document.getElementById('fileInput'),
@@ -43,13 +59,13 @@ class SidePanelUI {
       statusBar: document.getElementById('statusBar'),
       statusText: document.getElementById('statusText'),
       statusMeta: document.getElementById('statusMeta'),
-      toolTimeline: document.getElementById('toolTimeline'),
       agentNav: document.getElementById('agentNav'),
       tabSelectorBtn: document.getElementById('tabSelectorBtn'),
       tabSelector: document.getElementById('tabSelector'),
       tabList: document.getElementById('tabList'),
       closeTabSelector: document.getElementById('closeTabSelector'),
       selectedTabsBar: document.getElementById('selectedTabsBar'),
+      scrollToLatestBtn: document.getElementById('scrollToLatestBtn'),
       viewChatBtn: document.getElementById('viewChatBtn'),
       viewHistoryBtn: document.getElementById('viewHistoryBtn'),
       historyPanel: document.getElementById('historyPanel'),
@@ -81,7 +97,13 @@ class SidePanelUI {
       profileEditorSendScreenshots: document.getElementById('profileEditorSendScreenshots'),
       profileEditorScreenshotQuality: document.getElementById('profileEditorScreenshotQuality'),
       profileEditorPrompt: document.getElementById('profileEditorPrompt'),
-      saveProfileBtn: document.getElementById('saveProfileBtn')
+      saveProfileBtn: document.getElementById('saveProfileBtn'),
+      permissionRead: document.getElementById('permissionRead'),
+      permissionInteract: document.getElementById('permissionInteract'),
+      permissionNavigate: document.getElementById('permissionNavigate'),
+      permissionTabs: document.getElementById('permissionTabs'),
+      permissionScreenshots: document.getElementById('permissionScreenshots'),
+      allowedDomains: document.getElementById('allowedDomains')
     };
 
     this.conversationHistory = [];
@@ -93,15 +115,22 @@ class SidePanelUI {
     this.toolCallViews = new Map();
     this.timelineItems = new Map();
     this.selectedTabs = new Map();
+    this.tabGroupInfo = new Map();
+    this.scrollPositions = new Map();
     this.pendingToolCount = 0;
     this.isStreaming = false;
     this.streamingState = null;
+    this.userScrolledUp = false;
+    this.isNearBottom = true;
     this.contextUsage = { approxTokens: 0, maxContextTokens: 196000, percent: 0 };
     this.sessionTokensUsed = 0; // Track highest context seen in session
     this.auxAgentProfiles = [];
     this.currentView = 'chat';
     this.currentSettingsTab = 'general';
     this.profileEditorTarget = 'default';
+    this.authState = { status: 'signed_out' };
+    this.entitlement = { active: false };
+    this.accessPanelVisible = false;
     // Subagent tracking
     this.subagents = new Map(); // id -> { name, status, messages }
     this.activeAgent = 'main';
@@ -110,9 +139,13 @@ class SidePanelUI {
 
   async init() {
     this.setupEventListeners();
+    this.setupResizeObserver();
     await this.loadSettings();
     await this.loadHistoryList();
-    this.updateStatus('Ready', 'success');
+    await this.loadAccessState();
+    if (this.isAccessReady()) {
+      this.updateStatus('Ready', 'success');
+    }
   }
 
   setupEventListeners() {
@@ -120,6 +153,17 @@ class SidePanelUI {
     this.elements.settingsBtn.addEventListener('click', () => {
       this.toggleSettings();
     });
+
+    this.elements.accountBtn?.addEventListener('click', () => {
+      this.toggleAccessPanel();
+    });
+
+    this.elements.authStartBtn?.addEventListener('click', () => this.startAuthFlow());
+    this.elements.authVerifyBtn?.addEventListener('click', () => this.verifyAuthFlow());
+    this.elements.authCopyBtn?.addEventListener('click', () => this.copyAuthCode());
+    this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
+    this.elements.billingManageBtn?.addEventListener('click', () => this.manageBilling());
+    this.elements.authLogoutBtn?.addEventListener('click', () => this.signOut());
 
     this.elements.startNewSessionBtn?.addEventListener('click', () => this.startNewSession());
 
@@ -214,6 +258,9 @@ class SidePanelUI {
     this.elements.tabSelectorBtn.addEventListener('click', () => this.toggleTabSelector());
     this.elements.closeTabSelector.addEventListener('click', () => this.closeTabSelector());
 
+    this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
+    this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));
+
     // Profile editor controls
     this.elements.profileEditorProvider?.addEventListener('change', () => this.toggleProfileEditorEndpoint());
     this.elements.profileEditorTemperature?.addEventListener('input', () => {
@@ -230,11 +277,9 @@ class SidePanelUI {
           this.pendingToolCount += 1;
           this.clearErrorBanner(); // Clear errors when new activity starts
           this.updateActivityState();
-          this.addTimelineItem(message.id, message.tool, message.args);
         } else {
           this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
           this.updateActivityState();
-          this.updateTimelineItem(message.id, message.result);
         }
         this.displayToolExecution(message.tool, message.args, message.result, message.id);
       } else if (message.type === 'assistant_response') {
@@ -264,11 +309,26 @@ class SidePanelUI {
     });
   }
 
+  setupResizeObserver() {
+    if (!this.elements.chatMessages || typeof ResizeObserver === 'undefined') return;
+    this.chatResizeObserver = new ResizeObserver(() => {
+      if (this.shouldAutoScroll() && this.isNearBottom) {
+        this.scrollToBottom();
+      }
+    });
+    this.chatResizeObserver.observe(this.elements.chatMessages);
+  }
+
   toggleSettings() {
     this.elements.settingsPanel.classList.toggle('hidden');
-    if (!this.elements.settingsPanel.classList.contains('hidden')) {
+    const isOpen = !this.elements.settingsPanel.classList.contains('hidden');
+    if (isOpen) {
+      this.elements.chatInterface?.classList.add('hidden');
+      this.elements.historyPanel?.classList.add('hidden');
       this.switchSettingsTab(this.currentSettingsTab || 'general');
+      return;
     }
+    this.switchView(this.currentView || 'chat');
   }
 
   toggleCustomEndpoint() {
@@ -318,6 +378,8 @@ class SidePanelUI {
       'autoScroll',
       'confirmActions',
       'saveHistory',
+      'toolPermissions',
+      'allowedDomains',
       'activeConfig',
       'configs',
       'auxAgentProfiles'
@@ -357,15 +419,202 @@ class SidePanelUI {
     this.elements.orchestratorProfile.value = settings.orchestratorProfile || '';
     this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
     this.elements.streamResponses.value = settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
-    this.elements.autoScroll.value = settings.autoScroll !== undefined ? settings.autoScroll : 'true';
-    this.elements.confirmActions.value = settings.confirmActions !== undefined ? settings.confirmActions : 'true';
-    this.elements.saveHistory.value = settings.saveHistory !== undefined ? settings.saveHistory : 'true';
+    this.elements.autoScroll.value = settings.autoScroll !== undefined ? String(settings.autoScroll) : 'true';
+    this.elements.confirmActions.value = settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
+    this.elements.saveHistory.value = settings.saveHistory !== undefined ? String(settings.saveHistory) : 'true';
+
+    const defaultPermissions = {
+      read: true,
+      interact: true,
+      navigate: true,
+      tabs: true,
+      screenshots: false
+    };
+    const toolPermissions = { ...defaultPermissions, ...(settings.toolPermissions || {}) };
+    if (this.elements.permissionRead) this.elements.permissionRead.value = String(toolPermissions.read);
+    if (this.elements.permissionInteract) this.elements.permissionInteract.value = String(toolPermissions.interact);
+    if (this.elements.permissionNavigate) this.elements.permissionNavigate.value = String(toolPermissions.navigate);
+    if (this.elements.permissionTabs) this.elements.permissionTabs.value = String(toolPermissions.tabs);
+    if (this.elements.permissionScreenshots) this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
+    if (this.elements.allowedDomains) this.elements.allowedDomains.value = settings.allowedDomains || '';
 
     this.refreshConfigDropdown();
     this.setActiveConfig(this.currentConfig, true);
     this.toggleCustomEndpoint();
     this.updateScreenshotToggleState();
     this.editProfile(this.currentConfig, true);
+  }
+
+  async loadAccessState() {
+    const { authState, entitlement } = await chrome.storage.local.get(['authState', 'entitlement']);
+    this.authState = this.normalizeAuthState(authState);
+    this.entitlement = this.normalizeEntitlement(entitlement);
+    this.updateAccessUI();
+  }
+
+  normalizeAuthState(state) {
+    const normalized = { status: 'signed_out' };
+    if (!state || typeof state !== 'object') return normalized;
+    const status = ['signed_out', 'device_code', 'signed_in'].includes(state.status) ? state.status : 'signed_out';
+    normalized.status = status;
+    if (state.code) normalized.code = String(state.code);
+    if (state.email) normalized.email = String(state.email);
+    if (state.expiresAt) normalized.expiresAt = Number(state.expiresAt);
+    return normalized;
+  }
+
+  normalizeEntitlement(state) {
+    if (!state || typeof state !== 'object') {
+      return { active: false, plan: 'none' };
+    }
+    return {
+      active: Boolean(state.active),
+      plan: state.plan ? String(state.plan) : 'none',
+      renewsAt: state.renewsAt ? String(state.renewsAt) : ''
+    };
+  }
+
+  async persistAccessState() {
+    await chrome.storage.local.set({
+      authState: this.authState,
+      entitlement: this.entitlement
+    });
+  }
+
+  getAccessState() {
+    if (!this.authState || this.authState.status !== 'signed_in') return 'auth';
+    if (!this.entitlement || !this.entitlement.active) return 'billing';
+    return 'ready';
+  }
+
+  isAccessReady() {
+    return this.getAccessState() === 'ready';
+  }
+
+  updateAccessUI() {
+    const state = this.getAccessState();
+    const showAccess = this.accessPanelVisible || state !== 'ready';
+
+    if (this.elements.accessPanel) {
+      this.elements.accessPanel.classList.toggle('hidden', !showAccess);
+    }
+    if (this.elements.authPanel) {
+      this.elements.authPanel.classList.toggle('hidden', state !== 'auth');
+    }
+    if (this.elements.billingPanel) {
+      this.elements.billingPanel.classList.toggle('hidden', state !== 'billing');
+    }
+
+    if (this.elements.authCodeWrap) {
+      this.elements.authCodeWrap.classList.toggle('hidden', !this.authState?.code);
+    }
+    if (this.elements.authCodeValue) {
+      this.elements.authCodeValue.textContent = this.authState?.code || '----';
+    }
+    if (this.elements.planStatus) {
+      this.elements.planStatus.textContent = this.entitlement?.active
+        ? `Active${this.entitlement.renewsAt ? ` · Renews ${new Date(this.entitlement.renewsAt).toLocaleDateString()}` : ''}`
+        : 'No active plan';
+    }
+
+    if (this.elements.accountBtn) {
+      const label = state === 'auth'
+        ? 'Signed out'
+        : (this.authState?.email || 'Signed in');
+      this.elements.accountBtn.textContent = label;
+    }
+
+    const locked = showAccess;
+    if (this.elements.viewChatBtn) this.elements.viewChatBtn.disabled = locked;
+    if (this.elements.viewHistoryBtn) this.elements.viewHistoryBtn.disabled = locked;
+    if (this.elements.startNewSessionBtn) this.elements.startNewSessionBtn.disabled = locked;
+    if (this.elements.sendBtn) this.elements.sendBtn.disabled = locked;
+    if (this.elements.userInput) this.elements.userInput.disabled = locked;
+
+    if (showAccess) {
+      this.elements.chatInterface?.classList.add('hidden');
+      this.elements.historyPanel?.classList.add('hidden');
+      if (state !== 'ready') {
+        this.updateStatus(state === 'auth' ? 'Sign in required' : 'Subscription required', 'warning');
+      }
+    } else {
+      this.switchView(this.currentView || 'chat');
+    }
+  }
+
+  toggleAccessPanel() {
+    this.accessPanelVisible = !this.accessPanelVisible;
+    this.updateAccessUI();
+  }
+
+  generateDeviceCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+      if (i === 3) code += '-';
+    }
+    return code;
+  }
+
+  async startAuthFlow() {
+    const code = this.generateDeviceCode();
+    this.authState = {
+      status: 'device_code',
+      code,
+      expiresAt: Date.now() + 10 * 60 * 1000
+    };
+    await this.persistAccessState();
+    this.updateAccessUI();
+    this.updateStatus('Use the device code to sign in', 'active');
+  }
+
+  async verifyAuthFlow() {
+    this.authState = {
+      status: 'signed_in',
+      email: this.authState?.email || 'Signed in'
+    };
+    this.entitlement = { active: false, plan: 'none' };
+    await this.persistAccessState();
+    this.accessPanelVisible = true;
+    this.updateAccessUI();
+    this.updateStatus('Signed in — subscription required', 'warning');
+  }
+
+  async copyAuthCode() {
+    const code = this.authState?.code;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      this.updateStatus('Code copied to clipboard', 'success');
+    } catch (error) {
+      this.updateStatus('Unable to copy code', 'error');
+    }
+  }
+
+  async startSubscription() {
+    this.entitlement = {
+      active: true,
+      plan: 'pro',
+      renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    await this.persistAccessState();
+    this.accessPanelVisible = false;
+    this.updateAccessUI();
+    this.updateStatus('Subscription active', 'success');
+  }
+
+  manageBilling() {
+    this.updateStatus('Billing portal not connected yet', 'warning');
+  }
+
+  async signOut() {
+    this.authState = { status: 'signed_out' };
+    this.entitlement = { active: false, plan: 'none' };
+    await this.persistAccessState();
+    this.accessPanelVisible = true;
+    this.updateAccessUI();
+    this.updateStatus('Signed out', 'warning');
   }
 
   async saveSettings() {
@@ -396,6 +645,16 @@ class SidePanelUI {
     };
   }
 
+  collectToolPermissions() {
+    return {
+      read: this.elements.permissionRead?.value === 'true',
+      interact: this.elements.permissionInteract?.value === 'true',
+      navigate: this.elements.permissionNavigate?.value === 'true',
+      tabs: this.elements.permissionTabs?.value === 'true',
+      screenshots: this.elements.permissionScreenshots?.value === 'true'
+    };
+  }
+
   async persistAllSettings({ silent = false } = {}) {
     const activeProfile = this.configs[this.currentConfig] || {};
     const payload = {
@@ -420,6 +679,8 @@ class SidePanelUI {
       visionProfile: this.elements.visionProfile.value,
       useOrchestrator: this.elements.orchestratorToggle.value === 'true',
       orchestratorProfile: this.elements.orchestratorProfile.value,
+      toolPermissions: this.collectToolPermissions(),
+      allowedDomains: this.elements.allowedDomains?.value || '',
       auxAgentProfiles: this.auxAgentProfiles,
       activeConfig: this.currentConfig,
       configs: this.configs
@@ -473,10 +734,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   async createNewConfig(name) {
-    const trimmedName = (name || '').trim() || prompt('Enter configuration name:') || '';
+    const trimmedName = (name || '').trim() || prompt('Enter profile name:') || '';
     if (!trimmedName) return;
     if (this.configs[trimmedName]) {
-      alert('Configuration already exists!');
+      alert('Profile already exists!');
       return;
     }
 
@@ -497,28 +758,28 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     this.refreshConfigDropdown();
     this.setActiveConfig(trimmedName, true);
-    this.updateStatus(`Configuration "${trimmedName}" created`, 'success');
+    this.updateStatus(`Profile "${trimmedName}" created`, 'success');
   }
 
   async deleteConfig() {
     if (this.currentConfig === 'default') {
-      alert('Cannot delete default configuration');
+      alert('Cannot delete default profile');
       return;
     }
 
-    if (confirm(`Delete configuration "${this.currentConfig}"?`)) {
+    if (confirm(`Delete profile "${this.currentConfig}"?`)) {
       delete this.configs[this.currentConfig];
       this.currentConfig = 'default';
       this.refreshConfigDropdown();
       this.setActiveConfig(this.currentConfig, true);
-      this.updateStatus('Configuration deleted', 'success');
+      this.updateStatus('Profile deleted', 'success');
     }
   }
 
   async switchConfig() {
     const newConfig = this.elements.activeConfig.value;
     if (!this.configs[newConfig]) {
-      alert('Configuration not found');
+      alert('Profile not found');
       return;
     }
     this.setActiveConfig(newConfig);
@@ -750,6 +1011,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   async sendMessage() {
     const userMessage = this.elements.userInput.value.trim();
     if (!userMessage) return;
+    if (!this.isAccessReady()) {
+      this.updateAccessUI();
+      this.updateStatus('Sign in required', 'warning');
+      return;
+    }
 
     // Clear input
     this.elements.userInput.value = '';
@@ -769,15 +1035,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.displayUserMessage(userMessage);
 
     // Add to conversation history (include context)
-    this.conversationHistory.push({
-      role: 'user',
-      content: fullMessage
-    });
+    const userEntry = createMessage({ role: 'user', content: fullMessage });
+    if (userEntry) {
+      this.conversationHistory.push(userEntry);
+    }
     this.updateContextUsage();
 
     // Update status and input area
     this.updateStatus('Processing...', 'active');
-    document.querySelector('.input-area').classList.add('running');
+    this.elements.composer?.classList.add('running');
 
     // Send to background for processing
     try {
@@ -790,7 +1056,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.persistHistory();
     } catch (error) {
       this.updateStatus('Error: ' + error.message, 'error');
-      document.querySelector('.input-area').classList.remove('running');
+      this.elements.composer?.classList.remove('running');
       this.displayAssistantMessage('Sorry, an error occurred: ' + error.message);
     }
   }
@@ -803,7 +1069,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       <div class="message-content">${this.escapeHtml(content)}</div>
     `;
     this.elements.chatMessages.appendChild(messageDiv);
-    this.scrollToBottom();
+    this.scrollToBottom({ force: true });
   }
 
   deduplicateThinking(thinking) {
@@ -837,22 +1103,32 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   displayAssistantMessage(content, thinking = null) {
-    // Don't display empty messages unless there's thinking content
+    const streamResult = this.finishStreamingMessage();
+    const streamedContainer = streamResult?.container;
+
+    // If we have no content and no thinking, but we DO have a streamed message, keep the streamed message.
     if ((!content || content.trim() === '') && !thinking) {
+      if (streamedContainer) {
+        // We have text from the stream that should persist
+        return;
+      }
       return;
     }
-
-    this.finishStreamingMessage();
 
     const parsed = this.extractThinking(content, thinking);
     content = parsed.content;
     thinking = parsed.thinking;
 
+    // If we are about to render a new message, remove the temporary streamed one
+    if (streamedContainer) {
+      streamedContainer.remove();
+    }
+
     // Add to conversation history
-    this.conversationHistory.push({
-      role: 'assistant',
-      content: content
-    });
+    const assistantEntry = createMessage({ role: 'assistant', content });
+    if (assistantEntry) {
+      this.conversationHistory.push(assistantEntry);
+    }
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
@@ -862,7 +1138,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (thinking && this.elements.showThinking.value === 'true') {
       const cleanedThinking = this.deduplicateThinking(thinking);
       html += `
-        <div class="thinking-block collapsed">
+        <div class="thinking-block">
           <div class="thinking-header">
             <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6 9 12 15 18 9"></polyline>
@@ -893,7 +1169,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.chatMessages.appendChild(messageDiv);
     this.scrollToBottom();
     this.updateStatus('Ready', 'success');
-    document.querySelector('.input-area').classList.remove('running');
+    this.elements.composer?.classList.remove('running');
     this.pendingToolCount = 0;
     this.updateActivityState();
     this.persistHistory();
@@ -1092,28 +1368,104 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   finishStreamingMessage() {
     // Preserve thinking before clearing state
     const streamingThinking = this.streamingState?.thinking;
+    const container = this.streamingState?.container;
 
-    if (this.streamingState?.container) {
-      this.streamingState.container.remove();
+    if (container) {
+      // Clean up indicators but don't remove the container yet
+      const indicator = container.querySelector('.typing-indicator');
+      if (indicator) indicator.remove();
+      container.classList.remove('streaming');
     }
     this.streamingState = null;
     this.isStreaming = false;
     this.updateActivityState();
 
-    // Return preserved thinking so caller can use it
-    return streamingThinking;
+    // Return preserved thinking and container so caller can use/manage them
+    return { thinking: streamingThinking, container };
   }
 
   displayToolExecution(toolName, args, result, toolCallId = null) {
-    // Tool execution is now primarily shown in the top timeline
-    // Only update the timeline item status when result comes in
+    const entryId = toolCallId || `tool-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let entry = this.toolCallViews.get(entryId);
+
+    if (!entry) {
+      entry = this.createToolMessage(entryId, toolName, args);
+      this.toolCallViews.set(entryId, entry);
+      this.elements.chatMessages.appendChild(entry.container);
+      this.scrollToBottom();
+    }
+
     if (result !== null && result !== undefined) {
-      // Result received - timeline item already updated via updateTimelineItem
-      // Optionally show errors in an error banner
+      this.updateToolMessage(entry, result);
       const isError = result && (result.error || result.success === false);
       if (isError) {
         this.showErrorBanner(`${toolName}: ${result.error || 'Tool execution failed'}`);
       }
+    }
+  }
+
+  createToolMessage(entryId, toolName, args) {
+    const container = document.createElement('div');
+    container.className = 'message tool';
+    container.dataset.id = entryId;
+    const safeToolName = toolName || 'tool';
+    const argsPreview = this.getArgsPreview(args);
+    const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
+
+    const details = document.createElement('details');
+    details.className = 'tool-event running';
+    details.innerHTML = `
+      <summary>
+        <span class="tool-event-dot"></span>
+        <span class="tool-event-name">${this.escapeHtml(safeToolName)}</span>
+        <span class="tool-event-preview">${this.escapeHtml(argsPreview || 'No args')}</span>
+        <span class="tool-event-status">Running</span>
+      </summary>
+      <div class="tool-event-body">
+        <div class="tool-event-section">
+          <div class="tool-event-label">Args</div>
+          <pre class="tool-event-args-pre">${this.escapeHtml(argsText || 'No args')}</pre>
+        </div>
+        <div class="tool-event-section">
+          <div class="tool-event-label">Result</div>
+          <pre class="tool-event-result-pre">Waiting...</pre>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(details);
+    return {
+      container,
+      details,
+      statusEl: details.querySelector('.tool-event-status'),
+      resultEl: details.querySelector('.tool-event-result-pre'),
+      previewEl: details.querySelector('.tool-event-preview')
+    };
+  }
+
+  updateToolMessage(entry, result) {
+    if (!entry?.details) return;
+    const isError = result && (result.error || result.success === false);
+    entry.details.classList.remove('running', 'success', 'error');
+    entry.details.classList.add(isError ? 'error' : 'success');
+    if (entry.statusEl) entry.statusEl.textContent = isError ? 'Error' : 'Done';
+
+    if (entry.resultEl) {
+      const resultText = this.truncateText(this.safeJsonStringify(result), 2000);
+      entry.resultEl.textContent = resultText || (isError ? 'Tool failed' : 'Done');
+    }
+
+    if (entry.previewEl) {
+      const preview = isError
+        ? (result?.error || 'Tool failed')
+        : (result?.message || result?.summary || '');
+      if (preview) {
+        entry.previewEl.textContent = this.truncateText(String(preview), 120);
+      }
+    }
+
+    if (isError) {
+      entry.details.open = true;
     }
   }
 
@@ -1240,11 +1592,68 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
   }
 
-  scrollToBottom() {
-    // Use requestAnimationFrame to ensure DOM has updated
+  scrollToBottom({ force = false } = {}) {
+    if (!this.elements.chatMessages) return;
+    if (!force && !this.shouldAutoScroll()) return;
     requestAnimationFrame(() => {
       this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+      this.isNearBottom = true;
+      this.userScrolledUp = false;
+      this.updateScrollButton();
     });
+  }
+
+  shouldAutoScroll() {
+    const autoScrollEnabled = this.elements.autoScroll?.value !== 'false';
+    return autoScrollEnabled && !this.userScrolledUp;
+  }
+
+  handleChatScroll() {
+    if (!this.elements.chatMessages) return;
+    const { scrollTop, scrollHeight, clientHeight } = this.elements.chatMessages;
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 60;
+    this.isNearBottom = nearBottom;
+    this.userScrolledUp = !nearBottom;
+    this.recordScrollPosition();
+    this.updateScrollButton();
+  }
+
+  recordScrollPosition() {
+    if (!this.elements.chatMessages) return;
+    this.scrollPositions.set(this.sessionId, this.elements.chatMessages.scrollTop);
+  }
+
+  restoreScrollPosition() {
+    if (!this.elements.chatMessages) return;
+    const saved = this.scrollPositions.get(this.sessionId);
+    if (saved !== undefined) {
+      requestAnimationFrame(() => {
+        this.elements.chatMessages.scrollTop = saved;
+        this.handleChatScroll();
+      });
+    } else {
+      this.scrollToBottom({ force: true });
+    }
+  }
+
+  updateScrollButton() {
+    if (!this.elements.scrollToLatestBtn) return;
+    this.elements.scrollToLatestBtn.classList.toggle('hidden', !this.userScrolledUp);
+  }
+
+  safeJsonStringify(value) {
+    try {
+      if (value === undefined) return '';
+      return JSON.stringify(value, null, 2);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  truncateText(text, limit = 1200) {
+    if (!text) return '';
+    if (text.length <= limit) return text;
+    return `${text.slice(0, limit)}...`;
   }
 
   escapeHtmlBasic(text) {
@@ -1368,7 +1777,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       item.addEventListener('click', () => {
         this.switchView('chat');
         if (Array.isArray(session.transcript)) {
-          this.conversationHistory = [...session.transcript];
+          this.recordScrollPosition();
+          this.conversationHistory = normalizeConversationHistory(session.transcript || []);
           this.sessionId = session.id || `session-${Date.now()}`;
           this.firstUserMessage = session.title || '';
           this.renderConversationHistory();
@@ -1397,7 +1807,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         let html = `<div class="message-header">Assistant</div>`;
         if (parsed.thinking && this.elements.showThinking.value === 'true') {
           html += `
-            <div class="thinking-block collapsed">
+            <div class="thinking-block">
               <div class="thinking-header">
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"></polyline>
@@ -1424,13 +1834,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.elements.chatMessages.appendChild(messageDiv);
       }
     });
-    this.scrollToBottom();
+    this.restoreScrollPosition();
   }
 
   switchView(view) {
+    if (!this.isAccessReady()) {
+      this.updateAccessUI();
+      return;
+    }
     this.currentView = view;
     if (!this.elements.chatInterface || !this.elements.historyPanel) return;
     if (view === 'history') {
+      this.recordScrollPosition();
       this.elements.chatInterface.classList.add('hidden');
       this.elements.historyPanel.classList.remove('hidden');
       this.elements.viewHistoryBtn?.classList.add('active');
@@ -1440,10 +1855,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.historyPanel.classList.add('hidden');
       this.elements.viewChatBtn?.classList.add('active', 'live-active');
       this.elements.viewHistoryBtn?.classList.remove('active');
+      this.restoreScrollPosition();
     }
   }
 
   startNewSession() {
+    if (!this.isAccessReady()) {
+      this.updateAccessUI();
+      return;
+    }
     this.conversationHistory = [];
     this.sessionId = `session-${Date.now()}`;
     this.sessionStartedAt = Date.now();
@@ -1452,12 +1872,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.subagents.clear(); // Clear subagents
     this.activeAgent = 'main';
     this.elements.chatMessages.innerHTML = '';
-    this.elements.toolTimeline.innerHTML = ''; // Clear tool timeline
     this.timelineItems.clear();
+    this.toolCallViews.clear();
     this.hideAgentNav();
     this.updateStatus('Ready for a new session', 'success');
     this.switchView('chat');
     this.updateContextUsage();
+    this.scrollToBottom({ force: true });
   }
 
   // Subagent Management
@@ -1585,21 +2006,80 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   async loadTabs() {
-    const tabs = await chrome.tabs.query({});
+    const [tabs, groups] = await Promise.all([
+      chrome.tabs.query({}),
+      chrome.tabGroups.query({})
+    ]);
+    this.tabGroupInfo = new Map(groups.map(group => [group.id, group]));
     this.elements.tabList.innerHTML = '';
 
+    const groupedTabs = new Map();
+    const ungroupedTabs = [];
+
     tabs.forEach(tab => {
-      const isSelected = this.selectedTabs.has(tab.id);
-      const item = document.createElement('div');
-      item.className = `tab-item${isSelected ? ' selected' : ''}`;
-      item.innerHTML = `
-        <div class="tab-item-checkbox"></div>
-        <img class="tab-item-favicon" src="${tab.favIconUrl || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
-        <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
-      `;
-      item.addEventListener('click', () => this.toggleTabSelection(tab, item));
-      this.elements.tabList.appendChild(item);
+      if (tab.groupId !== undefined && tab.groupId >= 0) {
+        if (!groupedTabs.has(tab.groupId)) groupedTabs.set(tab.groupId, []);
+        groupedTabs.get(tab.groupId).push(tab);
+      } else {
+        ungroupedTabs.push(tab);
+      }
     });
+
+    const renderGroup = (label, color, groupTabs, groupId = 'ungrouped') => {
+      if (!groupTabs.length) return;
+      const section = document.createElement('div');
+      section.className = 'tab-group';
+      const allSelected = groupTabs.every(tab => this.selectedTabs.has(tab.id));
+      section.innerHTML = `
+        <div class="tab-group-header" style="--group-color: ${color}">
+          <div class="tab-group-label">${this.escapeHtml(label)}</div>
+          <button class="tab-group-toggle" type="button">${allSelected ? 'Clear' : 'Add all'}</button>
+        </div>
+      `;
+
+      const toggleBtn = section.querySelector('.tab-group-toggle');
+      toggleBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.toggleGroupSelection(groupTabs, !allSelected);
+      });
+
+      groupTabs.forEach(tab => {
+        const isSelected = this.selectedTabs.has(tab.id);
+        const item = document.createElement('div');
+        item.className = `tab-item${isSelected ? ' selected' : ''}`;
+        item.innerHTML = `
+          <div class="tab-item-checkbox"></div>
+          <img class="tab-item-favicon" src="${tab.favIconUrl || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
+          <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
+        `;
+        item.addEventListener('click', () => this.toggleTabSelection(tab, item));
+        section.appendChild(item);
+      });
+
+      this.elements.tabList.appendChild(section);
+    };
+
+    groupedTabs.forEach((groupTabs, groupId) => {
+      const group = this.tabGroupInfo.get(groupId);
+      const label = group?.title || `Group ${groupId}`;
+      const color = this.mapGroupColor(group?.color);
+      renderGroup(label, color, groupTabs, groupId);
+    });
+
+    renderGroup('Ungrouped', 'var(--text-tertiary)', ungroupedTabs);
+  }
+
+  toggleGroupSelection(groupTabs, shouldSelect) {
+    groupTabs.forEach(tab => {
+      if (shouldSelect) {
+        this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
+      } else {
+        this.selectedTabs.delete(tab.id);
+      }
+    });
+    this.updateSelectedTabsBar();
+    this.updateTabSelectorButton();
+    this.loadTabs();
   }
 
   toggleTabSelection(tab, itemElement) {
@@ -1607,11 +2087,26 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.selectedTabs.delete(tab.id);
       itemElement.classList.remove('selected');
     } else {
-      this.selectedTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url, windowId: tab.windowId });
+      this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
       itemElement.classList.add('selected');
     }
     this.updateSelectedTabsBar();
     this.updateTabSelectorButton();
+    this.loadTabs();
+  }
+
+  buildSelectedTab(tab) {
+    const group = this.tabGroupInfo.get(tab.groupId);
+    const hasGroup = tab.groupId !== undefined && tab.groupId >= 0;
+    return {
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+      windowId: tab.windowId,
+      groupId: tab.groupId,
+      groupTitle: hasGroup ? (group?.title || `Group ${tab.groupId}`) : 'Ungrouped',
+      groupColor: hasGroup ? this.mapGroupColor(group?.color) : 'var(--text-tertiary)'
+    };
   }
 
   updateSelectedTabsBar() {
@@ -1622,27 +2117,51 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     this.elements.selectedTabsBar.classList.remove('hidden');
     this.elements.selectedTabsBar.innerHTML = '';
+    const grouped = new Map();
+    this.selectedTabs.forEach(tab => {
+      const key = tab.groupId && tab.groupId >= 0 ? `group-${tab.groupId}` : 'ungrouped';
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(tab);
+    });
 
-    this.selectedTabs.forEach((tab, tabId) => {
-      const chip = document.createElement('div');
-      chip.className = 'selected-tab-chip';
-      chip.innerHTML = `
-        <span>${this.escapeHtml(tab.title?.substring(0, 25) || 'Tab')}${tab.title?.length > 25 ? '...' : ''}</span>
-        <button title="Remove">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+    grouped.forEach(tabs => {
+      const groupTitle = tabs[0]?.groupTitle || 'Ungrouped';
+      const groupLabel = this.truncateText(groupTitle, 18) || 'Ungrouped';
+      const groupColor = tabs[0]?.groupColor || 'var(--text-tertiary)';
+      const groupWrap = document.createElement('div');
+      groupWrap.className = 'selected-tabs-group';
+      groupWrap.innerHTML = `
+        <div class="selected-group-label" style="--group-color: ${groupColor}">
+          <span>${this.escapeHtml(groupLabel)}</span>
+          <span class="selected-group-count">${tabs.length}</span>
+        </div>
+        <div class="selected-tabs-chips"></div>
       `;
-      chip.querySelector('button').addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.selectedTabs.delete(tabId);
-        this.updateSelectedTabsBar();
-        this.updateTabSelectorButton();
-        this.loadTabs();
+
+      const chipsRow = groupWrap.querySelector('.selected-tabs-chips');
+      tabs.forEach(tab => {
+        const chip = document.createElement('div');
+        chip.className = 'selected-tab-chip';
+        chip.innerHTML = `
+          <span>${this.escapeHtml(tab.title?.substring(0, 25) || 'Tab')}${tab.title?.length > 25 ? '...' : ''}</span>
+          <button title="Remove">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        `;
+        chip.querySelector('button').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectedTabs.delete(tab.id);
+          this.updateSelectedTabsBar();
+          this.updateTabSelectorButton();
+          this.loadTabs();
+        });
+        chipsRow.appendChild(chip);
       });
-      this.elements.selectedTabsBar.appendChild(chip);
+
+      this.elements.selectedTabsBar.appendChild(groupWrap);
     });
   }
 
@@ -1652,6 +2171,21 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     } else {
       this.elements.tabSelectorBtn.classList.remove('has-selection');
     }
+  }
+
+  mapGroupColor(colorName) {
+    const palette = {
+      grey: '#9aa0a6',
+      blue: '#4c8bf5',
+      red: '#ea4335',
+      yellow: '#fbbc04',
+      green: '#34a853',
+      pink: '#f06292',
+      purple: '#a142f4',
+      cyan: '#24c1e0',
+      orange: '#f29900'
+    };
+    return palette[colorName] || 'var(--text-tertiary)';
   }
 
   getSelectedTabsContext() {

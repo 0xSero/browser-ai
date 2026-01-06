@@ -1,8 +1,8 @@
-# Browser AI Agent - Complete API Specification
+# Parchi - Complete API Specification
 
 ## Overview
 
-This document provides a comprehensive specification of all Chrome Extension APIs used, browser automation tools available, and implementation details for the Browser AI Agent extension.
+This document provides a comprehensive specification of all Chrome Extension APIs used, browser automation tools available, and implementation details for the Parchi extension.
 
 ## Chrome Extension APIs
 
@@ -260,44 +260,9 @@ chrome.runtime.getURL('path/to/resource.html')
 
 ---
 
-### 7. Debugger API (chrome.debugger)
+### 7. Debugger API (chrome.debugger) - Reserved
 
-**Purpose**: Access Chrome DevTools Protocol
-
-**Methods**:
-```javascript
-chrome.debugger.attach({ tabId }, version)
-chrome.debugger.detach({ tabId })
-chrome.debugger.sendCommand({ tabId }, method, params?)
-```
-
-**Example - DOM manipulation**:
-```javascript
-await chrome.debugger.attach({ tabId: tab.id }, '1.3');
-await chrome.debugger.sendCommand(
-  { tabId: tab.id },
-  'DOM.getDocument'
-);
-```
-
-**Available CDP Domains** (subset):
-- DOM, DOMDebugger, DOMSnapshot
-- Page, Input, Emulation
-- Network, Fetch
-- Runtime, Debugger
-- Console, Log
-- Performance, Profiler
-
-**Manifest Configuration**:
-```json
-{
-  "permissions": ["debugger"]
-}
-```
-
-**Documentation**: https://developer.chrome.com/docs/extensions/reference/api/debugger
-
-**CDP Protocol**: https://chromedevtools.github.io/devtools-protocol/
+**Status**: Not shipped in the current extension build. The manifest does not request the `debugger` permission, and no debugger tools are registered. This section is reserved for future CDP-based tooling.
 
 ---
 
@@ -332,42 +297,8 @@ await navigate({ url: 'https://google.com' })
 
 ---
 
-#### goBack / goForward
-**Description**: Navigate browser history
-
-**Parameters**:
-```typescript
-{
-  tabId?: number;       // Optional: specific tab
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-}
-```
-
----
-
-#### refresh
-**Description**: Reload page
-
-**Parameters**:
-```typescript
-{
-  tabId?: number;       // Optional: specific tab
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  tabId: number;
-}
-```
+#### goBack / goForward / refresh (Reserved)
+**Status**: Not shipped in the current extension build. Navigation is available via `navigate` and `openTab` only.
 
 ---
 
@@ -748,217 +679,9 @@ await createTabGroup({
 
 ---
 
-### History Management Tools
+### History Management Tools - Reserved
 
-#### searchHistory
-**Description**: Search browser history for URLs matching a text query
-
-**Parameters**:
-```typescript
-{
-  text: string;              // Search query text
-  maxResults?: number;       // Max results (default: 100)
-  startTime?: number;        // Start time in ms since epoch
-  endTime?: number;          // End time in ms since epoch
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  count: number;
-  results: Array<{
-    url: string;
-    title: string;
-    lastVisitTime: number;
-    visitCount: number;
-    typedCount: number;
-  }>;
-}
-```
-
-**Example**:
-```javascript
-await searchHistory({
-  text: 'github',
-  maxResults: 50
-})
-```
-
----
-
-#### getRecentHistory
-**Description**: Get recently visited pages from browser history
-
-**Parameters**:
-```typescript
-{
-  maxResults?: number;       // Max results (default: 50)
-  hoursAgo?: number;         // Hours to look back (default: 24)
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  count: number;
-  timeRange: {
-    from: string;            // ISO 8601 timestamp
-    to: string;              // ISO 8601 timestamp
-  };
-  results: Array<{
-    url: string;
-    title: string;
-    lastVisitTime: number;
-    visitCount: number;
-    lastVisitDate: string;   // ISO 8601 timestamp
-  }>;
-}
-```
-
-**Example**:
-```javascript
-// Get last 2 hours of history
-await getRecentHistory({
-  maxResults: 100,
-  hoursAgo: 2
-})
-```
-
----
-
-#### deleteHistoryItem
-**Description**: Delete a specific URL from browser history
-
-**Parameters**:
-```typescript
-{
-  url: string;               // URL to delete
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  url: string;
-  message?: string;
-  error?: string;
-}
-```
-
-**Example**:
-```javascript
-await deleteHistoryItem({
-  url: 'https://example.com/page'
-})
-```
-
-**Notes**:
-- Deletes ALL visits to the specified URL
-- Returns error if URL not found in history
-- This action cannot be undone
-
----
-
-#### deleteHistoryRange
-**Description**: Delete all history items within a time range
-
-**Parameters**:
-```typescript
-{
-  startTime: number;         // Start time in ms since epoch
-  endTime: number;           // End time in ms since epoch
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  deletedCount: number;
-  timeRange: {
-    from: string;            // ISO 8601 timestamp
-    to: string;              // ISO 8601 timestamp
-  };
-  message: string;
-}
-```
-
-**Example**:
-```javascript
-// Delete history from last week
-const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-const now = Date.now();
-
-await deleteHistoryRange({
-  startTime: oneWeekAgo,
-  endTime: now
-})
-```
-
-**Notes**:
-- Deletes ALL history entries in the specified range
-- This action cannot be undone
-- startTime must be before endTime
-
----
-
-#### getVisitCount
-**Description**: Get the number of times a URL has been visited
-
-**Parameters**:
-```typescript
-{
-  url: string;               // URL to check
-}
-```
-
-**Returns**:
-```typescript
-{
-  success: boolean;
-  url: string;
-  visitCount: number;
-  typedCount: number;        // Times user typed URL directly
-  lastVisitTime: number;
-  lastVisitDate: string;     // ISO 8601 timestamp
-  found: boolean;
-  visits: Array<{            // Last 10 visits
-    visitTime: number;
-    visitDate: string;       // ISO 8601 timestamp
-    transition: string;      // How user arrived (link, typed, etc)
-  }>;
-}
-```
-
-**Example**:
-```javascript
-await getVisitCount({
-  url: 'https://github.com'
-})
-
-// Returns:
-// {
-//   success: true,
-//   url: 'https://github.com',
-//   visitCount: 42,
-//   typedCount: 5,
-//   lastVisitTime: 1699564800000,
-//   lastVisitDate: '2025-11-07T12:00:00.000Z',
-//   found: true,
-//   visits: [...]
-// }
-```
-
-**Transition Types**:
-- `link` - User followed a link
-- `typed` - User typed URL in address bar
-- `auto_bookmark` - User clicked a bookmark
-- `reload` - User reloaded the page
-- `form_submit` - User submitted a form
+**Status**: Not shipped in the current extension build. Browser history tooling is disabled, and the manifest does not request the `history` permission. This section is reserved for future history automation APIs.
 
 ---
 
@@ -1129,8 +852,31 @@ anthropic-version: 2023-06-01
          │
          └─→ Content Script (if needed)
              │
-             └─→ DOM manipulation
+            └─→ DOM manipulation
 ```
+
+### Canonical Message Schema
+
+Local message history uses a normalized structure to keep tool results and UI rendering consistent.
+
+```typescript
+type CanonicalMessage = {
+  id: string;
+  createdAt: string; // ISO timestamp
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | Array<any>;
+  toolCalls?: Array<{ id: string; name: string; args: object }>;
+  toolCallId?: string; // for tool role
+  name?: string;       // optional tool name
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+};
+```
+
+Provider requests are derived from canonical messages by stripping metadata and serializing tool calls/results into the provider-specific formats.
 
 ### Storage Schema
 
@@ -1156,7 +902,11 @@ anthropic-version: 2023-06-01
 - Cleared on extension uninstall
 
 ### Permissions
+- `sidePanel` - Required to render the extension UI
 - `activeTab` - Only current tab, only on user action
+- `tabs` - Required for tab management (open/close/switch/query)
+- `tabGroups` - Required to group/ungroup tabs
+- `storage` - Persist settings and session history
 - `host_permissions: <all_urls>` - Required for content injection
 - `scripting` - Required for executeScript
 
@@ -1247,4 +997,4 @@ Error: Cannot access chrome:// URLs
 
 ---
 
-This specification covers all major components, APIs, and tools in the Browser AI Agent extension. For implementation details, refer to the source code in each module.
+This specification covers all major components, APIs, and tools in the Parchi extension. For implementation details, refer to the source code in each module.

@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get up and running with Browser AI Agent in 5 minutes.
+Get up and running with Parchi in 5 minutes.
 
 ## Step 1: Install Extension
 

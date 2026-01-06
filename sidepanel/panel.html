@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Browser AI Agent</title>
+  <title>Parchi</title>
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
@@ -11,15 +11,29 @@
     <!-- Header -->
     <header class="header">
       <div class="title-stack">
-        <p class="eyebrow">Browser Orchestrator</p>
-        <h1>Azzta Agent</h1>
+        <p class="eyebrow">Parchi Desk</p>
+        <div class="brand-row">
+          <span class="mascot" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+              <path d="M12 18c0-6 4-10 10-10h20c6 0 10 4 10 10v22c0 9-7 16-16 16H24c-9 0-16-7-16-16V18z" style="fill: var(--mascot-fill); stroke: var(--mascot-stroke);" stroke-width="2"/>
+              <path d="M22 26h20" style="stroke: var(--mascot-stroke);" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="24" cy="34" r="3" style="fill: var(--mascot-detail);"/>
+              <circle cx="40" cy="34" r="3" style="fill: var(--mascot-detail);"/>
+              <path d="M26 42c3 3 9 3 12 0" style="stroke: var(--mascot-detail);" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h1>Parchi</h1>
+        </div>
       </div>
-      <button id="settingsBtn" class="icon-btn" title="Settings">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-      </button>
+      <div class="header-actions">
+        <button id="accountBtn" class="pill subtle account-pill" title="Account">Signed out</button>
+        <button id="settingsBtn" class="icon-btn" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <div class="view-tabs">
@@ -30,214 +44,368 @@
       <button id="startNewSessionBtn" class="pill subtle">New Session</button>
     </div>
 
+    <div id="accessPanel" class="access-panel hidden">
+      <section id="authPanel" class="access-card">
+        <p class="eyebrow">Account</p>
+        <h2>Sign in to continue</h2>
+        <p class="access-subtitle">Link this browser with a one-time device code to start using Parchi.</p>
+
+        <div class="access-steps">
+          <div class="access-step">
+            <span class="step-index">1</span>
+            <div>
+              <div class="step-title">Generate a code</div>
+              <div class="step-body">We will display a short code you can use to authenticate.</div>
+            </div>
+          </div>
+          <div class="access-step">
+            <span class="step-index">2</span>
+            <div>
+              <div class="step-title">Sign in on the account page</div>
+              <div class="step-body">Enter the code to confirm this device.</div>
+            </div>
+          </div>
+          <div class="access-step">
+            <span class="step-index">3</span>
+            <div>
+              <div class="step-title">Return here to continue</div>
+              <div class="step-body">Once confirmed, the assistant unlocks instantly.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="access-actions">
+          <button id="authStartBtn" class="btn btn-primary">Get sign-in code</button>
+          <button id="authVerifyBtn" class="btn btn-secondary">I signed in</button>
+        </div>
+
+        <div id="authCodeWrap" class="device-code-wrap hidden">
+          <div class="device-code-row">
+            <div id="authCodeValue" class="device-code">----</div>
+            <button id="authCopyBtn" class="btn btn-secondary">Copy</button>
+          </div>
+          <p class="device-hint">Codes expire after 10 minutes.</p>
+        </div>
+      </section>
+
+      <section id="billingPanel" class="access-card hidden">
+        <p class="eyebrow">Subscription</p>
+        <h2>Unlock your plan</h2>
+        <p class="access-subtitle">Your account is signed in, but there is no active subscription on this device.</p>
+
+        <div class="plan-card">
+          <div>
+            <div class="plan-title">Parchi Pro</div>
+            <div id="planStatus" class="plan-meta">No active plan</div>
+          </div>
+          <span class="plan-pill">Monthly</span>
+        </div>
+
+        <div class="access-actions">
+          <button id="billingStartBtn" class="btn btn-primary">Start subscription</button>
+          <button id="billingManageBtn" class="btn btn-secondary">Manage billing</button>
+          <button id="authLogoutBtn" class="btn btn-secondary">Sign out</button>
+        </div>
+      </section>
+    </div>
+
     <!-- Settings Panel -->
     <div id="settingsPanel" class="settings-panel hidden">
-      <h2>Configuration</h2>
+      <div class="settings-header">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h2>Configuration</h2>
+          <p class="settings-subtitle">Edits apply to the selected profile. Save to persist.</p>
+        </div>
+      </div>
       <div class="settings-tabs">
         <button id="settingsTabGeneralBtn" class="settings-tab-button active" data-tab="general">General</button>
         <button id="settingsTabProfilesBtn" class="settings-tab-button" data-tab="profiles">Agent Library</button>
       </div>
       <div class="settings-tab-panels">
         <div id="settingsTabGeneral" class="tab-panel" data-tab="general">
-          <div class="form-group general-profile-select">
-            <label>Editing Profile</label>
-            <div class="profile-select-row">
-              <select id="generalProfileSelect"></select>
-              <button id="openProfilesBtn" class="btn btn-secondary subtle">Agent Library</button>
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <div>
+                <p class="eyebrow">Profile</p>
+                <h3 class="settings-section-title">Active profile</h3>
+              </div>
+              <button id="openProfilesBtn" class="btn btn-secondary subtle">Agent library</button>
             </div>
-            <small>Switch between saved configurations directly from here.</small>
-          </div>
-
-          <h3>AI Provider</h3>
-
-          <div class="form-group">
-            <label for="provider">Provider</label>
-            <select id="provider">
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="custom">Custom (OpenAI Compatible)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="apiKey">API Key</label>
-            <input type="password" id="apiKey" placeholder="sk-...">
-            <small>Your API key is stored locally and never shared</small>
-          </div>
-
-          <div class="form-group">
-            <label for="model">Model</label>
-            <input type="text" id="model" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
-            <small>Recommended: gpt-4o for OpenAI, claude-3-5-sonnet-20241022 for Anthropic</small>
-          </div>
-
-          <div class="form-group" id="customEndpointGroup" style="display: none;">
-            <label for="customEndpoint">Custom Endpoint</label>
-            <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1">
-            <small>Base URL for OpenAI-compatible API</small>
-          </div>
-
-          <h3>Model Parameters</h3>
-
-          <div class="form-group">
-            <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
-            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-            <small>Controls randomness (0 = focused, 2 = creative)</small>
-          </div>
-
-          <div class="form-group">
-            <label for="maxTokens">Max Response Tokens</label>
-            <input type="number" id="maxTokens" min="1" max="16384" value="4096">
-            <small>Maximum tokens per response</small>
-          </div>
-
-          <div class="form-group">
-            <label for="contextLimit">Context Window</label>
-            <input type="number" id="contextLimit" min="4000" max="1000000" value="200000">
-            <small>Model's context limit (Claude 3: 200k, GPT-4o: 128k)</small>
-          </div>
-
-          <div class="form-group">
-            <label for="timeout">Request Timeout (ms)</label>
-            <input type="number" id="timeout" min="5000" step="1000" value="30000">
-            <small>Maximum time to wait for API response</small>
-          </div>
-
-          <h3>Screenshots</h3>
-
-          <div class="form-group">
-            <label for="enableScreenshots">Screenshot tools</label>
-            <select id="enableScreenshots">
-              <option value="false">Disabled (default)</option>
-              <option value="true">Enabled (vision only)</option>
-            </select>
-            <small>Disabled by default. Turn on only with a vision-capable model.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="visionBridge">Vision relay</label>
-            <select id="visionBridge">
-              <option value="true">Describe screenshots with vision profile</option>
-              <option value="false">Do not relay to vision model</option>
-            </select>
-            <small>When the main model lacks vision, a vision profile can read screenshots.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="visionProfile">Vision profile</label>
-            <select id="visionProfile">
-              <option value="">Use active config</option>
-            </select>
-            <small>Select a saved profile that can see images (e.g., GPT-4o, Claude 3.5).</small>
-          </div>
-
-          <div class="form-group">
-            <label for="sendScreenshotsAsImages">Send screenshots as images</label>
-            <select id="sendScreenshotsAsImages">
-              <option value="true">Enabled (vision models only)</option>
-              <option value="false">Disabled (send as text)</option>
-            </select>
-            <small>When enabled, screenshots are sent as images to vision models like GPT-4o or Claude 3</small>
-          </div>
-
-          <div class="form-group">
-            <label for="screenshotQuality">Screenshot Quality</label>
-            <select id="screenshotQuality">
-              <option value="high">High (slower, better quality)</option>
-              <option value="low">Low (faster, smaller size)</option>
-            </select>
-          </div>
-
-          <h3>Behavior</h3>
-
-          <div class="form-group">
-            <label for="showThinking">Show AI thinking process</label>
-            <select id="showThinking">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <small>Display the AI's reasoning before tool calls</small>
-          </div>
-
-          <div class="form-group">
-            <label for="streamResponses">Stream responses</label>
-            <select id="streamResponses">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <small>See partial responses while the model is still generating</small>
-          </div>
-
-          <div class="form-group">
-            <label for="autoScroll">Auto-scroll to latest message</label>
-            <select id="autoScroll">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="confirmActions">Confirm dangerous actions</label>
-            <select id="confirmActions">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <small>Show confirmation for actions like deleting history or closing tabs</small>
-          </div>
-
-          <div class="form-group">
-            <label for="saveHistory">Save chat history</label>
-            <select id="saveHistory">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <small>Store conversations locally (max 50 messages)</small>
-          </div>
-
-          <h3>Orchestrator & Agents</h3>
-
-          <div class="form-group">
-            <label for="orchestratorToggle">Orchestrator mode</label>
-            <select id="orchestratorToggle">
-              <option value="false">Disabled (single agent)</option>
-              <option value="true">Enabled (spawn sub-agents)</option>
-            </select>
-            <small>Exposes spawn_subagent and subagent_complete tools for complex workflows.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="orchestratorProfile">Orchestrator profile</label>
-            <select id="orchestratorProfile">
-              <option value="">Use active config</option>
-            </select>
-            <small>Choose which profile coordinates sub-agents.</small>
-          </div>
-
-          <h3>Configurations</h3>
-
-          <div class="form-group">
-            <label>Active Configuration</label>
-            <div class="config-row">
-              <select id="activeConfig">
-                <option value="default">Default</option>
-              </select>
-              <button id="newConfigBtn" class="btn btn-secondary">New</button>
-              <button id="deleteConfigBtn" class="btn btn-secondary">Delete</button>
+            <div class="form-group">
+              <label for="activeConfig">Profile</label>
+              <div class="config-row">
+                <select id="activeConfig">
+                  <option value="default">Default</option>
+                </select>
+                <button id="newConfigBtn" class="btn btn-secondary">New</button>
+                <button id="deleteConfigBtn" class="btn btn-secondary">Delete</button>
+              </div>
+              <small>Switch profiles. “New” duplicates the current profile.</small>
             </div>
-            <small>Save and switch between different model configurations</small>
           </div>
 
-          <h3>System Prompt</h3>
+          <details class="settings-section settings-collapsible" open>
+            <summary>
+              <span class="settings-collapsible-title">Provider & model</span>
+              <span class="settings-collapsible-hint">API key, model name, optional endpoint</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="provider">Provider</label>
+                <select id="provider">
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="custom">Custom (OpenAI Compatible)</option>
+                </select>
+              </div>
 
-          <div class="form-group">
-            <label for="systemPrompt">System Prompt</label>
-            <textarea id="systemPrompt" rows="6" placeholder="You are a helpful browser automation assistant..."></textarea>
-            <small>Customize how the AI behaves and what tools it has access to</small>
-          </div>
+              <div class="form-group">
+                <label for="apiKey">API Key</label>
+                <input type="password" id="apiKey" placeholder="sk-...">
+                <small>Stored locally in your browser.</small>
+              </div>
 
-          <div class="button-group">
-            <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
-            <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+              <div class="form-group">
+                <label for="model">Model</label>
+                <input type="text" id="model" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
+                <small>Examples: `gpt-4o`, `claude-3-5-sonnet-20241022`.</small>
+              </div>
+
+              <div class="form-group" id="customEndpointGroup" style="display: none;">
+                <label for="customEndpoint">Custom endpoint</label>
+                <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1">
+                <small>Base URL for OpenAI-compatible APIs.</small>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Model parameters</span>
+              <span class="settings-collapsible-hint">Temperature, tokens, context, timeout</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                <small>0 = focused, 2 = more creative.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="maxTokens">Max response tokens</label>
+                <input type="number" id="maxTokens" min="1" max="16384" value="4096">
+              </div>
+
+              <div class="form-group">
+                <label for="contextLimit">Context window</label>
+                <input type="number" id="contextLimit" min="4000" max="1000000" value="200000">
+                <small>Used for context compaction. Examples: Claude 3 (200k), GPT-4o (128k).</small>
+              </div>
+
+              <div class="form-group">
+                <label for="timeout">Request timeout (ms)</label>
+                <input type="number" id="timeout" min="5000" step="1000" value="30000">
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Screenshots & vision</span>
+              <span class="settings-collapsible-hint">Off by default</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="enableScreenshots">Screenshot tools</label>
+                <select id="enableScreenshots">
+                  <option value="false">Disabled (default)</option>
+                  <option value="true">Enabled (vision only)</option>
+                </select>
+                <small>Enable only with a vision-capable model/profile.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="visionBridge">Vision relay</label>
+                <select id="visionBridge">
+                  <option value="true">Describe screenshots with vision profile</option>
+                  <option value="false">Do not relay to vision model</option>
+                </select>
+                <small>Use when your main model can’t see images.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="visionProfile">Vision profile</label>
+                <select id="visionProfile">
+                  <option value="">Use active profile</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="sendScreenshotsAsImages">Send screenshots</label>
+                <select id="sendScreenshotsAsImages">
+                  <option value="true">As images (vision models)</option>
+                  <option value="false">As text (describe only)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="screenshotQuality">Screenshot quality</label>
+                <select id="screenshotQuality">
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Behavior</span>
+              <span class="settings-collapsible-hint">Streaming, history, confirmations</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="showThinking">Show thinking</label>
+                <select id="showThinking">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="streamResponses">Stream responses</label>
+                <select id="streamResponses">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+                <small>Shows partial output while generating.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="autoScroll">Auto-scroll</label>
+                <select id="autoScroll">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmActions">Confirm dangerous actions</label>
+                <select id="confirmActions">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+                <small>Examples: deleting history, closing tabs.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="saveHistory">Save chat history</label>
+                <select id="saveHistory">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+                <small>Stored locally (max ~50 messages per session).</small>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Permissions</span>
+              <span class="settings-collapsible-hint">Control which tools can run</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="permissionRead">Read page content</label>
+                <select id="permissionRead">
+                  <option value="true">Allow</option>
+                  <option value="false">Block</option>
+                </select>
+                <small>Applies to getContent and page inspection.</small>
+              </div>
+              <div class="form-group">
+                <label for="permissionInteract">Interact with pages</label>
+                <select id="permissionInteract">
+                  <option value="true">Allow</option>
+                  <option value="false">Block</option>
+                </select>
+                <small>Click, type, pressKey, scroll.</small>
+              </div>
+              <div class="form-group">
+                <label for="permissionNavigate">Navigate/open URLs</label>
+                <select id="permissionNavigate">
+                  <option value="true">Allow</option>
+                  <option value="false">Block</option>
+                </select>
+                <small>navigate and openTab.</small>
+              </div>
+              <div class="form-group">
+                <label for="permissionTabs">Manage tabs</label>
+                <select id="permissionTabs">
+                  <option value="true">Allow</option>
+                  <option value="false">Block</option>
+                </select>
+                <small>getTabs, switchTab, closeTab, groupTabs.</small>
+              </div>
+              <div class="form-group">
+                <label for="permissionScreenshots">Screenshots</label>
+                <select id="permissionScreenshots">
+                  <option value="false">Block</option>
+                  <option value="true">Allow</option>
+                </select>
+                <small>Requires screenshot tools enabled.</small>
+              </div>
+              <div class="form-group full">
+                <label for="allowedDomains">Allowed domains (optional)</label>
+                <textarea id="allowedDomains" rows="3" placeholder="example.com&#10;docs.example.com"></textarea>
+                <small>When set, tool actions only run on these domains.</small>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Orchestrator</span>
+              <span class="settings-collapsible-hint">Sub-agent workflows</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group">
+                <label for="orchestratorToggle">Orchestrator mode</label>
+                <select id="orchestratorToggle">
+                  <option value="false">Disabled (single agent)</option>
+                  <option value="true">Enabled (spawn sub-agents)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="orchestratorProfile">Orchestrator profile</label>
+                <select id="orchestratorProfile">
+                  <option value="">Use active profile</option>
+                </select>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">System prompt</span>
+              <span class="settings-collapsible-hint">Behavior instructions</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group full">
+                <label for="systemPrompt">System prompt</label>
+                <textarea id="systemPrompt" rows="6" placeholder="You are a helpful browser automation assistant..."></textarea>
+                <small>Keep this short; long prompts consume context.</small>
+              </div>
+            </div>
+          </details>
+
+          <div class="settings-actions">
+            <div class="button-group">
+              <button id="saveSettingsBtn" class="btn btn-primary">Save</button>
+              <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+            </div>
           </div>
         </div>
         <div id="settingsTabProfiles" class="tab-panel hidden" data-tab="profiles">
@@ -361,10 +529,8 @@
         </div>
       </div>
 
-      <!-- Tool Timeline -->
-      <div id="toolTimeline" class="tool-timeline"></div>
-
       <div id="chatMessages" class="chat-messages"></div>
+      <button id="scrollToLatestBtn" class="jump-to-latest hidden">Jump to latest</button>
 
       <!-- Tab Selector -->
       <div id="tabSelector" class="tab-selector hidden">
@@ -380,33 +546,35 @@
         <div id="tabList" class="tab-list"></div>
       </div>
 
-      <!-- Selected Tabs Display -->
-      <div id="selectedTabsBar" class="selected-tabs-bar hidden"></div>
-
       <div class="input-area">
-        <div class="input-controls">
-          <button id="tabSelectorBtn" class="icon-btn tab-selector-btn" title="Select tabs to include">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="9" y1="21" x2="9" y2="9"></line>
-            </svg>
-          </button>
-          <button id="fileBtn" class="icon-btn file-btn" title="Attach files">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.44 11.05 12.36 20.12a5 5 0 0 1-7.07-7.07l8.49-8.49a3 3 0 0 1 4.24 4.24L9.76 17.12a1 1 0 0 1-1.41-1.41l7.07-7.07"></path>
-            </svg>
-          </button>
-          <input id="fileInput" class="file-input-hidden" type="file" multiple accept=".md,.markdown,.txt,.csv,.json,.log">
-        </div>
-        <div class="input-field">
-          <textarea id="userInput" placeholder="Ask the AI to interact with the browser, or paste files…" rows="2"></textarea>
-          <button id="sendBtn" class="icon-btn send-btn" title="Send message">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+        <div id="composer" class="composer">
+          <div class="composer-input">
+            <textarea id="userInput" placeholder="Message..." rows="2"></textarea>
+          </div>
+          <div id="selectedTabsBar" class="selected-tabs-bar hidden"></div>
+          <div class="composer-toolbar">
+            <div class="composer-tools">
+              <button id="fileBtn" class="icon-btn file-btn" title="Attach files">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05 12.36 20.12a5 5 0 0 1-7.07-7.07l8.49-8.49a3 3 0 0 1 4.24 4.24L9.76 17.12a1 1 0 0 1-1.41-1.41l7.07-7.07"></path>
+                </svg>
+              </button>
+              <button id="tabSelectorBtn" class="icon-btn tab-selector-btn" title="Select tabs to include">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+              </button>
+              <input id="fileInput" class="file-input-hidden" type="file" multiple accept=".md,.markdown,.txt,.csv,.json,.log">
+            </div>
+            <button id="sendBtn" class="send-btn" title="Send message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
