@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parchi Device Sign-in</title>
+    <link rel="stylesheet" href="/public/device.css">
+  </head>
+  <body>
+    <main class="device">
+      <header>
+        <p class="eyebrow">Parchi</p>
+        <h1>Confirm this device</h1>
+        <p class="subtitle">Enter the code from your browser to finish sign-in.</p>
+      </header>
+
+      <form id="deviceForm" class="device-form">
+        <label>
+          Device code
+          <input id="userCode" name="userCode" type="text" placeholder="ABCD-EFGH" autocomplete="off" required>
+        </label>
+        <label>
+          Work email
+          <input id="email" name="email" type="email" placeholder="you@company.com" required>
+        </label>
+        <button type="submit">Confirm device</button>
+      </form>
+
+      <div id="status" class="status"></div>
+    </main>
+
+    <script src="/public/device.js"></script>
+  </body>
+</html>

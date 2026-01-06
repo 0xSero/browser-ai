@@ -48,6 +48,13 @@ export class AIProvider {
     const tabsSection = Array.isArray(context.availableTabs) && context.availableTabs.length
       ? `Tabs selected (${context.availableTabs.length}). Use focusTab or switchTab before acting:\n${context.availableTabs.map(tab => `  - [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`).join('\n')}`
       : 'No additional tabs selected; actions target the current tab.';
+    const teamProfiles = Array.isArray(context.teamProfiles) ? context.teamProfiles : [];
+    const teamSection = teamProfiles.length
+      ? `Team profiles available for sub-agents:\n${teamProfiles.map(profile => `  - ${profile.name}: ${profile.provider || 'provider'} · ${profile.model || 'model'}`).join('\n')}\nUse spawn_subagent with a profile name to delegate parallel browser work. Prefer spinning up 2 helpers for complex tasks.`
+      : '';
+    const orchestratorSection = context.orchestratorEnabled
+      ? 'Orchestrator mode is enabled; you may delegate to sub-agents when useful.'
+      : '';
 
     return `${basePrompt}
 
@@ -56,6 +63,8 @@ Context:
 - Title: ${context.currentTitle}
 - Tab ID: ${context.tabId}
 ${tabsSection ? `- ${tabsSection}` : ''}
+${orchestratorSection ? `\n${orchestratorSection}` : ''}
+${teamSection ? `\n${teamSection}` : ''}
 
 Tool discipline:
 1. Never invent or summarize page content you did not fetch with getPageContent.

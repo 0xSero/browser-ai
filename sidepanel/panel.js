@@ -1,4 +1,5 @@
 import { createMessage, normalizeConversationHistory } from '../ai/message-schema.js';
+import { AccountClient } from './account-client.js';
 
 // Side Panel UI Controller
 class SidePanelUI {
@@ -11,14 +12,33 @@ class SidePanelUI {
       accessPanel: document.getElementById('accessPanel'),
       authPanel: document.getElementById('authPanel'),
       billingPanel: document.getElementById('billingPanel'),
+      accountPanel: document.getElementById('accountPanel'),
       authStartBtn: document.getElementById('authStartBtn'),
       authVerifyBtn: document.getElementById('authVerifyBtn'),
       authCopyBtn: document.getElementById('authCopyBtn'),
+      authOpenBtn: document.getElementById('authOpenBtn'),
       authCodeValue: document.getElementById('authCodeValue'),
       authCodeWrap: document.getElementById('authCodeWrap'),
       billingStartBtn: document.getElementById('billingStartBtn'),
       billingManageBtn: document.getElementById('billingManageBtn'),
       authLogoutBtn: document.getElementById('authLogoutBtn'),
+      accountGreeting: document.getElementById('accountGreeting'),
+      accountSubtext: document.getElementById('accountSubtext'),
+      accountRefreshBtn: document.getElementById('accountRefreshBtn'),
+      accountPlanStatus: document.getElementById('accountPlanStatus'),
+      accountPlanBadge: document.getElementById('accountPlanBadge'),
+      accountPlanDetails: document.getElementById('accountPlanDetails'),
+      accountCheckoutBtn: document.getElementById('accountCheckoutBtn'),
+      accountPortalBtn: document.getElementById('accountPortalBtn'),
+      accountBillingSummary: document.getElementById('accountBillingSummary'),
+      accountInvoices: document.getElementById('accountInvoices'),
+      accountSettingsSummary: document.getElementById('accountSettingsSummary'),
+      accountConfigs: document.getElementById('accountConfigs'),
+      accountHistory: document.getElementById('accountHistory'),
+      accountOpenSettingsBtn: document.getElementById('accountOpenSettingsBtn'),
+      accountOpenProfilesBtn: document.getElementById('accountOpenProfilesBtn'),
+      accountOpenHistoryBtn: document.getElementById('accountOpenHistoryBtn'),
+      accountLogoutBtn: document.getElementById('accountLogoutBtn'),
       planStatus: document.getElementById('planStatus'),
       provider: document.getElementById('provider'),
       apiKey: document.getElementById('apiKey'),
@@ -103,7 +123,8 @@ class SidePanelUI {
       permissionNavigate: document.getElementById('permissionNavigate'),
       permissionTabs: document.getElementById('permissionTabs'),
       permissionScreenshots: document.getElementById('permissionScreenshots'),
-      allowedDomains: document.getElementById('allowedDomains')
+      allowedDomains: document.getElementById('allowedDomains'),
+      accountApiBase: document.getElementById('accountApiBase')
     };
 
     this.conversationHistory = [];
@@ -130,7 +151,12 @@ class SidePanelUI {
     this.profileEditorTarget = 'default';
     this.authState = { status: 'signed_out' };
     this.entitlement = { active: false };
+    this.billingOverview = null;
     this.accessPanelVisible = false;
+    this.accountClient = new AccountClient({
+      baseUrl: '',
+      getAuthToken: () => this.authState?.accessToken || ''
+    });
     // Subagent tracking
     this.subagents = new Map(); // id -> { name, status, messages }
     this.activeAgent = 'main';
@@ -161,9 +187,17 @@ class SidePanelUI {
     this.elements.authStartBtn?.addEventListener('click', () => this.startAuthFlow());
     this.elements.authVerifyBtn?.addEventListener('click', () => this.verifyAuthFlow());
     this.elements.authCopyBtn?.addEventListener('click', () => this.copyAuthCode());
+    this.elements.authOpenBtn?.addEventListener('click', () => this.openAuthPage());
     this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
     this.elements.billingManageBtn?.addEventListener('click', () => this.manageBilling());
     this.elements.authLogoutBtn?.addEventListener('click', () => this.signOut());
+    this.elements.accountRefreshBtn?.addEventListener('click', () => this.refreshAccountData());
+    this.elements.accountCheckoutBtn?.addEventListener('click', () => this.startSubscription());
+    this.elements.accountPortalBtn?.addEventListener('click', () => this.manageBilling());
+    this.elements.accountOpenSettingsBtn?.addEventListener('click', () => this.openSettingsFromAccount());
+    this.elements.accountOpenProfilesBtn?.addEventListener('click', () => this.openProfilesFromAccount());
+    this.elements.accountOpenHistoryBtn?.addEventListener('click', () => this.openHistoryFromAccount());
+    this.elements.accountLogoutBtn?.addEventListener('click', () => this.signOut());
 
     this.elements.startNewSessionBtn?.addEventListener('click', () => this.startNewSession());
 
@@ -283,10 +317,7 @@ class SidePanelUI {
         }
         this.displayToolExecution(message.tool, message.args, message.result, message.id);
       } else if (message.type === 'assistant_response') {
-        const streamingThinking = this.finishStreamingMessage();
-        // Combine streaming thinking with API response thinking
-        const combinedThinking = [streamingThinking, message.thinking].filter(Boolean).join('\n\n') || null;
-        this.displayAssistantMessage(message.content, combinedThinking);
+        this.displayAssistantMessage(message.content, message.thinking);
         // Update context usage with actual token count if available
         if (message.usage?.inputTokens) {
           this.updateContextUsage(message.usage.inputTokens);
@@ -382,7 +413,8 @@ class SidePanelUI {
       'allowedDomains',
       'activeConfig',
       'configs',
-      'auxAgentProfiles'
+      'auxAgentProfiles',
+      'accountApiBase'
     ]);
 
     const storedConfigs = settings.configs || {};
@@ -437,6 +469,10 @@ class SidePanelUI {
     if (this.elements.permissionTabs) this.elements.permissionTabs.value = String(toolPermissions.tabs);
     if (this.elements.permissionScreenshots) this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
     if (this.elements.allowedDomains) this.elements.allowedDomains.value = settings.allowedDomains || '';
+    if (this.elements.accountApiBase) {
+      this.elements.accountApiBase.value = settings.accountApiBase || '';
+    }
+    this.accountClient.setBaseUrl(settings.accountApiBase || '');
 
     this.refreshConfigDropdown();
     this.setActiveConfig(this.currentConfig, true);
@@ -450,6 +486,9 @@ class SidePanelUI {
     this.authState = this.normalizeAuthState(authState);
     this.entitlement = this.normalizeEntitlement(entitlement);
     this.updateAccessUI();
+    if (this.authState?.status === 'signed_in' && this.authState?.accessToken) {
+      await this.refreshAccountData({ silent: true });
+    }
   }
 
   normalizeAuthState(state) {
@@ -458,6 +497,9 @@ class SidePanelUI {
     const status = ['signed_out', 'device_code', 'signed_in'].includes(state.status) ? state.status : 'signed_out';
     normalized.status = status;
     if (state.code) normalized.code = String(state.code);
+    if (state.deviceCode) normalized.deviceCode = String(state.deviceCode);
+    if (state.verificationUrl) normalized.verificationUrl = String(state.verificationUrl);
+    if (state.accessToken) normalized.accessToken = String(state.accessToken);
     if (state.email) normalized.email = String(state.email);
     if (state.expiresAt) normalized.expiresAt = Number(state.expiresAt);
     return normalized;
@@ -470,7 +512,8 @@ class SidePanelUI {
     return {
       active: Boolean(state.active),
       plan: state.plan ? String(state.plan) : 'none',
-      renewsAt: state.renewsAt ? String(state.renewsAt) : ''
+      renewsAt: state.renewsAt ? String(state.renewsAt) : '',
+      status: state.status ? String(state.status) : ''
     };
   }
 
@@ -494,15 +537,24 @@ class SidePanelUI {
   updateAccessUI() {
     const state = this.getAccessState();
     const showAccess = this.accessPanelVisible || state !== 'ready';
+    const showAccount = this.accessPanelVisible && state !== 'auth';
+    const showBilling = state === 'billing' && !showAccount;
+    const showAuth = state === 'auth';
 
     if (this.elements.accessPanel) {
       this.elements.accessPanel.classList.toggle('hidden', !showAccess);
     }
     if (this.elements.authPanel) {
-      this.elements.authPanel.classList.toggle('hidden', state !== 'auth');
+      this.elements.authPanel.classList.toggle('hidden', !showAuth);
     }
     if (this.elements.billingPanel) {
-      this.elements.billingPanel.classList.toggle('hidden', state !== 'billing');
+      this.elements.billingPanel.classList.toggle('hidden', !showBilling);
+    }
+    if (this.elements.accountPanel) {
+      this.elements.accountPanel.classList.toggle('hidden', !showAccount);
+      if (showAccount) {
+        this.renderAccountPanel();
+      }
     }
 
     if (this.elements.authCodeWrap) {
@@ -510,6 +562,9 @@ class SidePanelUI {
     }
     if (this.elements.authCodeValue) {
       this.elements.authCodeValue.textContent = this.authState?.code || '----';
+    }
+    if (this.elements.authOpenBtn) {
+      this.elements.authOpenBtn.disabled = !this.authState?.verificationUrl;
     }
     if (this.elements.planStatus) {
       this.elements.planStatus.textContent = this.entitlement?.active
@@ -547,6 +602,79 @@ class SidePanelUI {
     this.updateAccessUI();
   }
 
+  openExternalUrl(url) {
+    if (!url) return;
+    chrome.tabs.create({ url });
+  }
+
+  openAuthPage() {
+    const url = this.authState?.verificationUrl;
+    if (!url) {
+      this.updateStatus('No account page available yet.', 'warning');
+      return;
+    }
+    this.openExternalUrl(url);
+  }
+
+  async refreshAccountData({ silent = false } = {}) {
+    if (!this.authState || this.authState.status !== 'signed_in') return;
+    try {
+      const [account, billing] = await Promise.all([
+        this.accountClient.getAccount(),
+        this.accountClient.getBillingOverview()
+      ]);
+      if (account?.user?.email) {
+        this.authState.email = account.user.email;
+      }
+      if (billing?.entitlement) {
+        this.entitlement = this.normalizeEntitlement(billing.entitlement);
+      }
+      this.billingOverview = billing || null;
+      await this.persistAccessState();
+      this.updateAccessUI();
+      if (!silent) {
+        this.updateStatus('Account synced', 'success');
+      }
+    } catch (error) {
+      const message = error?.message || 'Unable to refresh account';
+      if (message.includes('Session expired') || message.includes('Missing access token')) {
+        await this.signOut();
+        if (!silent) {
+          this.updateStatus('Session expired. Please sign in again.', 'warning');
+        }
+        return;
+      }
+      if (!silent) {
+        this.updateStatus(message, 'error');
+      }
+    }
+  }
+
+  openSettingsFromAccount() {
+    this.accessPanelVisible = false;
+    this.updateAccessUI();
+    if (this.elements.settingsPanel?.classList.contains('hidden')) {
+      this.toggleSettings();
+    } else {
+      this.switchSettingsTab('general');
+    }
+  }
+
+  openProfilesFromAccount() {
+    this.accessPanelVisible = false;
+    this.updateAccessUI();
+    if (this.elements.settingsPanel?.classList.contains('hidden')) {
+      this.toggleSettings();
+    }
+    this.switchSettingsTab('profiles');
+  }
+
+  openHistoryFromAccount() {
+    this.accessPanelVisible = false;
+    this.updateAccessUI();
+    this.switchView('history');
+  }
+
   generateDeviceCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -558,27 +686,57 @@ class SidePanelUI {
   }
 
   async startAuthFlow() {
-    const code = this.generateDeviceCode();
-    this.authState = {
-      status: 'device_code',
-      code,
-      expiresAt: Date.now() + 10 * 60 * 1000
-    };
-    await this.persistAccessState();
-    this.updateAccessUI();
-    this.updateStatus('Use the device code to sign in', 'active');
+    try {
+      const response = await this.accountClient.startDeviceCode();
+      const expiresIn = Number(response?.expiresIn || 600) * 1000;
+      this.authState = {
+        status: 'device_code',
+        code: response?.userCode || response?.code || this.generateDeviceCode(),
+        deviceCode: response?.deviceCode || '',
+        verificationUrl: response?.verificationUrl || '',
+        expiresAt: Date.now() + (expiresIn || 10 * 60 * 1000)
+      };
+      await this.persistAccessState();
+      this.updateAccessUI();
+      this.updateStatus('Use the device code to sign in', 'active');
+      if (this.authState.verificationUrl) {
+        this.openExternalUrl(this.authState.verificationUrl);
+      }
+    } catch (error) {
+      this.updateStatus(error.message || 'Unable to start sign-in', 'error');
+    }
   }
 
   async verifyAuthFlow() {
-    this.authState = {
-      status: 'signed_in',
-      email: this.authState?.email || 'Signed in'
-    };
-    this.entitlement = { active: false, plan: 'none' };
-    await this.persistAccessState();
-    this.accessPanelVisible = true;
-    this.updateAccessUI();
-    this.updateStatus('Signed in — subscription required', 'warning');
+    if (!this.authState?.deviceCode) {
+      this.updateStatus('Generate a device code first.', 'warning');
+      return;
+    }
+    try {
+      const response = await this.accountClient.verifyDeviceCode(this.authState.deviceCode);
+      if (response?.status === 'pending') {
+        this.updateStatus('Waiting for confirmation…', 'active');
+        return;
+      }
+      const accessToken = response?.accessToken || response?.token;
+      if (!accessToken) {
+        this.updateStatus('Sign-in not confirmed yet.', 'warning');
+        return;
+      }
+      this.authState = {
+        status: 'signed_in',
+        accessToken,
+        email: response?.user?.email || response?.email || this.authState?.email || 'Signed in'
+      };
+      this.entitlement = this.normalizeEntitlement(response?.entitlement || { active: false, plan: 'none' });
+      await this.persistAccessState();
+      await this.refreshAccountData({ silent: true });
+      this.accessPanelVisible = true;
+      this.updateAccessUI();
+      this.updateStatus('Signed in — subscription required', 'warning');
+    } catch (error) {
+      this.updateStatus(error.message || 'Unable to verify sign-in', 'error');
+    }
   }
 
   async copyAuthCode() {
@@ -593,28 +751,208 @@ class SidePanelUI {
   }
 
   async startSubscription() {
-    this.entitlement = {
-      active: true,
-      plan: 'pro',
-      renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    };
-    await this.persistAccessState();
-    this.accessPanelVisible = false;
-    this.updateAccessUI();
-    this.updateStatus('Subscription active', 'success');
+    if (!this.authState || this.authState.status !== 'signed_in') {
+      this.updateStatus('Sign in required before subscribing', 'warning');
+      return;
+    }
+    try {
+      const response = await this.accountClient.createCheckout();
+      if (response?.url) {
+        this.openExternalUrl(response.url);
+        this.updateStatus('Checkout opened in a new tab', 'active');
+      } else {
+        this.updateStatus('Checkout link unavailable', 'warning');
+      }
+    } catch (error) {
+      this.updateStatus(error.message || 'Unable to start subscription', 'error');
+    }
   }
 
   manageBilling() {
-    this.updateStatus('Billing portal not connected yet', 'warning');
+    if (!this.authState || this.authState.status !== 'signed_in') {
+      this.updateStatus('Sign in required before opening billing', 'warning');
+      return;
+    }
+    this.accountClient.createPortal()
+      .then(response => {
+        if (response?.url) {
+          this.openExternalUrl(response.url);
+          this.updateStatus('Billing portal opened in a new tab', 'success');
+        } else {
+          this.updateStatus('Billing portal unavailable', 'warning');
+        }
+      })
+      .catch(error => {
+        this.updateStatus(error.message || 'Unable to open billing portal', 'error');
+      });
   }
 
   async signOut() {
     this.authState = { status: 'signed_out' };
     this.entitlement = { active: false, plan: 'none' };
+    this.billingOverview = null;
     await this.persistAccessState();
     this.accessPanelVisible = true;
     this.updateAccessUI();
     this.updateStatus('Signed out', 'warning');
+  }
+
+  formatCurrency(amount, currency = 'usd') {
+    if (amount === null || amount === undefined) return '';
+    const value = Number(amount) / 100;
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency.toUpperCase()
+      }).format(value);
+    } catch (error) {
+      return `${value.toFixed(2)} ${currency.toUpperCase()}`;
+    }
+  }
+
+  formatShortDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString();
+  }
+
+  renderAccountPanel() {
+    const email = this.authState?.email;
+    if (this.elements.accountGreeting) {
+      this.elements.accountGreeting.textContent = email ? `Welcome back, ${email}` : 'Welcome back';
+    }
+
+    const apiConfigured = Boolean(this.accountClient?.baseUrl);
+    const signedIn = this.authState?.status === 'signed_in';
+
+    if (this.elements.accountSubtext) {
+      this.elements.accountSubtext.textContent = apiConfigured
+        ? 'Manage your subscription, billing, and workspace settings.'
+        : 'Set the account API base URL in settings to enable billing.';
+    }
+
+    if (this.elements.accountRefreshBtn) {
+      this.elements.accountRefreshBtn.disabled = !signedIn || !apiConfigured;
+    }
+
+    const planLabel = this.entitlement?.active ? (this.entitlement?.plan || 'Active') : 'No plan';
+    if (this.elements.accountPlanBadge) {
+      this.elements.accountPlanBadge.textContent = planLabel;
+    }
+    if (this.elements.accountPlanStatus) {
+      const renewsAt = this.entitlement?.renewsAt ? ` · Renews ${this.formatShortDate(this.entitlement.renewsAt)}` : '';
+      this.elements.accountPlanStatus.textContent = this.entitlement?.active
+        ? `Active${renewsAt}`
+        : 'No active plan';
+    }
+
+    if (this.elements.accountPlanDetails) {
+      if (!apiConfigured) {
+        this.elements.accountPlanDetails.textContent = 'Connect billing to activate a subscription.';
+      } else if (this.entitlement?.active) {
+        this.elements.accountPlanDetails.textContent = `Plan: ${this.entitlement.plan || 'Pro'} · Status: ${this.entitlement.status || 'active'}`;
+      } else {
+        this.elements.accountPlanDetails.textContent = 'No subscription on this device yet.';
+      }
+    }
+
+    const billing = this.billingOverview || {};
+    const payment = billing?.paymentMethod;
+    if (this.elements.accountBillingSummary) {
+      if (payment?.brand && payment?.last4) {
+        const exp = payment?.expMonth ? ` · exp ${payment.expMonth}/${payment.expYear}` : '';
+        this.elements.accountBillingSummary.textContent = `${payment.brand.toUpperCase()} •••• ${payment.last4}${exp}`;
+      } else if (!apiConfigured) {
+        this.elements.accountBillingSummary.textContent = 'Billing data unavailable until the account API is configured.';
+      } else {
+        this.elements.accountBillingSummary.textContent = 'No payment method on file yet.';
+      }
+    }
+    if (this.elements.accountInvoices) {
+      const invoices = Array.isArray(billing?.invoices) ? billing.invoices : [];
+      this.elements.accountInvoices.innerHTML = '';
+      if (!invoices.length) {
+        this.elements.accountInvoices.innerHTML = '<div class="account-list-item"><span class="muted">No invoices yet.</span></div>';
+      } else {
+        invoices.slice(0, 4).forEach(invoice => {
+          const item = document.createElement('div');
+          item.className = 'account-list-item';
+          const amount = this.formatCurrency(invoice.amountDue, invoice.currency);
+          const date = this.formatShortDate(invoice.periodEnd || invoice.createdAt);
+          const link = invoice.hostedInvoiceUrl;
+          item.innerHTML = link
+            ? `<a href="${this.escapeAttribute(link)}" target="_blank" rel="noopener noreferrer">${amount || 'Invoice'}</a><span class="muted">${this.escapeHtml(date || '')}</span>`
+            : `<span>${this.escapeHtml(amount || 'Invoice')}</span><span class="muted">${this.escapeHtml(date || '')}</span>`;
+          this.elements.accountInvoices.appendChild(item);
+        });
+      }
+    }
+
+    if (this.elements.accountCheckoutBtn) {
+      this.elements.accountCheckoutBtn.disabled = !signedIn || !apiConfigured;
+    }
+    if (this.elements.accountPortalBtn) {
+      this.elements.accountPortalBtn.disabled = !signedIn || !apiConfigured;
+    }
+
+    if (this.elements.accountSettingsSummary) {
+      const profile = this.currentConfig || 'default';
+      const stream = this.elements.streamResponses?.value === 'true' ? 'Streaming on' : 'Streaming off';
+      const history = this.elements.saveHistory?.value === 'true' ? 'History saved' : 'History off';
+      this.elements.accountSettingsSummary.textContent = `Profile: ${profile} · ${stream} · ${history}`;
+    }
+
+    if (this.elements.accountConfigs) {
+      const configs = Object.entries(this.configs || {});
+      this.elements.accountConfigs.innerHTML = '';
+      if (!configs.length) {
+        this.elements.accountConfigs.innerHTML = '<div class="account-list-item"><span class="muted">No profiles saved.</span></div>';
+      } else {
+        configs.slice(0, 4).forEach(([name, config]) => {
+          const item = document.createElement('div');
+          item.className = 'account-list-item';
+          item.innerHTML = `
+            <span>${this.escapeHtml(name)}</span>
+            <span class="muted">${this.escapeHtml(config.provider || 'provider')} · ${this.escapeHtml(config.model || 'model')}</span>
+          `;
+          this.elements.accountConfigs.appendChild(item);
+        });
+      }
+    }
+
+    this.renderHistoryPreview();
+  }
+
+  async renderHistoryPreview() {
+    if (!this.elements.accountHistory) return;
+    const { chatSessions = [] } = await chrome.storage.local.get(['chatSessions']);
+    this.elements.accountHistory.innerHTML = '';
+    if (!chatSessions.length) {
+      this.elements.accountHistory.innerHTML = '<div class="account-list-item"><span class="muted">No saved chats yet.</span></div>';
+      return;
+    }
+    chatSessions.slice(0, 4).forEach(session => {
+      const item = document.createElement('div');
+      item.className = 'account-list-item';
+      const date = new Date(session.updatedAt || session.startedAt || Date.now());
+      item.innerHTML = `
+        <span>${this.escapeHtml(session.title || 'Session')}</span>
+        <span class="muted">${this.escapeHtml(date.toLocaleDateString())}</span>
+      `;
+      item.addEventListener('click', () => {
+        this.openHistoryFromAccount();
+        if (Array.isArray(session.transcript)) {
+          this.recordScrollPosition();
+          this.conversationHistory = normalizeConversationHistory(session.transcript || []);
+          this.sessionId = session.id || `session-${Date.now()}`;
+          this.firstUserMessage = session.title || '';
+          this.renderConversationHistory();
+          this.updateContextUsage();
+        }
+      });
+      this.elements.accountHistory.appendChild(item);
+    });
   }
 
   async saveSettings() {
@@ -681,11 +1019,13 @@ class SidePanelUI {
       orchestratorProfile: this.elements.orchestratorProfile.value,
       toolPermissions: this.collectToolPermissions(),
       allowedDomains: this.elements.allowedDomains?.value || '',
+      accountApiBase: this.elements.accountApiBase?.value?.trim() || '',
       auxAgentProfiles: this.auxAgentProfiles,
       activeConfig: this.currentConfig,
       configs: this.configs
     };
     await chrome.storage.local.set(payload);
+    this.accountClient.setBaseUrl(payload.accountApiBase);
     this.updateContextUsage();
     if (!silent) {
       this.updateStatus('Settings saved successfully', 'success');
@@ -1105,17 +1445,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   displayAssistantMessage(content, thinking = null) {
     const streamResult = this.finishStreamingMessage();
     const streamedContainer = streamResult?.container;
+    const combinedThinking = [streamResult?.thinking, thinking].filter(Boolean).join('\n\n') || null;
 
-    // If we have no content and no thinking, but we DO have a streamed message, keep the streamed message.
-    if ((!content || content.trim() === '') && !thinking) {
+    if ((!content || content.trim() === '') && !combinedThinking) {
       if (streamedContainer) {
-        // We have text from the stream that should persist
-        return;
+        streamedContainer.remove();
       }
+      this.updateStatus('Ready', 'success');
+      this.elements.composer?.classList.remove('running');
+      this.pendingToolCount = 0;
+      this.updateActivityState();
       return;
     }
 
-    const parsed = this.extractThinking(content, thinking);
+    const parsed = this.extractThinking(content, combinedThinking);
     content = parsed.content;
     thinking = parsed.thinking;
 

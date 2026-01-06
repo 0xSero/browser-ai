@@ -10,6 +10,7 @@ class BackgroundService {
     this.visionProvider = null;
     this.currentSettings = null;
     this.subAgentCount = 0;
+    this.subAgentProfileCursor = 0;
     this.init();
   }
 
@@ -82,7 +83,8 @@ class BackgroundService {
         'maxTokens',
         'timeout',
         'toolPermissions',
-        'allowedDomains'
+        'allowedDomains',
+        'auxAgentProfiles'
       ]);
 
       if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
@@ -98,6 +100,7 @@ class BackgroundService {
         };
       }
       if (settings.allowedDomains === undefined) settings.allowedDomains = '';
+      if (!Array.isArray(settings.auxAgentProfiles)) settings.auxAgentProfiles = [];
 
       if (!settings.apiKey) {
         this.sendToSidePanel({
@@ -109,6 +112,7 @@ class BackgroundService {
 
       this.currentSettings = settings;
       this.subAgentCount = 0;
+      this.subAgentProfileCursor = 0;
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
@@ -124,6 +128,7 @@ class BackgroundService {
       const orchestratorProfileName = settings.orchestratorProfile || activeProfileName;
       const visionProfileName = settings.visionProfile || null;
       const orchestratorEnabled = settings.useOrchestrator === true;
+      const teamProfiles = this.resolveTeamProfiles(settings);
 
       const activeProfile = this.resolveProfile(settings, activeProfileName);
       const orchestratorProfile = orchestratorEnabled ? this.resolveProfile(settings, orchestratorProfileName) : activeProfile;
@@ -143,7 +148,7 @@ class BackgroundService {
       }) : null;
 
       // Get available tools
-      const tools = this.getToolsForSession(settings, orchestratorEnabled);
+      const tools = this.getToolsForSession(settings, orchestratorEnabled, teamProfiles);
 
       // Get current tab info for context
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -154,7 +159,9 @@ class BackgroundService {
         currentUrl: workingTab?.url || activeTab?.url || 'unknown',
         currentTitle: workingTab?.title || activeTab?.title || 'unknown',
         tabId: workingTabId,
-        availableTabs: sessionTabs
+        availableTabs: sessionTabs,
+        orchestratorEnabled,
+        teamProfiles
       };
 
       const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
@@ -572,12 +579,35 @@ class BackgroundService {
     return { ...base, ...profile };
   }
 
-  getToolsForSession(settings, includeOrchestrator = false) {
+  resolveTeamProfiles(settings) {
+    const names = Array.isArray(settings.auxAgentProfiles) ? settings.auxAgentProfiles : [];
+    const unique = Array.from(new Set(names)).filter(name => typeof name === 'string' && name.trim());
+    return unique.map(name => {
+      const profile = this.resolveProfile(settings, name);
+      return {
+        name,
+        provider: profile.provider || '',
+        model: profile.model || ''
+      };
+    });
+  }
+
+  getToolsForSession(settings, includeOrchestrator = false, teamProfiles = []) {
     let tools = this.browserTools.getToolDefinitions();
     if (settings && settings.enableScreenshots === false) {
       tools = tools.filter(tool => tool.name !== 'screenshot');
     }
     if (includeOrchestrator) {
+      const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map(profile => profile.name).filter(Boolean) : [];
+      const profileSchema = {
+        type: 'string',
+        description: teamNames.length
+          ? `Name of saved profile to use. Available: ${teamNames.join(', ')}`
+          : 'Name of saved profile to use.'
+      };
+      if (teamNames.length) {
+        profileSchema.enum = teamNames;
+      }
       tools = tools.concat([
         {
           name: 'spawn_subagent',
@@ -585,7 +615,7 @@ class BackgroundService {
           input_schema: {
             type: 'object',
             properties: {
-              profile: { type: 'string', description: 'Name of saved profile to use' },
+              profile: profileSchema,
               prompt: { type: 'string', description: 'System prompt for the sub-agent' },
               tasks: { type: 'array', items: { type: 'string' }, description: 'Task list for the sub-agent' },
               goal: { type: 'string', description: 'Single goal string if tasks not provided' }
@@ -671,7 +701,19 @@ class BackgroundService {
     this.subAgentCount += 1;
     const subagentId = `subagent-${Date.now()}-${this.subAgentCount}`;
     const args = toolCall?.args || {};
-    const profileName = args.profile || args.config || this.currentSettings?.activeConfig || 'default';
+    let profileName = args.profile || args.config;
+    if (!profileName) {
+      const teamProfiles = Array.isArray(this.currentSettings?.auxAgentProfiles)
+        ? this.currentSettings.auxAgentProfiles
+        : [];
+      if (teamProfiles.length) {
+        profileName = teamProfiles[this.subAgentProfileCursor % teamProfiles.length];
+        this.subAgentProfileCursor += 1;
+      }
+    }
+    if (!profileName) {
+      profileName = this.currentSettings?.activeConfig || 'default';
+    }
     const profileSettings = this.resolveProfile(this.currentSettings || {}, profileName);
 
     // Notify UI about new subagent

@@ -74,6 +74,10 @@ Parchi is a premium warm-paper inspired Chrome (Chromium) extension built for pr
 - Spawn a helper: “Start a sub-agent to collect pricing tiers on this page and summarize with subagent_complete.”
 - Save history: toggle it on to store sessions locally, then switch to the History tab to reopen or review them.
 
+## Billing & Account Service
+
+Parchi includes an optional Stripe-backed billing/auth service under `server/`. Point the **Account API base URL** setting to your deployed service to enable device sign-in, Checkout, and the billing portal. See `docs/BILLING.md` for setup and environment variables.
+
 ## Architecture
 
 ```

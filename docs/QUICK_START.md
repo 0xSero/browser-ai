@@ -37,6 +37,10 @@ Or skip this - the extension works without icons.
 
 4. Click "Save Settings"
 
+## Step 3b: Connect Billing (Optional)
+
+If you run the billing/auth service, set the **Account API base URL** in Settings → Account & billing. This enables device sign-in, Stripe checkout, and the billing portal. See [BILLING.md](./BILLING.md) for setup.
+
 ## Step 4: Start Using
 
 Try these example commands:
