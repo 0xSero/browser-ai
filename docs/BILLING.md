@@ -24,6 +24,26 @@ Set the following environment variables before starting the service:
 - `DEVICE_CODE_TTL_SEC`: Optional device code TTL in seconds (default 600).
 - `SESSION_TTL_SEC`: Optional session TTL in seconds (default 7 days).
 
+You can place these in `server/.env` for local development (the server loads dotenv automatically).
+
+Example:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PRICE_ID=price_...
+BASE_URL=http://localhost:8787
+CHECKOUT_SUCCESS_URL=http://localhost:8787/public/success.html
+CHECKOUT_CANCEL_URL=http://localhost:8787/public/cancel.html
+PORTAL_RETURN_URL=http://localhost:8787/portal
+```
+
+## Create a $20/month price (Stripe CLI)
+
+```bash
+stripe products create --name "Parchi Pro"
+stripe prices create --product prod_XXXXXXXX --unit-amount 2000 --currency usd -d "recurring[interval]=month" -d "nickname=Parchi Pro Monthly"
+```
+
 ## Connect the extension
 
 1. Open the extension settings.
