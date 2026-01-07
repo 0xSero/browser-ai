@@ -73,12 +73,14 @@ class ContentScriptHandler {
   }
 
   notifyReady() {
-    chrome.runtime.sendMessage({
-      type: 'content_script_ready',
-      url: window.location.href
-    }).catch(() => {
-      // Extension context may not be ready yet
-    });
+    chrome.runtime
+      .sendMessage({
+        type: 'content_script_ready',
+        url: window.location.href,
+      })
+      .catch(() => {
+        // Extension context may not be ready yet
+      });
   }
 
   highlightElement(selector) {
@@ -95,7 +97,7 @@ class ContentScriptHandler {
     this.highlightedElements.add({
       element,
       originalOutline,
-      originalOutlineOffset
+      originalOutlineOffset,
     });
 
     // Auto-remove after 3 seconds
@@ -130,22 +132,24 @@ class ContentScriptHandler {
         top: rect.top,
         left: rect.left,
         width: rect.width,
-        height: rect.height
+        height: rect.height,
       },
       visible: this.isElementVisible(element),
       attributes: Array.from(element.attributes).reduce((acc, attr) => {
         acc[attr.name] = attr.value;
         return acc;
-      }, {})
+      }, {}),
     };
   }
 
   isElementVisible(element) {
     const style = window.getComputedStyle(element);
-    return style.display !== 'none' &&
-           style.visibility !== 'hidden' &&
-           style.opacity !== '0' &&
-           element.offsetParent !== null;
+    return (
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      style.opacity !== '0' &&
+      element.offsetParent !== null
+    );
   }
 
   simulateHover(selector) {
@@ -155,18 +159,19 @@ class ContentScriptHandler {
     const mouseoverEvent = new MouseEvent('mouseover', {
       view: window,
       bubbles: true,
-      cancelable: true
+      cancelable: true,
     });
     element.dispatchEvent(mouseoverEvent);
   }
 
   getAllInputs() {
-    const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+    const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      'input, textarea, select',
+    );
     return Array.from(inputs).map((input, index) => {
       const label = this.findLabelForInput(input);
-      const placeholder = (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)
-        ? input.placeholder
-        : '';
+      const placeholder =
+        input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement ? input.placeholder : '';
       return {
         index,
         tagName: input.tagName,
@@ -176,20 +181,22 @@ class ContentScriptHandler {
         placeholder,
         value: input.value,
         label: label?.textContent?.trim(),
-        selector: this.getOptimalSelector(input)
+        selector: this.getOptimalSelector(input),
       };
     });
   }
 
   getAllButtons() {
-    const buttons = document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input[type="button"], input[type="submit"], [role="button"]');
+    const buttons = document.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
+      'button, input[type="button"], input[type="submit"], [role="button"]',
+    );
     return Array.from(buttons).map((button, index) => ({
       index,
       tagName: button.tagName,
       text: button.textContent?.trim() || button.value,
       id: button.id,
       className: button.className,
-      selector: this.getOptimalSelector(button)
+      selector: this.getOptimalSelector(button),
     }));
   }
 
@@ -245,31 +252,25 @@ class ContentScriptHandler {
 
   getVisibleText() {
     // Get all text nodes that are actually visible
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
 
-          const style = window.getComputedStyle(parent);
-          if (style.display === 'none' ||
-              style.visibility === 'hidden' ||
-              style.opacity === '0') {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          // Filter out script and style tags
-          if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          const text = node.textContent?.trim() || '';
-          return text.length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+          return NodeFilter.FILTER_REJECT;
         }
-      }
-    );
+
+        // Filter out script and style tags
+        if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        const text = node.textContent?.trim() || '';
+        return text.length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+    });
 
     const textParts: string[] = [];
     let node: Node | null;

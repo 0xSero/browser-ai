@@ -27,7 +27,7 @@ export class AccountClient {
       throw new Error('Account API base URL is not configured.');
     }
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
     if (auth) {
       const token = this.getAuthToken();
@@ -40,7 +40,7 @@ export class AccountClient {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? JSON.stringify(body) : undefined,
     });
 
     const text = await response.text();
@@ -68,14 +68,14 @@ export class AccountClient {
   verifyDeviceCode(deviceCode: string): Promise<any> {
     return this.request('/v1/auth/device-code/verify', {
       method: 'POST',
-      body: { deviceCode }
+      body: { deviceCode },
     });
   }
 
   signInWithEmail(email: string): Promise<any> {
     return this.request('/v1/auth/email', {
       method: 'POST',
-      body: { email }
+      body: { email },
     });
   }
 
@@ -91,7 +91,7 @@ export class AccountClient {
     return this.request('/v1/billing/checkout', {
       method: 'POST',
       auth: true,
-      body: returnUrl ? { returnUrl } : undefined
+      body: returnUrl ? { returnUrl } : undefined,
     });
   }
 
@@ -99,7 +99,7 @@ export class AccountClient {
     return this.request('/v1/billing/portal', {
       method: 'POST',
       auth: true,
-      body: returnUrl ? { returnUrl } : undefined
+      body: returnUrl ? { returnUrl } : undefined,
     });
   }
 }

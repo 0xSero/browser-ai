@@ -24,7 +24,7 @@ const copyFile = (src, dest) => {
 const copyDirFiltered = (src, dest, filter) => {
   if (!fs.existsSync(src)) return;
   const entries = fs.readdirSync(src, { withFileTypes: true });
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {

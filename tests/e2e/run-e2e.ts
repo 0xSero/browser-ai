@@ -18,7 +18,7 @@ const colors = {
   success: '\x1b[32m',
   error: '\x1b[31m',
   warning: '\x1b[33m',
-  reset: '\x1b[0m'
+  reset: '\x1b[0m',
 } as const;
 
 function log(message: string, type: keyof typeof colors = 'info') {
@@ -67,23 +67,26 @@ async function seedAccessState(worker: import('playwright').Worker): Promise<voi
       authState: {
         status: 'signed_in',
         email: 'qa@parchi.dev',
-        accessToken: 'test-token'
+        accessToken: 'test-token',
       },
       entitlement: {
         active: true,
         plan: 'pro',
-        renewsAt: ''
-      }
+        renewsAt: '',
+      },
     });
   });
 }
 
 test('Side panel loads and shows ready state', async ({ panel }) => {
   await panel.waitForSelector('text=Parchi', { timeout: timeoutMs });
-  await panel.waitForFunction(() => {
-    const el = document.querySelector('#statusText');
-    return el && el.textContent && el.textContent.includes('Ready');
-  }, { timeout: timeoutMs });
+  await panel.waitForFunction(
+    () => {
+      const el = document.querySelector('#statusText');
+      return el && el.textContent && el.textContent.includes('Ready');
+    },
+    { timeout: timeoutMs },
+  );
 });
 
 test('Settings panel toggles custom endpoint field', async ({ panel }) => {
@@ -104,12 +107,10 @@ test('Tab selector lists integration test page', async ({ panel, context }) => {
   await panel.click('#tabSelectorBtn');
   await panel.waitForSelector('#tabSelector', { state: 'visible', timeout: timeoutMs });
   await panel.waitForSelector('.tab-item-title', { timeout: timeoutMs });
-  const titles = await panel.$$eval('.tab-item-title', nodes =>
-    nodes.map(node => (node.textContent || '').trim())
-  );
+  const titles = await panel.$$eval('.tab-item-title', (nodes) => nodes.map((node) => (node.textContent || '').trim()));
   assert(
-    titles.some(title => title.includes('Integration Test Page')),
-    'Expected integration test page in tab selector.'
+    titles.some((title) => title.includes('Integration Test Page')),
+    'Expected integration test page in tab selector.',
   );
 });
 
@@ -131,17 +132,17 @@ async function run() {
         `--load-extension=${extensionPath}`,
         '--allow-file-access-from-files',
         '--disable-dev-shm-usage',
-        '--no-sandbox'
-      ]
+        '--no-sandbox',
+      ],
     });
 
     const extensionId = await getExtensionId(context);
-    const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker', { timeout: timeoutMs });
+    const worker = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker', { timeout: timeoutMs }));
     await seedAccessState(worker);
 
     const panel = await context.newPage();
     await panel.goto(`chrome-extension://${extensionId}/sidepanel/panel.html`, {
-      waitUntil: 'domcontentloaded'
+      waitUntil: 'domcontentloaded',
     });
 
     let passed = 0;

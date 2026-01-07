@@ -40,26 +40,116 @@ export class BrowserTools {
       getTabs: this.getTabs.bind(this),
       groupTabs: this.groupTabs.bind(this),
       focusTab: this.focusTab.bind(this),
-      describeSessionTabs: this.describeSessionTabs.bind(this)
+      describeSessionTabs: this.describeSessionTabs.bind(this),
     };
   }
 
   getToolDefinitions(): ToolDefinition[] {
     return [
-      { name: 'navigate', description: 'Go to URL', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] } },
-      { name: 'click', description: 'Click element', input_schema: { type: 'object', properties: { selector: { type: 'string' }, text: { type: 'string' }, timeoutMs: { type: 'number', minimum: 250 } }, required: [] } },
-      { name: 'type', description: 'Type text into element', input_schema: { type: 'object', properties: { selector: { type: 'string' }, text: { type: 'string' } }, required: ['selector', 'text'] } },
-      { name: 'pressKey', description: 'Press keyboard key', input_schema: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] } },
-      { name: 'scroll', description: 'Scroll page', input_schema: { type: 'object', properties: { direction: { type: 'string', enum: ['up', 'down', 'top', 'bottom'] } }, required: ['direction'] } },
-      { name: 'screenshot', description: 'Capture page', input_schema: { type: 'object', properties: {}, required: [] } },
-      { name: 'getContent', description: 'Get page content', input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['text', 'html', 'title', 'url', 'links'] } }, required: ['type'] } },
-      { name: 'openTab', description: 'Open tab', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] } },
-      { name: 'closeTab', description: 'Close tab', input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: [] } },
-      { name: 'switchTab', description: 'Switch tab', input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: ['tabId'] } },
+      {
+        name: 'navigate',
+        description: 'Go to URL',
+        input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
+      },
+      {
+        name: 'click',
+        description: 'Click element',
+        input_schema: {
+          type: 'object',
+          properties: {
+            selector: { type: 'string' },
+            text: { type: 'string' },
+            timeoutMs: { type: 'number', minimum: 250 },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'type',
+        description: 'Type text into element',
+        input_schema: {
+          type: 'object',
+          properties: { selector: { type: 'string' }, text: { type: 'string' } },
+          required: ['selector', 'text'],
+        },
+      },
+      {
+        name: 'pressKey',
+        description: 'Press keyboard key',
+        input_schema: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] },
+      },
+      {
+        name: 'scroll',
+        description: 'Scroll page',
+        input_schema: {
+          type: 'object',
+          properties: { direction: { type: 'string', enum: ['up', 'down', 'top', 'bottom'] } },
+          required: ['direction'],
+        },
+      },
+      {
+        name: 'screenshot',
+        description: 'Capture page',
+        input_schema: { type: 'object', properties: {}, required: [] },
+      },
+      {
+        name: 'getContent',
+        description: 'Get page content',
+        input_schema: {
+          type: 'object',
+          properties: { type: { type: 'string', enum: ['text', 'html', 'title', 'url', 'links'] } },
+          required: ['type'],
+        },
+      },
+      {
+        name: 'openTab',
+        description: 'Open tab',
+        input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
+      },
+      {
+        name: 'closeTab',
+        description: 'Close tab',
+        input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: [] },
+      },
+      {
+        name: 'switchTab',
+        description: 'Switch tab',
+        input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: ['tabId'] },
+      },
       { name: 'getTabs', description: 'List tabs', input_schema: { type: 'object', properties: {}, required: [] } },
-      { name: 'groupTabs', description: 'Group/ungroup tabs', input_schema: { type: 'object', properties: { tabIds: { type: 'array', items: { type: 'number' } }, title: { type: 'string' }, color: { type: 'string' }, ungroup: { type: 'boolean' } }, required: ['tabIds'] } },
-      { name: 'focusTab', description: 'Set which tab future actions target', input_schema: { type: 'object', properties: { tabId: { type: 'number' }, titleContains: { type: 'string' }, urlContains: { type: 'string' }, direction: { type: 'string', enum: ['next', 'previous'] } }, required: [] } },
-      { name: 'describeSessionTabs', description: 'List the tabs selected for this automation session', input_schema: { type: 'object', properties: {}, required: [] } }
+      {
+        name: 'groupTabs',
+        description: 'Group/ungroup tabs',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tabIds: { type: 'array', items: { type: 'number' } },
+            title: { type: 'string' },
+            color: { type: 'string' },
+            ungroup: { type: 'boolean' },
+          },
+          required: ['tabIds'],
+        },
+      },
+      {
+        name: 'focusTab',
+        description: 'Set which tab future actions target',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tabId: { type: 'number' },
+            titleContains: { type: 'string' },
+            urlContains: { type: 'string' },
+            direction: { type: 'string', enum: ['next', 'previous'] },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'describeSessionTabs',
+        description: 'List the tabs selected for this automation session',
+        input_schema: { type: 'object', properties: {}, required: [] },
+      },
     ];
   }
 
@@ -93,16 +183,16 @@ export class BrowserTools {
 
   async configureSessionTabs(
     tabs: chrome.tabs.Tab[] = [],
-    options: { title?: string; color?: chrome.tabGroups.ColorEnum } = {}
+    options: { title?: string; color?: chrome.tabGroups.ColorEnum } = {},
   ) {
-    this.sessionTabs = Array.isArray(tabs) ? tabs.filter(tab => typeof tab.id === 'number') : [];
+    this.sessionTabs = Array.isArray(tabs) ? tabs.filter((tab) => typeof tab.id === 'number') : [];
     this.currentTabId = this.sessionTabs[0]?.id || null;
 
     // Don't disrupt existing user-created groups; only group ungrouped tabs we own
     if (!this.sessionTabs.length) return;
 
     const tabsByWindow = new Map<number | 'unknown', chrome.tabs.Tab[]>();
-    this.sessionTabs.forEach(tab => {
+    this.sessionTabs.forEach((tab) => {
       const key = tab.windowId ?? 'unknown';
       if (!tabsByWindow.has(key)) tabsByWindow.set(key, []);
       const bucket = tabsByWindow.get(key);
@@ -112,18 +202,16 @@ export class BrowserTools {
     for (const [windowKey, entries] of tabsByWindow.entries()) {
       if (windowKey === 'unknown' || !entries.length) continue;
       const alreadyGrouped = entries
-        .filter(t => typeof t.groupId === 'number' && typeof t.id === 'number')
-        .map(t => t.id as number);
-      const toGroup = entries
-        .filter(t => !t.groupId && typeof t.id === 'number')
-        .map(t => t.id as number);
+        .filter((t) => typeof t.groupId === 'number' && typeof t.id === 'number')
+        .map((t) => t.id as number);
+      const toGroup = entries.filter((t) => !t.groupId && typeof t.id === 'number').map((t) => t.id as number);
 
       if (toGroup.length) {
         try {
           const groupId = await chrome.tabs.group({ tabIds: toGroup });
           await chrome.tabGroups.update(groupId, {
             title: options.title || 'Browser AI',
-            color: options.color || 'blue'
+            color: options.color || 'blue',
           });
           this.sessionTabGroups.push({ groupId, tabIds: [...toGroup] });
         } catch (error) {
@@ -152,12 +240,12 @@ export class BrowserTools {
   }
 
   getSessionTabSummaries() {
-    return this.sessionTabs.map(tab => ({
+    return this.sessionTabs.map((tab) => ({
       id: tab.id,
       title: tab.title,
       url: tab.url,
       windowId: tab.windowId,
-      groupId: tab.groupId
+      groupId: tab.groupId,
     }));
   }
 
@@ -192,7 +280,7 @@ export class BrowserTools {
         success: false,
         error: 'Either selector or text must be provided as a non-empty string',
         selector,
-        text
+        text,
       };
     }
 
@@ -202,9 +290,20 @@ export class BrowserTools {
         target: { tabId: targetTabId },
         func: async (sel, txt, waitMs) => {
           const timeout = typeof waitMs === 'number' ? waitMs : 2500;
-          const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-          const searchableSelectors = ['button', 'a', 'input[type="button"]', 'input[type="submit"]', '[role="button"]', '[role="menuitem"]', '[role="tab"]', '[onclick]', '[tabindex="0"]', 'summary'];
+          const searchableSelectors = [
+            'button',
+            'a',
+            'input[type="button"]',
+            'input[type="submit"]',
+            '[role="button"]',
+            '[role="menuitem"]',
+            '[role="tab"]',
+            '[onclick]',
+            '[tabindex="0"]',
+            'summary',
+          ];
 
           const findByText = () => {
             const clickableElements = document.querySelectorAll(searchableSelectors.join(','));
@@ -215,7 +314,9 @@ export class BrowserTools {
               for (const el of elements) {
                 const elementText = el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '';
                 if (!elementText) continue;
-                const candidate = exact ? elementText.toLowerCase() === normalized : elementText.toLowerCase().includes(normalized);
+                const candidate = exact
+                  ? elementText.toLowerCase() === normalized
+                  : elementText.toLowerCase().includes(normalized);
                 if (candidate) return el;
               }
               return null;
@@ -239,7 +340,7 @@ export class BrowserTools {
                   return NodeFilter.FILTER_SKIP;
                 }
                 return NodeFilter.FILTER_ACCEPT;
-              }
+              },
             });
             while (walker.nextNode()) {
               if (walker.currentNode instanceof HTMLElement) {
@@ -267,34 +368,40 @@ export class BrowserTools {
           const element = await locateElement();
 
           if (!element) {
-            const sample = Array.from(document.querySelectorAll(searchableSelectors.join(','))).slice(0, 10).map(el => {
-              const inputValue = (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
-                ? el.value
-                : '';
-              return ({
-                tagName: el.tagName,
-                text: (el.textContent?.trim() || inputValue || el.getAttribute('aria-label') || '').substring(0, 50),
-                id: el.id || '',
-                className: el.className || ''
+            const sample = Array.from(document.querySelectorAll(searchableSelectors.join(',')))
+              .slice(0, 10)
+              .map((el) => {
+                const inputValue = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value : '';
+                return {
+                  tagName: el.tagName,
+                  text: (el.textContent?.trim() || inputValue || el.getAttribute('aria-label') || '').substring(0, 50),
+                  id: el.id || '',
+                  className: el.className || '',
+                };
               });
-            });
             return {
               success: false,
               error: txt ? `No clickable element found with text: "${txt}"` : 'Element not found',
               selector: sel,
               text: txt,
               found: false,
-              suggestions: sample
+              suggestions: sample,
             };
           }
 
-          try { element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch {}
+          try {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          } catch {}
 
           const rect = element.getBoundingClientRect();
           const style = window.getComputedStyle(element);
           const isDisplayed = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
           const hasSize = rect.width > 0 && rect.height > 0;
-          const inViewport = rect.bottom > 0 && rect.right > 0 && rect.top < (window.innerHeight || document.documentElement.clientHeight) && rect.left < (window.innerWidth || document.documentElement.clientWidth);
+          const inViewport =
+            rect.bottom > 0 &&
+            rect.right > 0 &&
+            rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.left < (window.innerWidth || document.documentElement.clientWidth);
           const isClickable = isDisplayed && hasSize && element.offsetParent !== null;
 
           if (!isClickable) {
@@ -308,8 +415,8 @@ export class BrowserTools {
                 tagName: element.tagName,
                 text: element.textContent?.substring(0, 50) || '',
                 id: element.id || '',
-                className: element.className || ''
-              }
+                className: element.className || '',
+              },
             };
           }
 
@@ -336,7 +443,10 @@ export class BrowserTools {
           `;
           document.head.appendChild(pulseStyle);
           document.body.appendChild(highlight);
-          setTimeout(() => { highlight.remove(); pulseStyle.remove(); }, 600);
+          setTimeout(() => {
+            highlight.remove();
+            pulseStyle.remove();
+          }, 600);
 
           element.focus({ preventScroll: true });
 
@@ -376,11 +486,11 @@ export class BrowserTools {
               tagName: element.tagName,
               text: element.textContent?.substring(0, 50) || '',
               id: element.id || '',
-              className: element.className || ''
-            }
+              className: element.className || '',
+            },
           };
         },
-        args: [selector ?? null, text ?? null, timeoutMs ?? 2500]
+        args: [selector ?? null, text ?? null, timeoutMs ?? 2500],
       });
 
       const scriptResult = result?.[0]?.result;
@@ -391,14 +501,14 @@ export class BrowserTools {
         success: false,
         error: 'Script execution failed or returned no result',
         selector,
-        text
+        text,
       };
     } catch (error) {
       return {
         success: false,
         error: `Execution failed: ${error.message}`,
         selector,
-        text
+        text,
       };
     }
   }
@@ -445,12 +555,14 @@ export class BrowserTools {
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
 
-          setTimeout(() => { highlight.style.opacity = '0'; }, 400);
+          setTimeout(() => {
+            highlight.style.opacity = '0';
+          }, 400);
           setTimeout(() => highlight.remove(), 700);
 
           return { success: true };
         },
-        args: [selector, text ?? '']
+        args: [selector, text ?? ''],
       });
       return result?.[0]?.result || { success: false, error: 'Script failed' };
     } catch (error) {
@@ -477,12 +589,12 @@ export class BrowserTools {
 
           // Map common key names
           const keyMap = {
-            'Enter': { key: 'Enter', code: 'Enter', keyCode: 13 },
-            'Tab': { key: 'Tab', code: 'Tab', keyCode: 9 },
-            'Escape': { key: 'Escape', code: 'Escape', keyCode: 27 },
-            'ArrowDown': { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
-            'ArrowUp': { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
-            'Backspace': { key: 'Backspace', code: 'Backspace', keyCode: 8 },
+            Enter: { key: 'Enter', code: 'Enter', keyCode: 13 },
+            Tab: { key: 'Tab', code: 'Tab', keyCode: 9 },
+            Escape: { key: 'Escape', code: 'Escape', keyCode: 27 },
+            ArrowDown: { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+            ArrowUp: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+            Backspace: { key: 'Backspace', code: 'Backspace', keyCode: 8 },
           };
 
           const keyInfo = keyMap[k] || { key: k, code: k, keyCode: 0 };
@@ -492,7 +604,7 @@ export class BrowserTools {
             keyCode: keyInfo.keyCode,
             which: keyInfo.keyCode,
             bubbles: true,
-            cancelable: true
+            cancelable: true,
           };
 
           // Dispatch keyboard events
@@ -520,7 +632,7 @@ export class BrowserTools {
 
           return { success: true, key: k };
         },
-        args: [key]
+        args: [key],
       });
       return result?.[0]?.result || { success: false, error: 'Script failed' };
     } catch (error) {
@@ -540,7 +652,7 @@ export class BrowserTools {
       return {
         success: false,
         error: `Invalid direction: must be one of ${validDirections.join(', ')}`,
-        direction: direction
+        direction: direction,
       };
     }
 
@@ -548,7 +660,7 @@ export class BrowserTools {
       return {
         success: false,
         error: 'Invalid amount: must be a positive number',
-        amount: amount
+        amount: amount,
       };
     }
 
@@ -578,7 +690,7 @@ export class BrowserTools {
             return { success: false, error: error.message, direction: dir };
           }
         },
-        args: [direction ?? null, amount ?? null]
+        args: [direction ?? null, amount ?? null],
       });
 
       // Safely access result
@@ -588,14 +700,14 @@ export class BrowserTools {
         return {
           success: false,
           error: 'Script execution failed or returned no result',
-          direction: direction
+          direction: direction,
         };
       }
     } catch (error) {
       return {
         success: false,
         error: `Execution failed: ${error.message}`,
-        direction: direction
+        direction: direction,
       };
     }
   }
@@ -622,15 +734,27 @@ export class BrowserTools {
         target: { tabId: targetTabId },
         func: (contentType, sel) => {
           switch (contentType) {
-            case 'text': return { success: true, content: sel ? document.querySelector(sel)?.innerText : document.body.innerText };
-            case 'html': return { success: true, content: sel ? document.querySelector(sel)?.innerHTML : document.documentElement.outerHTML };
-            case 'title': return { success: true, content: document.title };
-            case 'url': return { success: true, content: window.location.href };
-            case 'links': return { success: true, content: Array.from(document.querySelectorAll('a')).map(a => ({ text: a.innerText, href: a.href })) };
-            default: return { success: false, error: 'Invalid type' };
+            case 'text':
+              return { success: true, content: sel ? document.querySelector(sel)?.innerText : document.body.innerText };
+            case 'html':
+              return {
+                success: true,
+                content: sel ? document.querySelector(sel)?.innerHTML : document.documentElement.outerHTML,
+              };
+            case 'title':
+              return { success: true, content: document.title };
+            case 'url':
+              return { success: true, content: window.location.href };
+            case 'links':
+              return {
+                success: true,
+                content: Array.from(document.querySelectorAll('a')).map((a) => ({ text: a.innerText, href: a.href })),
+              };
+            default:
+              return { success: false, error: 'Invalid type' };
           }
         },
-        args: [type, selector ?? null]
+        args: [type, selector ?? null],
       });
       return result?.[0]?.result || { success: false, error: 'Script failed' };
     } catch (error) {
@@ -672,12 +796,12 @@ export class BrowserTools {
       const entries = this.sessionTabs;
       const term = (titleContains || urlContains || '').toLowerCase();
       const prop = titleContains ? 'title' : 'url';
-      const candidate = entries.find(tab => (tab[prop] || '').toLowerCase().includes(term));
+      const candidate = entries.find((tab) => (tab[prop] || '').toLowerCase().includes(term));
       if (candidate) targetId = candidate.id;
     }
 
     if (!targetId && direction && this.sessionTabs.length > 0) {
-      const currentIndex = this.sessionTabs.findIndex(tab => tab.id === this.currentTabId);
+      const currentIndex = this.sessionTabs.findIndex((tab) => tab.id === this.currentTabId);
       if (currentIndex !== -1) {
         if (direction === 'next') {
           targetId = this.sessionTabs[(currentIndex + 1) % this.sessionTabs.length].id;
@@ -705,7 +829,13 @@ export class BrowserTools {
     const tabs = await chrome.tabs.query({});
     return {
       success: true,
-      tabs: tabs.map(tab => ({ id: tab.id, title: tab.title, url: tab.url, active: tab.active, groupId: tab.groupId }))
+      tabs: tabs.map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        active: tab.active,
+        groupId: tab.groupId,
+      })),
     };
   }
 
@@ -717,7 +847,7 @@ export class BrowserTools {
     tabIds,
     title,
     color = 'grey',
-    ungroup = false
+    ungroup = false,
   }: {
     tabIds: number[];
     title?: string;
@@ -739,7 +869,7 @@ export class BrowserTools {
         'pink',
         'purple',
         'cyan',
-        'orange'
+        'orange',
       ];
       const resolvedColor = allowedColors.includes(color as chrome.tabGroups.ColorEnum)
         ? (color as chrome.tabGroups.ColorEnum)
@@ -784,7 +914,7 @@ export class BrowserTools {
           `;
           document.head.appendChild(style);
           document.body.appendChild(glow);
-        }
+        },
       });
       this.glowTabs.add(tabId);
     } catch (error) {
@@ -802,10 +932,9 @@ export class BrowserTools {
     if (!/^https?:\/\//i.test(trimmed)) {
       return { ok: false, message: 'Only http/https URLs are allowed for safety. Please provide a full URL.' };
     }
-    if (blockedSchemes.some(s => lowered.startsWith(s))) {
+    if (blockedSchemes.some((s) => lowered.startsWith(s))) {
       return { ok: false, message: 'Navigation blocked for security (disallowed scheme).' };
     }
     return { ok: true };
   }
-
 }

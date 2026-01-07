@@ -50,7 +50,7 @@ class ExtensionValidator {
       success: '\x1b[32m',
       error: '\x1b[31m',
       warning: '\x1b[33m',
-      reset: '\x1b[0m'
+      reset: '\x1b[0m',
     };
     console.log(`${colors[type]}${message}${colors.reset}`);
   }
@@ -129,16 +129,14 @@ class ExtensionValidator {
     this.test('required permissions are declared', () => {
       const required = ['sidePanel', 'activeTab', 'scripting', 'tabs', 'storage'];
       const permissions = Array.isArray(this.manifest?.permissions) ? this.manifest.permissions : [];
-      const missing = required.filter(p => !permissions.includes(p));
+      const missing = required.filter((p) => !permissions.includes(p));
       if (missing.length > 0) {
         throw new Error(`Missing permissions: ${missing.join(', ')}`);
       }
     });
 
     this.test('host_permissions includes <all_urls>', () => {
-      const hostPermissions = Array.isArray(this.manifest?.host_permissions)
-        ? this.manifest.host_permissions
-        : [];
+      const hostPermissions = Array.isArray(this.manifest?.host_permissions) ? this.manifest.host_permissions : [];
       if (!hostPermissions.includes('<all_urls>')) {
         throw new Error('Must include <all_urls> in host_permissions');
       }
@@ -164,7 +162,7 @@ class ExtensionValidator {
 
     // Check for icons
     if (!this.manifest?.icons) {
-      this.warn('No icons configured - extension will work but won\'t show an icon');
+      this.warn("No icons configured - extension will work but won't show an icon");
     }
   }
 
@@ -178,10 +176,10 @@ class ExtensionValidator {
       'sidepanel/panel.css',
       'sidepanel/panel.js',
       'ai/provider.js',
-      'tools/browser-tools.js'
+      'tools/browser-tools.js',
     ];
 
-    requiredFiles.forEach(file => {
+    requiredFiles.forEach((file) => {
       this.test(`${file} exists`, () => {
         this.fileExists(file);
       });
@@ -191,15 +189,9 @@ class ExtensionValidator {
   validateJavaScriptSyntax() {
     this.log('\n=== Validating JavaScript Files ===', 'info');
 
-    const jsFiles = [
-      'background.js',
-      'content.js',
-      'sidepanel/panel.js',
-      'ai/provider.js',
-      'tools/browser-tools.js'
-    ];
+    const jsFiles = ['background.js', 'content.js', 'sidepanel/panel.js', 'ai/provider.js', 'tools/browser-tools.js'];
 
-    jsFiles.forEach(file => {
+    jsFiles.forEach((file) => {
       this.test(`${file} has valid syntax`, () => {
         const fullPath = this.fileExists(file);
         const content = fs.readFileSync(fullPath, 'utf8');
@@ -230,7 +222,7 @@ class ExtensionValidator {
 
     this.test('package.json has required scripts', () => {
       const required = ['test', 'validate', 'build'];
-      const missing = required.filter(s => !this.packageJSON.scripts?.[s]);
+      const missing = required.filter((s) => !this.packageJSON.scripts?.[s]);
       if (missing.length > 0) {
         throw new Error(`Missing scripts: ${missing.join(', ')}`);
       }
@@ -240,14 +232,9 @@ class ExtensionValidator {
   validateDocumentation() {
     this.log('\n=== Validating Documentation ===', 'info');
 
-    const docs = [
-      'README.md',
-      'LICENSE',
-      'docs/API_SPECIFICATION.md',
-      'docs/QUICK_START.md'
-    ];
+    const docs = ['README.md', 'LICENSE', 'docs/API_SPECIFICATION.md', 'docs/QUICK_START.md'];
 
-    docs.forEach(doc => {
+    docs.forEach((doc) => {
       this.test(`${doc} exists`, () => {
         this.fileExists(doc, PROJECT_DIR);
       });
@@ -257,14 +244,9 @@ class ExtensionValidator {
   validateFileStructure() {
     this.log('\n=== Validating File Structure ===', 'info');
 
-    const requiredDirs = [
-      'sidepanel',
-      'ai',
-      'tools',
-      'icons'
-    ];
+    const requiredDirs = ['sidepanel', 'ai', 'tools', 'icons'];
 
-    requiredDirs.forEach(dir => {
+    requiredDirs.forEach((dir) => {
       this.test(`${dir}/ directory exists`, () => {
         const fullPath = path.join(ROOT_DIR, dir);
         if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isDirectory()) {
@@ -301,12 +283,12 @@ class ExtensionValidator {
 
     if (this.warnings.length > 0) {
       this.log(`Warnings: ${this.warnings.length}`, 'warning');
-      this.warnings.forEach(w => this.log(`  - ${w}`, 'warning'));
+      this.warnings.forEach((w) => this.log(`  - ${w}`, 'warning'));
     }
 
     if (this.errors.length > 0) {
       this.log('\nErrors:', 'error');
-      this.errors.forEach(e => {
+      this.errors.forEach((e) => {
         this.log(`  ${e.test}:`, 'error');
         this.log(`    ${e.error}`, 'error');
       });

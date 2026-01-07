@@ -23,7 +23,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: 'Work Sans', 'Space Grotesk', sans-serif;
+  font-family: "Work Sans", "Space Grotesk", sans-serif;
   color: var(--ink);
   background: radial-gradient(circle at top right, #f9e9d5, transparent 45%),
     radial-gradient(circle at 10% 30%, rgba(196, 135, 80, 0.25), transparent 40%),
@@ -34,9 +34,13 @@ body {
 .backdrop {
   position: fixed;
   inset: 0;
-  background:
-    repeating-linear-gradient(120deg, rgba(40, 31, 22, 0.03), rgba(40, 31, 22, 0.03) 1px, transparent 1px, transparent 80px),
-    radial-gradient(circle at 20% 80%, rgba(29, 106, 111, 0.15), transparent 40%);
+  background: repeating-linear-gradient(
+      120deg,
+      rgba(40, 31, 22, 0.03),
+      rgba(40, 31, 22, 0.03) 1px,
+      transparent 1px,
+      transparent 80px
+    ), radial-gradient(circle at 20% 80%, rgba(29, 106, 111, 0.15), transparent 40%);
   pointer-events: none;
   z-index: 0;
 }
@@ -63,7 +67,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.22em;
@@ -79,7 +83,7 @@ body {
 }
 
 .hero h1 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: clamp(2.6rem, 5vw, 3.6rem);
   margin: 0;
 }
@@ -117,7 +121,7 @@ body {
 
 .card-header h2 {
   margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 1.8rem;
 }
 
@@ -184,7 +188,7 @@ body {
 }
 
 .code-value {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 1.6rem;
   letter-spacing: 0.25em;
   color: var(--accent-strong);
@@ -262,7 +266,7 @@ body {
 
 .stat-card h3 {
   margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
 }
 
 .actions {
@@ -276,7 +280,7 @@ body {
   border-radius: 999px;
   padding: 10px 18px;
   font-weight: 600;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

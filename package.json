@@ -1,6 +1,6 @@
 {
   "name": "parchi-extension",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Warm-paper browser automation extension with configurable LLM providers",
   "type": "module",
   "scripts": {
@@ -11,7 +11,9 @@
     "test:integration": "echo 'Load tests/integration/test-page.html in browser and run tests'",
     "test:e2e": "node scripts/build.mjs && node dist/tests/e2e/run-e2e.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
-    "lint": "echo 'Linting extension files...' && node dist/tests/lint-check.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "dev": "echo 'Run npm run build, then load the dist/ folder in Chrome://extensions'"
   },
   "keywords": [
@@ -25,6 +27,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/chrome": "^0.0.268",
     "@types/node": "^22.10.5",
     "playwright": "^1.49.1",

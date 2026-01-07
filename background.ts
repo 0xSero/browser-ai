@@ -1,8 +1,8 @@
-// Background Service Worker
-import { BrowserTools } from './tools/browser-tools.js';
-import { AIProvider } from './ai/provider.js';
 import { normalizeConversationHistory, toProviderMessages } from './ai/message-schema.js';
 import type { Message, ProviderMessage, ToolCall } from './ai/message-schema.js';
+import { AIProvider } from './ai/provider.js';
+// Background Service Worker
+import { BrowserTools } from './tools/browser-tools.js';
 
 class BackgroundService {
   browserTools: BrowserTools;
@@ -24,9 +24,7 @@ class BackgroundService {
 
   init() {
     // Set up side panel behavior
-    chrome.sidePanel
-      .setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error) => console.error(error));
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
 
     // Listen for messages from side panel
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -61,7 +59,7 @@ class BackgroundService {
       console.error('Error handling message:', error);
       this.sendToSidePanel({
         type: 'error',
-        message: error.message
+        message: error.message,
       });
       sendResponse({ success: false, error: error.message });
     }
@@ -92,7 +90,7 @@ class BackgroundService {
         'timeout',
         'toolPermissions',
         'allowedDomains',
-        'auxAgentProfiles'
+        'auxAgentProfiles',
       ]);
 
       if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
@@ -104,7 +102,7 @@ class BackgroundService {
           interact: true,
           navigate: true,
           tabs: true,
-          screenshots: false
+          screenshots: false,
         };
       }
       if (settings.allowedDomains === undefined) settings.allowedDomains = '';
@@ -113,7 +111,7 @@ class BackgroundService {
       if (!settings.apiKey) {
         this.sendToSidePanel({
           type: 'error',
-          message: 'Please configure your API key in settings'
+          message: 'Please configure your API key in settings',
         });
         return;
       }
@@ -125,7 +123,7 @@ class BackgroundService {
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
           title: 'Browser AI',
-          color: 'blue'
+          color: 'blue',
         });
       } catch (error) {
         console.warn('Failed to configure session tabs:', error);
@@ -139,22 +137,26 @@ class BackgroundService {
       const teamProfiles = this.resolveTeamProfiles(settings);
 
       const activeProfile = this.resolveProfile(settings, activeProfileName);
-      const orchestratorProfile = orchestratorEnabled ? this.resolveProfile(settings, orchestratorProfileName) : activeProfile;
-      const visionProfile = settings.visionBridge !== false
-        ? this.resolveProfile(settings, visionProfileName || activeProfileName)
-        : null;
+      const orchestratorProfile = orchestratorEnabled
+        ? this.resolveProfile(settings, orchestratorProfileName)
+        : activeProfile;
+      const visionProfile =
+        settings.visionBridge !== false ? this.resolveProfile(settings, visionProfileName || activeProfileName) : null;
 
       // Initialize AI providers
       const aiProvider = new AIProvider({
         ...orchestratorProfile,
-        sendScreenshotsAsImages: Boolean(settings.enableScreenshots && settings.sendScreenshotsAsImages)
+        sendScreenshotsAsImages: Boolean(settings.enableScreenshots && settings.sendScreenshotsAsImages),
       });
       this.aiProvider = aiProvider;
 
-      const visionProvider = (visionProfile && visionProfile.apiKey) ? new AIProvider({
-        ...visionProfile,
-        sendScreenshotsAsImages: true
-      }) : null;
+      const visionProvider =
+        visionProfile && visionProfile.apiKey
+          ? new AIProvider({
+              ...visionProfile,
+              sendScreenshotsAsImages: true,
+            })
+          : null;
       this.visionProvider = visionProvider;
 
       // Get available tools
@@ -164,17 +166,17 @@ class BackgroundService {
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       const sessionTabs = this.browserTools.getSessionTabSummaries();
       const sessionTabContext = sessionTabs
-        .filter(tab => typeof tab.id === 'number')
-        .map(tab => ({ id: tab.id as number, title: tab.title, url: tab.url }));
+        .filter((tab) => typeof tab.id === 'number')
+        .map((tab) => ({ id: tab.id as number, title: tab.title, url: tab.url }));
       const workingTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
-      const workingTab = sessionTabs.find(tab => tab.id === workingTabId);
+      const workingTab = sessionTabs.find((tab) => tab.id === workingTabId);
       const context = {
         currentUrl: workingTab?.url || activeTab?.url || 'unknown',
         currentTitle: workingTab?.title || activeTab?.title || 'unknown',
         tabId: workingTabId,
         availableTabs: sessionTabContext,
         orchestratorEnabled,
-        teamProfiles
+        teamProfiles,
       };
 
       const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
@@ -182,23 +184,22 @@ class BackgroundService {
       const compactedHistory = this.compactConversationHistory(providerHistory);
 
       // Call AI with tools
-      const supportsStreaming = typeof aiProvider.supportsStreaming === 'function'
-        ? aiProvider.supportsStreaming()
-        : (settings.provider !== 'anthropic');
+      const supportsStreaming =
+        typeof aiProvider.supportsStreaming === 'function'
+          ? aiProvider.supportsStreaming()
+          : settings.provider !== 'anthropic';
       const streamEnabled = supportsStreaming && settings.streamResponses !== false;
-      const response = await aiProvider.chat(
-        compactedHistory,
-        tools,
-        context,
-        {
-          stream: streamEnabled,
-          streamCallbacks: streamEnabled ? {
-            onStart: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'start' }),
-            onDelta: (payload) => this.sendToSidePanel({ type: 'assistant_stream', status: 'delta', content: payload?.content || '' }),
-            onComplete: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'stop' })
-          } : null
-        }
-      );
+      const response = await aiProvider.chat(compactedHistory, tools, context, {
+        stream: streamEnabled,
+        streamCallbacks: streamEnabled
+          ? {
+              onStart: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'start' }),
+              onDelta: (payload) =>
+                this.sendToSidePanel({ type: 'assistant_stream', status: 'delta', content: payload?.content || '' }),
+              onComplete: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'stop' }),
+            }
+          : null,
+      });
 
       // Process response and handle tool execution loop
       let currentResponse = response;
@@ -209,8 +210,7 @@ class BackgroundService {
       let apiRetryCount = 0;
       const maxApiRetries = 3;
 
-      const hasUsableContent = (resp) =>
-        resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
+      const hasUsableContent = (resp) => resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
 
       while (true) {
         // Execute tools until none remain
@@ -221,7 +221,7 @@ class BackgroundService {
             console.warn('Reached maximum tool execution iterations');
             this.sendToSidePanel({
               type: 'warning',
-              message: 'Reached maximum tool execution limit. Task may be incomplete.'
+              message: 'Reached maximum tool execution limit. Task may be incomplete.',
             });
             currentResponse.toolCalls = [];
             break;
@@ -238,7 +238,7 @@ class BackgroundService {
               // Still add the error result so the AI knows what happened
               aiProvider.addToolResult(toolCall.id, {
                 success: false,
-                error: err.message || 'Tool execution failed'
+                error: err.message || 'Tool execution failed',
               });
               toolResults.push({ id: toolCall.id, success: false, error: err.message });
             }
@@ -252,13 +252,13 @@ class BackgroundService {
             console.error('Error continuing conversation:', continueErr);
             apiRetryCount++;
 
-            const isToolOrderingError = continueErr.message?.includes('tool call result') ||
-              continueErr.message?.includes('tool_call_id');
+            const isToolOrderingError =
+              continueErr.message?.includes('tool call result') || continueErr.message?.includes('tool_call_id');
 
             if (apiRetryCount < maxApiRetries) {
               // Silent retry with exponential backoff
               console.log(`API error, retry attempt ${apiRetryCount}/${maxApiRetries}`);
-              await new Promise(r => setTimeout(r, 500 * apiRetryCount));
+              await new Promise((r) => setTimeout(r, 500 * apiRetryCount));
 
               // If tool ordering error persists, try to fix by force-clearing tool history
               if (isToolOrderingError && apiRetryCount >= 2) {
@@ -272,7 +272,7 @@ class BackgroundService {
               // All retries exhausted - show error but still don't terminate
               this.sendToSidePanel({
                 type: 'error',
-                message: 'API error after retries: ' + continueErr.message
+                message: 'API error after retries: ' + continueErr.message,
               });
 
               // Force-clear tool history and try to get a final response
@@ -289,16 +289,17 @@ class BackgroundService {
 
         if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
           if (!hasUsableContent(currentResponse)) {
-            currentResponse.content = currentResponse.content && currentResponse.content.trim()
-              ? currentResponse.content
-              : 'I completed the requested actions but could not produce a final summary. Please try again.';
+            currentResponse.content =
+              currentResponse.content && currentResponse.content.trim()
+                ? currentResponse.content
+                : 'I completed the requested actions but could not produce a final summary. Please try again.';
           }
           break;
         }
 
         // Ask the model to finish the task with a final summary before exiting
         aiProvider.requestFinalResponse(
-          'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.'
+          'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.',
         );
         followupAttempts++;
         currentResponse = await aiProvider.continueConversation();
@@ -309,13 +310,13 @@ class BackgroundService {
         type: 'assistant_response',
         content: currentResponse.content,
         thinking: currentResponse.thinking,
-        usage: currentResponse.usage
+        usage: currentResponse.usage,
       });
     } catch (error) {
       console.error('Error processing user message:', error);
       this.sendToSidePanel({
         type: 'error',
-        message: 'Error: ' + error.message
+        message: 'Error: ' + error.message,
       });
     }
   }
@@ -323,7 +324,7 @@ class BackgroundService {
   async executeToolCall(
     toolCall: ToolCall,
     provider: AIProvider | null = this.aiProvider,
-    options: { silent?: boolean; settings?: Record<string, any> } = {}
+    options: { silent?: boolean; settings?: Record<string, any> } = {},
   ) {
     // Declare in outer scope so catch can reference them safely
     let rawName = '';
@@ -331,7 +332,7 @@ class BackgroundService {
     let args: Record<string, any> = {};
     try {
       // Normalize tool name and attempt a best-effort inference when missing
-      rawName = (toolCall && typeof toolCall.name === 'string') ? toolCall.name.trim() : '';
+      rawName = toolCall && typeof toolCall.name === 'string' ? toolCall.name.trim() : '';
       toolName = rawName;
       args = toolCall?.args || {};
 
@@ -340,7 +341,14 @@ class BackgroundService {
       if (!toolName || !known.has(toolName)) {
         // Heuristic inference for common shapes to keep UX flowing
         if (args && typeof args === 'object') {
-          if ('type' in args && (args.type === 'text' || args.type === 'html' || args.type === 'title' || args.type === 'url' || args.type === 'links')) {
+          if (
+            'type' in args &&
+            (args.type === 'text' ||
+              args.type === 'html' ||
+              args.type === 'title' ||
+              args.type === 'url' ||
+              args.type === 'links')
+          ) {
             toolName = 'getPageContent';
           } else if ('direction' in args) {
             toolName = 'scroll';
@@ -365,7 +373,7 @@ class BackgroundService {
           tool: toolName || rawName,
           id: toolCall.id,
           args,
-          result: null
+          result: null,
         });
       }
 
@@ -378,7 +386,7 @@ class BackgroundService {
             tool: toolName,
             id: toolCall.id,
             args,
-            result
+            result,
           });
         }
         return result;
@@ -393,7 +401,7 @@ class BackgroundService {
             tool: toolName,
             id: toolCall.id,
             args,
-            result
+            result,
           });
         }
         return result;
@@ -413,7 +421,7 @@ class BackgroundService {
             tool: toolName || rawName,
             id: toolCall.id,
             args,
-            result: blocked
+            result: blocked,
           });
         }
         return blocked;
@@ -428,7 +436,7 @@ class BackgroundService {
             tool: toolName,
             id: toolCall.id,
             args,
-            result: blocked
+            result: blocked,
           });
         }
         return blocked;
@@ -436,11 +444,17 @@ class BackgroundService {
 
       const result = await this.browserTools.executeTool(toolName, args);
 
-      if (toolName === 'screenshot' && result?.success && result.dataUrl && this.currentSettings?.visionBridge && this.visionProvider) {
+      if (
+        toolName === 'screenshot' &&
+        result?.success &&
+        result.dataUrl &&
+        this.currentSettings?.visionBridge &&
+        this.visionProvider
+      ) {
         try {
           const description = await this.visionProvider.describeImage(
             result.dataUrl,
-            'Provide a concise description of this screenshot so a non-vision model can reason about it.'
+            'Provide a concise description of this screenshot so a non-vision model can reason about it.',
           );
           result.visionDescription = description;
           result.message = 'Screenshot captured and described by vision model.';
@@ -468,7 +482,7 @@ class BackgroundService {
           tool: toolName || rawName,
           id: toolCall.id,
           args,
-          result: finalResult
+          result: finalResult,
         });
       }
       console.info('[Browser AI] Tool result:', toolName || rawName, finalResult);
@@ -479,7 +493,7 @@ class BackgroundService {
       const errorResult = {
         success: false,
         error: error.message,
-        details: 'Tool execution failed. The AI will be informed of this error.'
+        details: 'Tool execution failed. The AI will be informed of this error.',
       };
       if (this.aiProvider) {
         this.aiProvider.addToolResult(toolCall.id, errorResult);
@@ -489,7 +503,7 @@ class BackgroundService {
         tool: toolName || rawName,
         id: toolCall.id,
         args,
-        result: errorResult
+        result: errorResult,
       });
       console.warn('[Browser AI] Tool error:', toolName || rawName, errorResult);
       // Don't throw - let the AI handle the error and potentially retry
@@ -512,7 +526,7 @@ class BackgroundService {
       switchTab: 'tabs',
       groupTabs: 'tabs',
       focusTab: 'tabs',
-      describeSessionTabs: 'tabs'
+      describeSessionTabs: 'tabs',
     };
     return mapping[toolName] || null;
   }
@@ -520,7 +534,7 @@ class BackgroundService {
   parseAllowedDomains(value = '') {
     return String(value)
       .split(/[\n,]/)
-      .map(entry => entry.trim().toLowerCase())
+      .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean);
   }
 
@@ -528,7 +542,7 @@ class BackgroundService {
     if (!allowlist.length) return true;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
-      return allowlist.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
+      return allowlist.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
     } catch (error) {
       return false;
     }
@@ -572,12 +586,12 @@ class BackgroundService {
 
   sendToSidePanel(message) {
     // Send message to all side panels
-    chrome.runtime.sendMessage(message).catch(err => {
+    chrome.runtime.sendMessage(message).catch((err) => {
       console.log('Side panel not open:', err);
     });
   }
 
-  resolveProfile(settings: Record<string, any>, name: string = 'default') {
+  resolveProfile(settings: Record<string, any>, name = 'default') {
     const base = {
       provider: settings.provider,
       apiKey: settings.apiKey,
@@ -590,23 +604,23 @@ class BackgroundService {
       streamResponses: settings.streamResponses,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
-      timeout: settings.timeout
+      timeout: settings.timeout,
     };
-    const profile = (settings.configs && settings.configs[name]) ? settings.configs[name] : {};
+    const profile = settings.configs && settings.configs[name] ? settings.configs[name] : {};
     return { ...base, ...profile };
   }
 
   resolveTeamProfiles(settings: Record<string, any>) {
     const names = Array.isArray(settings.auxAgentProfiles) ? settings.auxAgentProfiles : [];
     const unique = Array.from(new Set(names)).filter(
-      (name): name is string => typeof name === 'string' && name.trim().length > 0
+      (name): name is string => typeof name === 'string' && name.trim().length > 0,
     );
-    return unique.map(name => {
+    return unique.map((name) => {
       const profile = this.resolveProfile(settings, name);
       return {
         name,
         provider: profile.provider || '',
-        model: profile.model || ''
+        model: profile.model || '',
       };
     });
   }
@@ -614,19 +628,19 @@ class BackgroundService {
   getToolsForSession(
     settings: Record<string, any>,
     includeOrchestrator = false,
-    teamProfiles: Array<{ name: string }> = []
+    teamProfiles: Array<{ name: string }> = [],
   ) {
     let tools = this.browserTools.getToolDefinitions();
     if (settings && settings.enableScreenshots === false) {
-      tools = tools.filter(tool => tool.name !== 'screenshot');
+      tools = tools.filter((tool) => tool.name !== 'screenshot');
     }
     if (includeOrchestrator) {
-      const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map(profile => profile.name).filter(Boolean) : [];
+      const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map((profile) => profile.name).filter(Boolean) : [];
       const profileSchema: { type: string; description: string; enum?: string[] } = {
         type: 'string',
         description: teamNames.length
           ? `Name of saved profile to use. Available: ${teamNames.join(', ')}`
-          : 'Name of saved profile to use.'
+          : 'Name of saved profile to use.',
       };
       if (teamNames.length) {
         profileSchema.enum = teamNames;
@@ -641,9 +655,9 @@ class BackgroundService {
               profile: profileSchema,
               prompt: { type: 'string', description: 'System prompt for the sub-agent' },
               tasks: { type: 'array', items: { type: 'string' }, description: 'Task list for the sub-agent' },
-              goal: { type: 'string', description: 'Single goal string if tasks not provided' }
-            }
-          }
+              goal: { type: 'string', description: 'Single goal string if tasks not provided' },
+            },
+          },
         },
         {
           name: 'subagent_complete',
@@ -652,11 +666,11 @@ class BackgroundService {
             type: 'object',
             properties: {
               summary: { type: 'string' },
-              data: { type: 'object' }
+              data: { type: 'object' },
             },
-            required: ['summary']
-          }
-        }
+            required: ['summary'],
+          },
+        },
       ]);
     }
     return tools;
@@ -672,12 +686,15 @@ class BackgroundService {
       const content = msg?.content;
       if (typeof content === 'string') return acc + content.length;
       if (Array.isArray(content)) {
-        return acc + content.reduce((sum, part) => {
-          if (typeof part === 'string') return sum + part.length;
-          if (part?.text) return sum + part.text.length;
-          if (part?.content) return sum + JSON.stringify(part.content).length;
-          return sum;
-        }, 0);
+        return (
+          acc +
+          content.reduce((sum, part) => {
+            if (typeof part === 'string') return sum + part.length;
+            if (part?.text) return sum + part.text.length;
+            if (part?.content) return sum + JSON.stringify(part.content).length;
+            return sum;
+          }, 0)
+        );
       }
       return acc;
     }, 0);
@@ -701,7 +718,7 @@ class BackgroundService {
       if (typeof msg?.content === 'string') {
         preview = msg.content.slice(0, 100);
       } else if (Array.isArray(msg?.content)) {
-        const textPart = msg.content.find(p => (typeof p === 'string') || (p && typeof p === 'object' && 'text' in p));
+        const textPart = msg.content.find((p) => typeof p === 'string' || (p && typeof p === 'object' && 'text' in p));
         if (typeof textPart === 'string') {
           preview = textPart.slice(0, 100);
         } else if (textPart && typeof textPart === 'object' && 'text' in textPart) {
@@ -715,7 +732,7 @@ class BackgroundService {
 
     const compactNote: Message = {
       role: 'user',
-      content: `[Context compacted: ${trimmed.length} earlier messages]\nRecent context:\n${summaryPieces.join('\n')}`
+      content: `[Context compacted: ${trimmed.length} earlier messages]\nRecent context:\n${summaryPieces.join('\n')}`,
     };
 
     return [compactNote, ...preserved];
@@ -749,7 +766,7 @@ class BackgroundService {
       type: 'subagent_start',
       id: subagentId,
       name: subagentName,
-      tasks: args.tasks || [args.goal || args.task || 'Task']
+      tasks: args.tasks || [args.goal || args.task || 'Task'],
     });
 
     // Create custom system prompt for sub-agent
@@ -759,23 +776,25 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
     const subProvider = new AIProvider({
       ...profileSettings,
       systemPrompt: subAgentSystemPrompt,
-      sendScreenshotsAsImages: Boolean((this.currentSettings?.enableScreenshots) && profileSettings.sendScreenshotsAsImages)
+      sendScreenshotsAsImages: Boolean(
+        this.currentSettings?.enableScreenshots && profileSettings.sendScreenshotsAsImages,
+      ),
     });
     const tools = this.getToolsForSession(this.currentSettings || {}, false);
     const sessionTabs = this.browserTools.getSessionTabSummaries();
     const sessionTabContext = sessionTabs
-      .filter(tab => typeof tab.id === 'number')
-      .map(tab => ({ id: tab.id as number, title: tab.title, url: tab.url }));
+      .filter((tab) => typeof tab.id === 'number')
+      .map((tab) => ({ id: tab.id as number, title: tab.title, url: tab.url }));
     const taskLines = Array.isArray(args.tasks)
       ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join('\n')
-      : (args.goal || args.task || args.prompt || '');
+      : args.goal || args.task || args.prompt || '';
 
     // Don't include system message in history - it's passed via provider settings
     const subHistory: Message[] = [
       {
         role: 'user',
-        content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`
-      }
+        content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`,
+      },
     ];
 
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -784,7 +803,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
       currentUrl: activeTab?.url || 'unknown',
       currentTitle: activeTab?.title || 'unknown',
       tabId: subTabId,
-      availableTabs: sessionTabContext
+      availableTabs: sessionTabContext,
     };
 
     let response = await subProvider.chat(subHistory, tools, context, { stream: false });
@@ -806,7 +825,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
       type: 'subagent_complete',
       id: subagentId,
       success: true,
-      summary
+      summary,
     });
 
     return {
@@ -817,7 +836,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
       summary,
       tasks: taskLines,
       iterations,
-      transcriptLength: subProvider.messages.length
+      transcriptLength: subProvider.messages.length,
     };
   }
 }

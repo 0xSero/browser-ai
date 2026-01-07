@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import fs from 'fs/promises';
 import path from 'path';
+import fs from 'fs/promises';
 
 type User = {
   id: string;
@@ -35,7 +35,7 @@ type DataStoreShape = {
 const DEFAULT_DATA: DataStoreShape = {
   users: [],
   deviceCodes: [],
-  sessions: []
+  sessions: [],
 };
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -92,16 +92,16 @@ export class DataStore {
 
   cleanupExpired(): void {
     const now = Date.now();
-    this.data.deviceCodes = this.data.deviceCodes.filter(code => code.expiresAt > now);
-    this.data.sessions = this.data.sessions.filter(session => session.expiresAt > now);
+    this.data.deviceCodes = this.data.deviceCodes.filter((code) => code.expiresAt > now);
+    this.data.sessions = this.data.sessions.filter((session) => session.expiresAt > now);
   }
 
   findUserByEmail(email: string): User | undefined {
-    return this.data.users.find(user => user.email === email);
+    return this.data.users.find((user) => user.email === email);
   }
 
   findUserById(id: string): User | undefined {
-    return this.data.users.find(user => user.id === id);
+    return this.data.users.find((user) => user.id === id);
   }
 
   upsertUser({ email }: { email: string }): User {
@@ -112,7 +112,7 @@ export class DataStore {
         id: `user_${createToken(8)}`,
         email: normalizedEmail,
         createdAt: new Date().toISOString(),
-        stripeCustomerId: ''
+        stripeCustomerId: '',
       };
       this.data.users.push(user);
     }
@@ -128,14 +128,14 @@ export class DataStore {
       status: 'pending',
       userId: '',
       createdAt: new Date().toISOString(),
-      expiresAt: Date.now() + expiresInMs
+      expiresAt: Date.now() + expiresInMs,
     };
     this.data.deviceCodes.push(entry);
     return entry;
   }
 
   approveDeviceCode({ userCode, email }: { userCode: string; email: string }): { entry: DeviceCodeEntry; user: User } {
-    const entry = this.data.deviceCodes.find(code => code.userCode === userCode);
+    const entry = this.data.deviceCodes.find((code) => code.userCode === userCode);
     if (!entry) {
       throw new Error('Invalid device code.');
     }
@@ -149,10 +149,11 @@ export class DataStore {
     return { entry, user };
   }
 
-  verifyDeviceCode({ deviceCode, sessionTtlMs }: { deviceCode: string; sessionTtlMs: number }):
-    | { status: 'pending' }
-    | { status: 'approved'; session: Session } {
-    const entry = this.data.deviceCodes.find(code => code.deviceCode === deviceCode);
+  verifyDeviceCode({
+    deviceCode,
+    sessionTtlMs,
+  }: { deviceCode: string; sessionTtlMs: number }): { status: 'pending' } | { status: 'approved'; session: Session } {
+    const entry = this.data.deviceCodes.find((code) => code.deviceCode === deviceCode);
     if (!entry) {
       throw new Error('Invalid device code.');
     }
@@ -172,19 +173,22 @@ export class DataStore {
       token: `sess_${createToken(24)}`,
       userId,
       createdAt: new Date().toISOString(),
-      expiresAt: Date.now() + sessionTtlMs
+      expiresAt: Date.now() + sessionTtlMs,
     };
     this.data.sessions.push(session);
     return session;
   }
 
-  createSessionForEmail({ email, sessionTtlMs }: { email: string; sessionTtlMs: number }): { user: User; session: Session } {
+  createSessionForEmail({ email, sessionTtlMs }: { email: string; sessionTtlMs: number }): {
+    user: User;
+    session: Session;
+  } {
     const user = this.upsertUser({ email });
     const session = this.createSession(user.id, sessionTtlMs);
     return { user, session };
   }
 
   findSession(token: string): Session | undefined {
-    return this.data.sessions.find(session => session.token === token);
+    return this.data.sessions.find((session) => session.token === token);
   }
 }

@@ -43,11 +43,11 @@ const elements = {
   paymentMethod: document.getElementById('paymentMethod') as HTMLElement | null,
   invoiceList: document.getElementById('invoiceList') as HTMLElement | null,
   checkoutBtn: document.getElementById('checkoutBtn') as HTMLButtonElement | null,
-  portalBtn: document.getElementById('portalBtn') as HTMLButtonElement | null
+  portalBtn: document.getElementById('portalBtn') as HTMLButtonElement | null,
 };
 
 const state = {
-  accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || ''
+  accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || '',
 };
 
 function setAuthStatus(message: string, tone: 'error' | 'success' | '' = ''): void {
@@ -69,7 +69,7 @@ async function apiFetch(path: string, options: RequestInit = {}, auth = false) {
   }
   const response = await fetch(path, {
     ...options,
-    headers: { ...headers, ...(options.headers || {}) }
+    headers: { ...headers, ...(options.headers || {}) },
   });
   const text = await response.text();
   const payload = text ? JSON.parse(text) : {};
@@ -91,7 +91,7 @@ async function signInWithEmail(email: string): Promise<void> {
   try {
     const payload = await apiFetch('/v1/auth/email', {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email }),
     });
     if (!payload?.accessToken) {
       throw new Error('Sign-in did not return an access token.');
@@ -118,7 +118,7 @@ async function loadAccount(): Promise<void> {
 
   try {
     const account = await apiFetch('/v1/account', { method: 'GET' }, true);
-    const billing = await apiFetch('/v1/billing/overview', { method: 'GET' }, true) as BillingOverview;
+    const billing = (await apiFetch('/v1/billing/overview', { method: 'GET' }, true)) as BillingOverview;
     if (elements.accountEmail) {
       elements.accountEmail.textContent = account?.user?.email ? `Signed in as ${account.user.email}` : 'Signed in';
     }
@@ -166,7 +166,7 @@ function renderBilling(billing: BillingOverview): void {
       elements.invoiceList.innerHTML = '<p class="muted">No invoices yet.</p>';
       return;
     }
-    invoices.forEach(inv => {
+    invoices.forEach((inv) => {
       const item = document.createElement('div');
       item.className = 'invoice-item';
       const amount = formatCurrency(inv.amountDue || 0, inv.currency || 'usd');
@@ -185,7 +185,7 @@ function formatCurrency(amount: number, currency: string): string {
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency.toUpperCase()
+      currency: currency.toUpperCase(),
     }).format((amount || 0) / 100);
   } catch {
     return `$${(amount || 0) / 100}`;
@@ -194,10 +194,14 @@ function formatCurrency(amount: number, currency: string): string {
 
 async function startCheckout(): Promise<void> {
   try {
-    const payload = await apiFetch('/v1/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ returnUrl: window.location.href })
-    }, true);
+    const payload = await apiFetch(
+      '/v1/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      },
+      true,
+    );
     if (payload?.url) {
       window.location.href = payload.url;
     }
@@ -209,10 +213,14 @@ async function startCheckout(): Promise<void> {
 
 async function openPortal(): Promise<void> {
   try {
-    const payload = await apiFetch('/v1/billing/portal', {
-      method: 'POST',
-      body: JSON.stringify({ returnUrl: window.location.href })
-    }, true);
+    const payload = await apiFetch(
+      '/v1/billing/portal',
+      {
+        method: 'POST',
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      },
+      true,
+    );
     if (payload?.url) {
       window.location.href = payload.url;
     }

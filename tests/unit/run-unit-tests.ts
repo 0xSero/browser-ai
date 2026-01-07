@@ -13,7 +13,7 @@ const colors = {
   success: '\x1b[32m',
   error: '\x1b[31m',
   warning: '\x1b[33m',
-  reset: '\x1b[0m'
+  reset: '\x1b[0m',
 } as const;
 
 function log(message: string, type: keyof typeof colors = 'info') {
@@ -68,9 +68,7 @@ class TestRunner {
 
   assertEqual(actual: unknown, expected: unknown, message = '') {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(
-        `${message}\nExpected: ${JSON.stringify(expected)}\nActual: ${JSON.stringify(actual)}`
-      );
+      throw new Error(`${message}\nExpected: ${JSON.stringify(expected)}\nActual: ${JSON.stringify(actual)}`);
     }
   }
 
@@ -106,7 +104,7 @@ class TestRunner {
     if (this.failed > 0) {
       log(`Tests Failed: ${this.failed}`, 'error');
       log('\nFailed Tests:', 'error');
-      this.errors.forEach(e => {
+      this.errors.forEach((e) => {
         log(`  ${e.test}:`, 'error');
         log(`    ${e.error}`, 'error');
       });
@@ -135,15 +133,15 @@ function testToolDefinitions(runner: TestRunner) {
         type: 'object',
         properties: {
           url: { type: 'string' },
-          tabId: { type: 'number' }
+          tabId: { type: 'number' },
         },
-        required: ['url']
-      }
-    }
+        required: ['url'],
+      },
+    },
   ];
 
   runner.test('Tool definitions have required fields', () => {
-    mockToolDefinitions.forEach(tool => {
+    mockToolDefinitions.forEach((tool) => {
       runner.assertTrue(tool.name, 'Tool must have name');
       runner.assertTrue(tool.description, 'Tool must have description');
       runner.assertTrue(tool.input_schema, 'Tool must have input_schema');
@@ -153,7 +151,7 @@ function testToolDefinitions(runner: TestRunner) {
   });
 
   runner.test('Required parameters are properly marked', () => {
-    const navTool = mockToolDefinitions.find(t => t.name === 'navigate');
+    const navTool = mockToolDefinitions.find((t) => t.name === 'navigate');
     runner.assertTrue(navTool?.input_schema.required?.includes('url'), 'Navigate requires url');
   });
 }
@@ -167,7 +165,7 @@ function testAIProviderConfig(runner: TestRunner) {
       provider: 'openai',
       apiKey: 'sk-test123',
       model: 'gpt-4o',
-      systemPrompt: 'Test prompt'
+      systemPrompt: 'Test prompt',
     };
 
     runner.assertEqual(config.provider, 'openai');
@@ -179,7 +177,7 @@ function testAIProviderConfig(runner: TestRunner) {
       provider: 'anthropic',
       apiKey: 'test-key',
       model: 'claude-3-5-sonnet-20241022',
-      systemPrompt: 'Test prompt'
+      systemPrompt: 'Test prompt',
     };
 
     runner.assertEqual(config.provider, 'anthropic');
@@ -192,7 +190,7 @@ function testAIProviderConfig(runner: TestRunner) {
       apiKey: 'custom-key',
       model: 'custom-model',
       customEndpoint: 'https://api.example.com/v1',
-      systemPrompt: 'Test prompt'
+      systemPrompt: 'Test prompt',
     };
 
     runner.assertEqual(config.provider, 'custom');
@@ -211,10 +209,10 @@ function testToolSchemaConversion(runner: TestRunner) {
       input_schema: {
         type: 'object',
         properties: {
-          param1: { type: 'string' }
+          param1: { type: 'string' },
         },
-        required: ['param1']
-      }
+        required: ['param1'],
+      },
     };
 
     const openaiFormat = {
@@ -222,8 +220,8 @@ function testToolSchemaConversion(runner: TestRunner) {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: tool.input_schema
-      }
+        parameters: tool.input_schema,
+      },
     };
 
     runner.assertEqual(openaiFormat.type, 'function');
@@ -237,16 +235,16 @@ function testToolSchemaConversion(runner: TestRunner) {
       input_schema: {
         type: 'object',
         properties: {
-          param1: { type: 'string' }
+          param1: { type: 'string' },
         },
-        required: ['param1']
-      }
+        required: ['param1'],
+      },
     };
 
     const anthropicFormat = {
       name: tool.name,
       description: tool.description,
-      input_schema: tool.input_schema
+      input_schema: tool.input_schema,
     };
 
     runner.assertEqual(anthropicFormat.name, 'test_tool');
@@ -259,31 +257,17 @@ function testInputValidation(runner: TestRunner) {
   log('\n=== Testing Input Validation ===', 'info');
 
   runner.test('Validate URL format', () => {
-    const validUrls = [
-      'https://google.com',
-      'http://example.com',
-      'https://sub.domain.com/path'
-    ];
+    const validUrls = ['https://google.com', 'http://example.com', 'https://sub.domain.com/path'];
 
-    validUrls.forEach(url => {
-      runner.assertTrue(
-        url.startsWith('http://') || url.startsWith('https://'),
-        `${url} should be valid`
-      );
+    validUrls.forEach((url) => {
+      runner.assertTrue(url.startsWith('http://') || url.startsWith('https://'), `${url} should be valid`);
     });
   });
 
   runner.test('Validate CSS selectors', () => {
-    const validSelectors = [
-      '#id',
-      '.class',
-      'div',
-      'input[name="test"]',
-      '.class > div',
-      'div:nth-child(2)'
-    ];
+    const validSelectors = ['#id', '.class', 'div', 'input[name="test"]', '.class > div', 'div:nth-child(2)'];
 
-    validSelectors.forEach(selector => {
+    validSelectors.forEach((selector) => {
       runner.assertTrue(selector.length > 0, 'Selector should not be empty');
       runner.assertFalse(selector.includes('  '), 'Selector should not have double spaces');
     });
@@ -313,7 +297,7 @@ function testErrorHandling(runner: TestRunner) {
   runner.test('Invalid selector format detected', () => {
     const invalidSelectors: Array<string | null | undefined> = ['', '  ', null, undefined];
 
-    invalidSelectors.forEach(selector => {
+    invalidSelectors.forEach((selector) => {
       if (!selector || selector.trim() === '') {
         // This is correct behavior
         runner.assertTrue(true);
@@ -341,7 +325,7 @@ function testMessageSchema(runner: TestRunner) {
     const normalized = normalizeConversationHistory([
       { role: 'user', content: 'ok' },
       { role: 'invalid' as any, content: 'skip' },
-      null as any
+      null as any,
     ] as any);
     runner.assertEqual(normalized.length, 1);
     runner.assertEqual(normalized[0].role, 'user');
@@ -352,22 +336,29 @@ function testMessageSchema(runner: TestRunner) {
       {
         role: 'assistant',
         content: '',
-        toolCalls: [{ id: 'call_1', name: 'click', args: { selector: '#a' } }]
+        toolCalls: [{ id: 'call_1', name: 'click', args: { selector: '#a' } }],
       },
       {
         role: 'tool',
         content: { success: true },
-        toolCallId: 'call_1'
-      }
+        toolCallId: 'call_1',
+      },
     ];
     const provider = toProviderMessages(history);
     runner.assertTrue(Array.isArray(provider[0].tool_calls), 'tool_calls should be an array');
     runner.assertTrue(typeof provider[0].tool_calls?.[0]?.function?.arguments === 'string', 'tool args serialized');
     runner.assertEqual(provider[1].role, 'tool');
-    const toolContent = typeof provider[1].content === 'string'
-      ? provider[1].content
-      : JSON.stringify(provider[1].content);
+    const toolContent =
+      typeof provider[1].content === 'string' ? provider[1].content : JSON.stringify(provider[1].content);
     runner.assertTrue(toolContent.includes('success'));
+  });
+
+  runner.test('thinking metadata is preserved and not sent to provider', () => {
+    const history: Message[] = [{ role: 'assistant', content: 'Hello', thinking: 'Drafting response' }];
+    const normalized = normalizeConversationHistory(history);
+    runner.assertEqual(normalized[0]?.thinking, 'Drafting response');
+    const provider = toProviderMessages(normalized);
+    runner.assertFalse('thinking' in provider[0], 'Provider messages should not include thinking');
   });
 }
 

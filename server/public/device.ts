@@ -18,7 +18,9 @@ form?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!form) return;
   const formData = new FormData(form);
-  const userCode = String(formData.get('userCode') || '').trim().toUpperCase();
+  const userCode = String(formData.get('userCode') || '')
+    .trim()
+    .toUpperCase();
   const email = String(formData.get('email') || '').trim();
 
   if (!userCode || !email) {
@@ -30,7 +32,7 @@ form?.addEventListener('submit', async (event) => {
     const response = await fetch('/v1/auth/device-code/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userCode, email })
+      body: JSON.stringify({ userCode, email }),
     });
     const payload = await response.json();
     if (!response.ok) {

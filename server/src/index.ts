@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import cors from 'cors';
-import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
-import Stripe from 'stripe';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
+import express from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import Stripe from 'stripe';
 import { DataStore } from './store.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +20,9 @@ const CHECKOUT_SUCCESS_URL = process.env.CHECKOUT_SUCCESS_URL || '';
 const CHECKOUT_CANCEL_URL = process.env.CHECKOUT_CANCEL_URL || '';
 const PORTAL_RETURN_URL = process.env.PORTAL_RETURN_URL || '';
 const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, '../data/store.json');
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(item => item.trim()) : [];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((item) => item.trim())
+  : [];
 
 type User = {
   id: string;
@@ -38,15 +40,17 @@ await store.load();
 
 const app = express();
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Origin not allowed'));
-    }
-  }
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Origin not allowed'));
+      }
+    },
+  }),
+);
 app.use(express.json({ limit: '1mb' }));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
@@ -104,7 +108,7 @@ async function fetchSubscription(customerId: string) {
   const stripeClient = stripe!;
   const subs = await stripeClient.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
   if (!subs.data.length) return null;
-  const preferred = subs.data.find(sub => ['active', 'trialing', 'past_due'].includes(sub.status));
+  const preferred = subs.data.find((sub) => ['active', 'trialing', 'past_due'].includes(sub.status));
   return preferred || subs.data[0];
 }
 
@@ -147,7 +151,7 @@ async function buildBillingOverview(user: User) {
         brand: pm.card.brand,
         last4: pm.card.last4,
         expMonth: pm.card.exp_month,
-        expYear: pm.card.exp_year
+        expYear: pm.card.exp_year,
       };
     }
   } else {
@@ -158,20 +162,20 @@ async function buildBillingOverview(user: User) {
         brand: pm.card.brand,
         last4: pm.card.last4,
         expMonth: pm.card.exp_month,
-        expYear: pm.card.exp_year
+        expYear: pm.card.exp_year,
       };
     }
   }
 
   const invoiceList = await stripeClient.invoices.list({ customer: user.stripeCustomerId, limit: 5 });
-  const invoices = invoiceList.data.map(inv => ({
+  const invoices = invoiceList.data.map((inv) => ({
     id: inv.id,
     status: inv.status,
     amountDue: inv.amount_due,
     currency: inv.currency,
     hostedInvoiceUrl: inv.hosted_invoice_url,
     createdAt: inv.created ? new Date(inv.created * 1000).toISOString() : '',
-    periodEnd: inv.period_end ? new Date(inv.period_end * 1000).toISOString() : ''
+    periodEnd: inv.period_end ? new Date(inv.period_end * 1000).toISOString() : '',
   }));
 
   return { entitlement, paymentMethod, invoices };
@@ -200,7 +204,7 @@ app.post('/v1/auth/device-code', async (req, res, next) => {
       userCode: entry.userCode,
       verificationUrl,
       expiresIn: DEVICE_CODE_TTL_SEC,
-      interval: 5
+      interval: 5,
     });
   } catch (error) {
     next(error);
@@ -233,7 +237,7 @@ app.post('/v1/auth/device-code/verify', async (req, res, next) => {
     }
     const result = store.verifyDeviceCode({
       deviceCode,
-      sessionTtlMs: SESSION_TTL_SEC * 1000
+      sessionTtlMs: SESSION_TTL_SEC * 1000,
     });
     await store.save();
     if (result.status === 'pending') {
@@ -246,7 +250,7 @@ app.post('/v1/auth/device-code/verify', async (req, res, next) => {
       status: 'approved',
       accessToken: result.session.token,
       user: user ? { id: user.id, email: user.email } : null,
-      entitlement
+      entitlement,
     });
   } catch (error) {
     next(error);
@@ -264,14 +268,14 @@ app.post('/v1/auth/email', async (req, res, next) => {
     }
     const { user, session } = store.createSessionForEmail({
       email,
-      sessionTtlMs: SESSION_TTL_SEC * 1000
+      sessionTtlMs: SESSION_TTL_SEC * 1000,
     });
     await store.save();
     const entitlement = await buildEntitlement(user);
     res.json({
       accessToken: session.token,
       user: { id: user.id, email: user.email },
-      entitlement
+      entitlement,
     });
   } catch (error) {
     next(error);
@@ -304,7 +308,7 @@ app.post('/v1/billing/checkout', requireAuth, async (req, res, next) => {
       customer: customerId,
       line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
       success_url: returnUrl || CHECKOUT_SUCCESS_URL || `${resolveBaseUrl(req)}/public/success.html`,
-      cancel_url: returnUrl || CHECKOUT_CANCEL_URL || `${resolveBaseUrl(req)}/public/cancel.html`
+      cancel_url: returnUrl || CHECKOUT_CANCEL_URL || `${resolveBaseUrl(req)}/public/cancel.html`,
     });
     res.json({ url: session.url });
   } catch (error) {
@@ -320,7 +324,7 @@ app.post('/v1/billing/portal', requireAuth, async (req, res, next) => {
     const returnUrl = req.body?.returnUrl || PORTAL_RETURN_URL || `${resolveBaseUrl(req)}/public/success.html`;
     const portal = await stripeClient.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl
+      return_url: returnUrl,
     });
     res.json({ url: portal.url });
   } catch (error) {

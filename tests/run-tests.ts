@@ -15,7 +15,7 @@ const colors = {
   success: '\x1b[32m',
   error: '\x1b[31m',
   warning: '\x1b[33m',
-  reset: '\x1b[0m'
+  reset: '\x1b[0m',
 } as const;
 
 function log(message: string, type: keyof typeof colors = 'info') {
@@ -45,10 +45,10 @@ async function main() {
   let allPassed = true;
 
   // Run validation
-  allPassed = await runCommand('node dist/tests/validate-extension.js', 'Extension Validation') && allPassed;
+  allPassed = (await runCommand('node dist/tests/validate-extension.js', 'Extension Validation')) && allPassed;
 
   // Run unit tests
-  allPassed = await runCommand('node dist/tests/unit/run-unit-tests.js', 'Unit Tests') && allPassed;
+  allPassed = (await runCommand('node dist/tests/unit/run-unit-tests.js', 'Unit Tests')) && allPassed;
 
   // Summary
   log('\n' + '═'.repeat(40), 'info');

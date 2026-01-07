@@ -199,7 +199,7 @@ class SidePanelUI {
       exportSettingsBtn: document.getElementById('exportSettingsBtn'),
       importSettingsBtn: document.getElementById('importSettingsBtn'),
       importSettingsInput: document.getElementById('importSettingsInput'),
-      accessStatus: document.getElementById('accessStatus')
+      accessStatus: document.getElementById('accessStatus'),
     };
 
     this.conversationHistory = [];
@@ -232,7 +232,7 @@ class SidePanelUI {
     this.settingsOpen = false;
     this.accountClient = new AccountClient({
       baseUrl: '',
-      getAuthToken: () => this.authState?.accessToken || ''
+      getAuthToken: () => this.authState?.accessToken || '',
     });
     // Subagent tracking
     this.subagents = new Map(); // id -> { name, status, messages }
@@ -270,7 +270,9 @@ class SidePanelUI {
       this.startEmailAuth();
     });
     this.elements.authOpenBtn?.addEventListener('click', () => this.openAuthPage());
-    this.elements.authOpenSettingsBtn?.addEventListener('click', () => this.openAccountSettings({ focusAccountApi: true }));
+    this.elements.authOpenSettingsBtn?.addEventListener('click', () =>
+      this.openAccountSettings({ focusAccountApi: true }),
+    );
     this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
     this.elements.billingManageBtn?.addEventListener('click', () => this.manageBilling());
     this.elements.authLogoutBtn?.addEventListener('click', () => this.signOut());
@@ -520,7 +522,7 @@ class SidePanelUI {
       'activeConfig',
       'configs',
       'auxAgentProfiles',
-      'accountApiBase'
+      'accountApiBase',
     ]);
 
     const storedConfigs = settings.configs || {};
@@ -541,24 +543,27 @@ class SidePanelUI {
       autoScroll: true,
       confirmActions: true,
       saveHistory: true,
-      enableScreenshots: false
+      enableScreenshots: false,
     };
 
     this.configs = {
       default: { ...baseConfig, ...(storedConfigs.default || {}) },
-      ...storedConfigs
+      ...storedConfigs,
     };
     this.currentConfig = this.configs[settings.activeConfig] ? settings.activeConfig : 'default';
     this.auxAgentProfiles = settings.auxAgentProfiles || [];
 
     this.elements.visionBridge.value = settings.visionBridge !== undefined ? String(settings.visionBridge) : 'true';
     this.elements.visionProfile.value = settings.visionProfile || '';
-    this.elements.orchestratorToggle.value = settings.useOrchestrator !== undefined ? String(settings.useOrchestrator) : 'false';
+    this.elements.orchestratorToggle.value =
+      settings.useOrchestrator !== undefined ? String(settings.useOrchestrator) : 'false';
     this.elements.orchestratorProfile.value = settings.orchestratorProfile || '';
     this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
-    this.elements.streamResponses.value = settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
+    this.elements.streamResponses.value =
+      settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
     this.elements.autoScroll.value = settings.autoScroll !== undefined ? String(settings.autoScroll) : 'true';
-    this.elements.confirmActions.value = settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
+    this.elements.confirmActions.value =
+      settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
     this.elements.saveHistory.value = settings.saveHistory !== undefined ? String(settings.saveHistory) : 'true';
 
     const defaultPermissions = {
@@ -566,14 +571,15 @@ class SidePanelUI {
       interact: true,
       navigate: true,
       tabs: true,
-      screenshots: false
+      screenshots: false,
     };
     const toolPermissions = { ...defaultPermissions, ...(settings.toolPermissions || {}) };
     if (this.elements.permissionRead) this.elements.permissionRead.value = String(toolPermissions.read);
     if (this.elements.permissionInteract) this.elements.permissionInteract.value = String(toolPermissions.interact);
     if (this.elements.permissionNavigate) this.elements.permissionNavigate.value = String(toolPermissions.navigate);
     if (this.elements.permissionTabs) this.elements.permissionTabs.value = String(toolPermissions.tabs);
-    if (this.elements.permissionScreenshots) this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
+    if (this.elements.permissionScreenshots)
+      this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
     if (this.elements.allowedDomains) this.elements.allowedDomains.value = settings.allowedDomains || '';
     const fallbackAccountBase = this.getDefaultAccountApiBase();
     const accountApiBase = settings.accountApiBase || fallbackAccountBase;
@@ -606,9 +612,10 @@ class SidePanelUI {
   normalizeAuthState(state: Record<string, any> | null | undefined): AuthState {
     const normalized: AuthState = { status: 'signed_out' };
     if (!state || typeof state !== 'object') return normalized;
-    const status: AuthState['status'] = (state.status === 'signed_out' || state.status === 'device_code' || state.status === 'signed_in')
-      ? state.status
-      : 'signed_out';
+    const status: AuthState['status'] =
+      state.status === 'signed_out' || state.status === 'device_code' || state.status === 'signed_in'
+        ? state.status
+        : 'signed_out';
     normalized.status = status;
     if (state.code) normalized.code = String(state.code);
     if (state.deviceCode) normalized.deviceCode = String(state.deviceCode);
@@ -627,14 +634,14 @@ class SidePanelUI {
       active: Boolean(state.active),
       plan: state.plan ? String(state.plan) : 'none',
       renewsAt: state.renewsAt ? String(state.renewsAt) : '',
-      status: state.status ? String(state.status) : ''
+      status: state.status ? String(state.status) : '',
     };
   }
 
   async persistAccessState() {
     await chrome.storage.local.set({
       authState: this.authState,
-      entitlement: this.entitlement
+      entitlement: this.entitlement,
     });
   }
 
@@ -686,8 +693,10 @@ class SidePanelUI {
 
     if (this.elements.accountBtn) {
       const label = accountRequired
-        ? (state === 'auth' ? 'Signed out' : (this.authState?.email || 'Signed in'))
-        : (this.authState?.email || 'Account');
+        ? state === 'auth'
+          ? 'Signed out'
+          : this.authState?.email || 'Signed in'
+        : this.authState?.email || 'Account';
       this.elements.accountBtn.textContent = label;
     }
 
@@ -753,7 +762,7 @@ class SidePanelUI {
     try {
       const [account, billing] = await Promise.all([
         this.accountClient.getAccount(),
-        this.accountClient.getBillingOverview()
+        this.accountClient.getBillingOverview(),
       ]);
       if (account?.user?.email) {
         this.authState.email = account.user.email;
@@ -856,7 +865,7 @@ class SidePanelUI {
       this.authState = {
         status: 'signed_in',
         accessToken,
-        email: response?.user?.email || email
+        email: response?.user?.email || email,
       };
       this.entitlement = this.normalizeEntitlement(response?.entitlement || { active: false, plan: 'none' });
       await this.persistAccessState();
@@ -908,8 +917,9 @@ class SidePanelUI {
       this.updateStatus('Sign in required before opening billing', 'warning');
       return;
     }
-    this.accountClient.createPortal()
-      .then(response => {
+    this.accountClient
+      .createPortal()
+      .then((response) => {
         if (response?.url) {
           this.openExternalUrl(response.url);
           this.setAccessStatus('Billing portal opened in a new tab.', 'success');
@@ -919,7 +929,7 @@ class SidePanelUI {
           this.updateStatus('Billing portal unavailable', 'warning');
         }
       })
-      .catch(error => {
+      .catch((error) => {
         this.setAccessStatus(error.message || 'Unable to open billing portal', 'error');
         this.updateStatus(error.message || 'Unable to open billing portal', 'error');
       });
@@ -962,7 +972,7 @@ class SidePanelUI {
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currency.toUpperCase()
+        currency: currency.toUpperCase(),
       }).format(value);
     } catch (error) {
       return `${value.toFixed(2)} ${currency.toUpperCase()}`;
@@ -995,15 +1005,13 @@ class SidePanelUI {
       this.elements.accountRefreshBtn.disabled = !signedIn || !apiConfigured;
     }
 
-    const planLabel = this.entitlement?.active ? (this.entitlement?.plan || 'Active') : 'No plan';
+    const planLabel = this.entitlement?.active ? this.entitlement?.plan || 'Active' : 'No plan';
     if (this.elements.accountPlanBadge) {
       this.elements.accountPlanBadge.textContent = planLabel;
     }
     if (this.elements.accountPlanStatus) {
       const renewsAt = this.entitlement?.renewsAt ? ` · Renews ${this.formatShortDate(this.entitlement.renewsAt)}` : '';
-      this.elements.accountPlanStatus.textContent = this.entitlement?.active
-        ? `Active${renewsAt}`
-        : 'No active plan';
+      this.elements.accountPlanStatus.textContent = this.entitlement?.active ? `Active${renewsAt}` : 'No active plan';
     }
 
     if (this.elements.accountPlanDetails) {
@@ -1023,7 +1031,8 @@ class SidePanelUI {
         const exp = payment?.expMonth ? ` · exp ${payment.expMonth}/${payment.expYear}` : '';
         this.elements.accountBillingSummary.textContent = `${payment.brand.toUpperCase()} •••• ${payment.last4}${exp}`;
       } else if (!apiConfigured) {
-        this.elements.accountBillingSummary.textContent = 'Billing data unavailable until the account API is configured.';
+        this.elements.accountBillingSummary.textContent =
+          'Billing data unavailable until the account API is configured.';
       } else {
         this.elements.accountBillingSummary.textContent = 'No payment method on file yet.';
       }
@@ -1032,9 +1041,10 @@ class SidePanelUI {
       const invoices = Array.isArray(billing?.invoices) ? billing.invoices : [];
       this.elements.accountInvoices.innerHTML = '';
       if (!invoices.length) {
-        this.elements.accountInvoices.innerHTML = '<div class="account-list-item"><span class="muted">No invoices yet.</span></div>';
+        this.elements.accountInvoices.innerHTML =
+          '<div class="account-list-item"><span class="muted">No invoices yet.</span></div>';
       } else {
-        invoices.slice(0, 4).forEach(invoice => {
+        invoices.slice(0, 4).forEach((invoice) => {
           const item = document.createElement('div');
           item.className = 'account-list-item';
           const amount = this.formatCurrency(invoice.amountDue, invoice.currency);
@@ -1066,7 +1076,8 @@ class SidePanelUI {
       const configs = Object.entries(this.configs || {});
       this.elements.accountConfigs.innerHTML = '';
       if (!configs.length) {
-        this.elements.accountConfigs.innerHTML = '<div class="account-list-item"><span class="muted">No profiles saved.</span></div>';
+        this.elements.accountConfigs.innerHTML =
+          '<div class="account-list-item"><span class="muted">No profiles saved.</span></div>';
       } else {
         configs.slice(0, 4).forEach(([name, config]) => {
           const item = document.createElement('div');
@@ -1088,10 +1099,11 @@ class SidePanelUI {
     const { chatSessions = [] } = await chrome.storage.local.get(['chatSessions']);
     this.elements.accountHistory.innerHTML = '';
     if (!chatSessions.length) {
-      this.elements.accountHistory.innerHTML = '<div class="account-list-item"><span class="muted">No saved chats yet.</span></div>';
+      this.elements.accountHistory.innerHTML =
+        '<div class="account-list-item"><span class="muted">No saved chats yet.</span></div>';
       return;
     }
-    chatSessions.slice(0, 4).forEach(session => {
+    chatSessions.slice(0, 4).forEach((session) => {
       const item = document.createElement('div');
       item.className = 'account-list-item';
       const date = new Date(session.updatedAt || session.startedAt || Date.now());
@@ -1137,13 +1149,13 @@ class SidePanelUI {
         'saveHistory',
         'toolPermissions',
         'allowedDomains',
-        'accountApiBase'
+        'accountApiBase',
       ];
       const settings = await chrome.storage.local.get(keys);
       const payload = {
         ...settings,
         exportedAt: new Date().toISOString(),
-        exportVersion: 1
+        exportVersion: 1,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1181,7 +1193,7 @@ class SidePanelUI {
         'saveHistory',
         'toolPermissions',
         'allowedDomains',
-        'accountApiBase'
+        'accountApiBase',
       ];
       allowedKeys.forEach((key) => {
         if (data[key] !== undefined) {
@@ -1210,10 +1222,10 @@ class SidePanelUI {
       model: this.elements.model.value,
       customEndpoint: this.elements.customEndpoint.value,
       systemPrompt: this.elements.systemPrompt.value,
-      temperature: parseFloat(this.elements.temperature.value) || 0.7,
-      maxTokens: parseInt(this.elements.maxTokens.value) || 4096,
-      contextLimit: parseInt(this.elements.contextLimit.value) || 200000,
-      timeout: parseInt(this.elements.timeout.value) || 30000,
+      temperature: Number.parseFloat(this.elements.temperature.value) || 0.7,
+      maxTokens: Number.parseInt(this.elements.maxTokens.value) || 4096,
+      contextLimit: Number.parseInt(this.elements.contextLimit.value) || 200000,
+      timeout: Number.parseInt(this.elements.timeout.value) || 30000,
       enableScreenshots: this.elements.enableScreenshots.value === 'true',
       sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
       screenshotQuality: this.elements.screenshotQuality.value || 'high',
@@ -1221,7 +1233,7 @@ class SidePanelUI {
       streamResponses: this.elements.streamResponses.value === 'true',
       autoScroll: this.elements.autoScroll.value === 'true',
       confirmActions: this.elements.confirmActions.value === 'true',
-      saveHistory: this.elements.saveHistory.value === 'true'
+      saveHistory: this.elements.saveHistory.value === 'true',
     };
   }
 
@@ -1231,7 +1243,7 @@ class SidePanelUI {
       interact: this.elements.permissionInteract?.value === 'true',
       navigate: this.elements.permissionNavigate?.value === 'true',
       tabs: this.elements.permissionTabs?.value === 'true',
-      screenshots: this.elements.permissionScreenshots?.value === 'true'
+      screenshots: this.elements.permissionScreenshots?.value === 'true',
     };
   }
 
@@ -1264,7 +1276,7 @@ class SidePanelUI {
       accountApiBase: this.elements.accountApiBase?.value?.trim() || '',
       auxAgentProfiles: this.auxAgentProfiles,
       activeConfig: this.currentConfig,
-      configs: this.configs
+      configs: this.configs,
     };
     await chrome.storage.local.set(payload);
     this.accountClient.setBaseUrl(payload.accountApiBase);
@@ -1356,13 +1368,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       model: this.elements.model.value,
       customEndpoint: this.elements.customEndpoint.value,
       systemPrompt: this.elements.systemPrompt.value,
-      temperature: parseFloat(this.elements.temperature.value),
-      maxTokens: parseInt(this.elements.maxTokens.value),
-      timeout: parseInt(this.elements.timeout.value),
+      temperature: Number.parseFloat(this.elements.temperature.value),
+      maxTokens: Number.parseInt(this.elements.maxTokens.value),
+      timeout: Number.parseInt(this.elements.timeout.value),
       sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
       screenshotQuality: this.elements.screenshotQuality.value,
       streamResponses: this.elements.streamResponses.value === 'true',
-      enableScreenshots: this.elements.enableScreenshots.value === 'true'
+      enableScreenshots: this.elements.enableScreenshots.value === 'true',
     };
 
     this.refreshConfigDropdown();
@@ -1401,7 +1413,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (this.elements.generalProfileSelect) {
       this.elements.generalProfileSelect.innerHTML = '';
     }
-    Object.keys(this.configs).forEach(name => {
+    Object.keys(this.configs).forEach((name) => {
       const option = document.createElement('option');
       option.value = name;
       option.textContent = name;
@@ -1428,10 +1440,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   refreshProfileSelectors() {
     const names = Object.keys(this.configs);
     const selects = [this.elements.orchestratorProfile, this.elements.visionProfile];
-    selects.forEach(select => {
+    selects.forEach((select) => {
       if (!select) return;
-      select.innerHTML = '<option value=\"\">Use active config</option>';
-      names.forEach(name => {
+      select.innerHTML = '<option value="">Use active config</option>';
+      names.forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
@@ -1450,18 +1462,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.agentGrid.innerHTML = '<div class="history-empty">No profiles yet.</div>';
       return;
     }
-    configs.forEach(name => {
+    configs.forEach((name) => {
       const card = document.createElement('div');
       card.className = 'agent-card';
       if (name === this.profileEditorTarget) {
         card.classList.add('editing');
       }
       card.dataset.profile = name;
-      const rolePills = ['main', 'vision', 'orchestrator', 'aux'].map(role => {
-        const isActive = this.isProfileActiveForRole(name, role, currentVision, currentOrchestrator);
-        const label = this.getRoleLabel(role);
-        return `<span class="role-pill ${isActive ? 'active' : ''} ${role}-pill" data-role="${role}" data-profile="${name}">${label}</span>`;
-      }).join('');
+      const rolePills = ['main', 'vision', 'orchestrator', 'aux']
+        .map((role) => {
+          const isActive = this.isProfileActiveForRole(name, role, currentVision, currentOrchestrator);
+          const label = this.getRoleLabel(role);
+          return `<span class="role-pill ${isActive ? 'active' : ''} ${role}-pill" data-role="${role}" data-profile="${name}">${label}</span>`;
+        })
+        .join('');
       const config = this.configs[name] || {};
       card.innerHTML = `
         <div>
@@ -1476,10 +1490,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   getRoleLabel(role) {
     switch (role) {
-      case 'main': return 'Main';
-      case 'vision': return 'Vision';
-      case 'orchestrator': return 'Orchestrator';
-      default: return 'Team';
+      case 'main':
+        return 'Main';
+      case 'vision':
+        return 'Vision';
+      case 'orchestrator':
+        return 'Orchestrator';
+      default:
+        return 'Team';
     }
   }
 
@@ -1557,13 +1575,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       apiKey: this.elements.profileEditorApiKey.value,
       model: this.elements.profileEditorModel.value,
       customEndpoint: this.elements.profileEditorEndpoint.value,
-      temperature: parseFloat(this.elements.profileEditorTemperature.value) || 0.7,
-      maxTokens: parseInt(this.elements.profileEditorMaxTokens.value) || 2048,
-      timeout: parseInt(this.elements.profileEditorTimeout.value) || 30000,
+      temperature: Number.parseFloat(this.elements.profileEditorTemperature.value) || 0.7,
+      maxTokens: Number.parseInt(this.elements.profileEditorMaxTokens.value) || 2048,
+      timeout: Number.parseInt(this.elements.profileEditorTimeout.value) || 30000,
       enableScreenshots: this.elements.profileEditorEnableScreenshots.value === 'true',
       sendScreenshotsAsImages: this.elements.profileEditorSendScreenshots.value === 'true',
       screenshotQuality: this.elements.profileEditorScreenshotQuality.value || 'high',
-      systemPrompt: this.elements.profileEditorPrompt.value || this.getDefaultSystemPrompt()
+      systemPrompt: this.elements.profileEditorPrompt.value || this.getDefaultSystemPrompt(),
     };
   }
 
@@ -1662,7 +1680,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         type: 'user_message',
         message: fullMessage,
         conversationHistory: this.conversationHistory,
-        selectedTabs: Array.from(this.selectedTabs.values())
+        selectedTabs: Array.from(this.selectedTabs.values()),
       });
       this.persistHistory();
     } catch (error) {
@@ -1739,7 +1757,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     // Add to conversation history
-    const assistantEntry = createMessage({ role: 'assistant', content });
+    const assistantEntry = createMessage({ role: 'assistant', content, thinking });
     if (assistantEntry) {
       this.conversationHistory.push(assistantEntry);
     }
@@ -1749,17 +1767,24 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     let html = `<div class="message-header">Assistant</div>`;
 
-    if (thinking && this.elements.showThinking.value === 'true') {
+    const showThinking = this.elements.showThinking.value === 'true';
+    if (thinking) {
       const cleanedThinking = this.deduplicateThinking(thinking);
       html += `
-        <div class="thinking-block">
-          <div class="thinking-header">
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-            Thinking
-          </div>
-          <div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>
+        <div class="thinking-block${showThinking ? '' : ' thinking-hidden'}">
+          <button class="thinking-header" type="button" ${showThinking ? 'aria-expanded="true"' : 'aria-disabled="true" tabindex="-1"'}>
+            ${
+              showThinking
+                ? `
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            `
+                : ''
+            }
+            ${showThinking ? 'Thinking' : 'Thinking available'}
+          </button>
+          ${showThinking ? `<div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>` : ''}
         </div>
       `;
     }
@@ -1777,7 +1802,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (thinkingHeader) {
       thinkingHeader.addEventListener('click', () => {
         const block = thinkingHeader.closest('.thinking-block');
-        block?.classList.toggle('collapsed');
+        if (!block || block.classList.contains('thinking-hidden')) return;
+        block.classList.toggle('collapsed');
+        const expanded = !block.classList.contains('collapsed');
+        thinkingHeader.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       });
     }
 
@@ -1808,11 +1836,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     const applyInline = (value = '') => {
       let html = escape(value);
-      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) =>
-        `<img alt="${escape(alt)}" src="${escapeAttr(url)}">`
+      html = html.replace(
+        /!\[([^\]]*)\]\(([^)]+)\)/g,
+        (_, alt, url) => `<img alt="${escape(alt)}" src="${escapeAttr(url)}">`,
       );
-      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) =>
-        `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+      html = html.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        (_, label, url) => `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`,
       );
       html = html.replace(/`([^`]+)`/g, (_, code) => `<code>${escape(code)}</code>`);
       html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -1959,7 +1989,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.chatMessages.appendChild(container);
     this.streamingState = {
       container,
-      textEl: container.querySelector('.streaming-text')
+      textEl: container.querySelector('.streaming-text'),
     };
     this.scrollToBottom();
   }
@@ -2054,7 +2084,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       details,
       statusEl: details.querySelector('.tool-event-status'),
       resultEl: details.querySelector('.tool-event-result-pre'),
-      previewEl: details.querySelector('.tool-event-preview')
+      previewEl: details.querySelector('.tool-event-preview'),
     };
   }
 
@@ -2071,9 +2101,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     if (entry.previewEl) {
-      const preview = isError
-        ? (result?.error || 'Tool failed')
-        : (result?.message || result?.summary || '');
+      const preview = isError ? result?.error || 'Tool failed' : result?.message || result?.summary || '';
       if (preview) {
         entry.previewEl.textContent = this.truncateText(String(preview), 120);
       }
@@ -2163,7 +2191,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!id || !this.timelineItems.has(id)) return;
     const row = this.timelineItems.get(id);
     const statusEl = row.querySelector('.tool-timeline-status');
-    const start = parseInt(row.dataset.start || '0', 10);
+    const start = Number.parseInt(row.dataset.start || '0', 10);
     const dur = start ? Date.now() - start : 0;
     const isError = result && (result.error || result.success === false);
 
@@ -2309,11 +2337,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       startedAt: this.sessionStartedAt,
       updatedAt: Date.now(),
       title: this.firstUserMessage || 'Session',
-      transcript: this.conversationHistory.slice(-200)
+      transcript: this.conversationHistory.slice(-200),
     };
     const existing = await chrome.storage.local.get(['chatSessions']);
     const sessions = existing.chatSessions || [];
-    const filtered = sessions.filter(s => s.id !== entry.id);
+    const filtered = sessions.filter((s) => s.id !== entry.id);
     filtered.unshift(entry);
     const trimmed = filtered.slice(0, 20);
     await chrome.storage.local.set({ chatSessions: trimmed });
@@ -2331,16 +2359,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     } else {
       // Estimate tokens from conversation history
       const joined = this.conversationHistory
-        .map(msg => {
+        .map((msg) => {
           if (!msg) return '';
           if (typeof msg.content === 'string') return msg.content;
           if (Array.isArray(msg.content)) {
-            return msg.content.map(p => {
-              if (typeof p === 'string') return p;
-              if (p?.text) return p.text;
-              if (p?.content) return JSON.stringify(p.content);
-              return '';
-            }).join('');
+            return msg.content
+              .map((p) => {
+                if (typeof p === 'string') return p;
+                if (p?.text) return p.text;
+                if (p?.content) return JSON.stringify(p.content);
+                return '';
+              })
+              .join('');
           }
           return '';
         })
@@ -2362,7 +2392,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   getConfiguredContextLimit() {
     // Use configured value from settings
     const active = this.configs[this.currentConfig] || {};
-    const configured = active.contextLimit || parseInt(this.elements.contextLimit?.value) || 200000;
+    const configured = active.contextLimit || Number.parseInt(this.elements.contextLimit?.value) || 200000;
     return configured;
   }
 
@@ -2382,7 +2412,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.historyItems.innerHTML = '<div class="history-empty">No saved chats yet.</div>';
       return;
     }
-    chatSessions.forEach(session => {
+    chatSessions.forEach((session) => {
       const item = document.createElement('div');
       item.className = 'history-item';
       const date = new Date(session.updatedAt || session.startedAt || Date.now());
@@ -2407,7 +2437,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   renderConversationHistory() {
     this.elements.chatMessages.innerHTML = '';
-    this.conversationHistory.forEach(msg => {
+    this.conversationHistory.forEach((msg) => {
       if (msg.role === 'user') {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message user';
@@ -2418,20 +2448,28 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.elements.chatMessages.appendChild(messageDiv);
       } else if (msg.role === 'assistant') {
         const rawContent = typeof msg.content === 'string' ? msg.content : this.safeJsonStringify(msg.content);
-        const parsed = this.extractThinking(rawContent, null);
+        const parsed = this.extractThinking(rawContent, msg.thinking || null);
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
         let html = `<div class="message-header">Assistant</div>`;
-        if (parsed.thinking && this.elements.showThinking.value === 'true') {
+        const showThinking = this.elements.showThinking.value === 'true';
+        if (parsed.thinking) {
+          const cleanedThinking = this.deduplicateThinking(parsed.thinking);
           html += `
-            <div class="thinking-block">
-              <div class="thinking-header">
-                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-                Thinking
-              </div>
-              <div class="thinking-content">${this.escapeHtml(parsed.thinking)}</div>
+            <div class="thinking-block${showThinking ? '' : ' thinking-hidden'}">
+              <button class="thinking-header" type="button" ${showThinking ? 'aria-expanded="true"' : 'aria-disabled="true" tabindex="-1"'}>
+                ${
+                  showThinking
+                    ? `
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                `
+                    : ''
+                }
+                ${showThinking ? 'Thinking' : 'Thinking available'}
+              </button>
+              ${showThinking ? `<div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>` : ''}
             </div>
           `;
         }
@@ -2445,7 +2483,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         if (thinkingHeader) {
           thinkingHeader.addEventListener('click', () => {
             const block = thinkingHeader.closest('.thinking-block');
-            block?.classList.toggle('collapsed');
+            if (!block || block.classList.contains('thinking-hidden')) return;
+            block.classList.toggle('collapsed');
+            const expanded = !block.classList.contains('collapsed');
+            thinkingHeader.setAttribute('aria-expanded', expanded ? 'true' : 'false');
           });
         }
 
@@ -2505,7 +2546,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       name: name || `Sub-${this.subagents.size + 1}`,
       tasks,
       status: 'running',
-      messages: []
+      messages: [],
     });
     this.renderAgentNav();
   }
@@ -2538,7 +2579,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     `;
 
     this.subagents.forEach((agent, id) => {
-      const statusClass = agent.status === 'running' ? 'running' : (agent.status === 'completed' ? 'completed' : 'error');
+      const statusClass = agent.status === 'running' ? 'running' : agent.status === 'completed' ? 'completed' : 'error';
       html += `
         <div class="agent-nav-item sub-agent ${statusClass} ${this.activeAgent === id ? 'active' : ''}" data-agent="${id}">
           <span class="agent-status"></span>
@@ -2550,7 +2591,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.agentNav.innerHTML = html;
 
     // Add click handlers
-    this.elements.agentNav.querySelectorAll('.agent-nav-item').forEach(item => {
+    this.elements.agentNav.querySelectorAll('.agent-nav-item').forEach((item) => {
       item.addEventListener('click', () => {
         const agentId = item.dataset.agent;
         this.switchAgent(agentId);
@@ -2577,7 +2618,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const provider = this.elements.provider?.value;
     const hasVision = (provider && provider !== 'custom') || visionProfile;
     const controls = [this.elements.sendScreenshotsAsImages, this.elements.screenshotQuality];
-    controls.forEach(ctrl => {
+    controls.forEach((ctrl) => {
       if (!ctrl) return;
       ctrl.disabled = !wantsScreens;
       ctrl.parentElement?.classList.toggle('disabled', !wantsScreens);
@@ -2597,9 +2638,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     for (const file of files) {
       try {
         const text = await file.text();
-        const trimmed = text.length > maxPerFile
-          ? text.slice(0, maxPerFile) + '\n… (truncated)'
-          : text;
+        const trimmed = text.length > maxPerFile ? text.slice(0, maxPerFile) + '\n… (truncated)' : text;
         const prefix = `\n\n[File: ${file.name}]\n`;
         this.elements.userInput.value += prefix + trimmed;
       } catch (e) {
@@ -2625,31 +2664,35 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   async loadTabs() {
-    const [tabs, groups] = await Promise.all([
-      chrome.tabs.query({}),
-      chrome.tabGroups.query({})
-    ]);
-    this.tabGroupInfo = new Map(groups.map(group => [group.id, group]));
+    const [tabs, groups] = await Promise.all([chrome.tabs.query({}), chrome.tabGroups.query({})]);
+    this.tabGroupInfo = new Map(groups.map((group) => [group.id, group]));
     this.elements.tabList.innerHTML = '';
 
     const groupedTabs = new Map<number, chrome.tabs.Tab[]>();
     const ungroupedTabs: chrome.tabs.Tab[] = [];
 
-    tabs.filter(tab => typeof tab.id === 'number').forEach(tab => {
-      if (tab.groupId !== undefined && tab.groupId >= 0) {
-        if (!groupedTabs.has(tab.groupId)) groupedTabs.set(tab.groupId, []);
-        const bucket = groupedTabs.get(tab.groupId);
-        if (bucket) bucket.push(tab);
-      } else {
-        ungroupedTabs.push(tab);
-      }
-    });
+    tabs
+      .filter((tab) => typeof tab.id === 'number')
+      .forEach((tab) => {
+        if (tab.groupId !== undefined && tab.groupId >= 0) {
+          if (!groupedTabs.has(tab.groupId)) groupedTabs.set(tab.groupId, []);
+          const bucket = groupedTabs.get(tab.groupId);
+          if (bucket) bucket.push(tab);
+        } else {
+          ungroupedTabs.push(tab);
+        }
+      });
 
-    const renderGroup = (label: string, color: string, groupTabs: chrome.tabs.Tab[], groupId: string | number = 'ungrouped') => {
+    const renderGroup = (
+      label: string,
+      color: string,
+      groupTabs: chrome.tabs.Tab[],
+      groupId: string | number = 'ungrouped',
+    ) => {
       if (!groupTabs.length) return;
       const section = document.createElement('div');
       section.className = 'tab-group';
-      const allSelected = groupTabs.every(tab => typeof tab.id === 'number' && this.selectedTabs.has(tab.id));
+      const allSelected = groupTabs.every((tab) => typeof tab.id === 'number' && this.selectedTabs.has(tab.id));
       section.innerHTML = `
         <div class="tab-group-header" style="--group-color: ${color}">
           <div class="tab-group-label">${this.escapeHtml(label)}</div>
@@ -2663,7 +2706,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.toggleGroupSelection(groupTabs, !allSelected);
       });
 
-      groupTabs.forEach(tab => {
+      groupTabs.forEach((tab) => {
         const tabId = tab.id;
         const isSelected = typeof tabId === 'number' && this.selectedTabs.has(tabId);
         const item = document.createElement('div');
@@ -2691,7 +2734,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   toggleGroupSelection(groupTabs, shouldSelect) {
-    groupTabs.forEach(tab => {
+    groupTabs.forEach((tab) => {
       if (typeof tab.id !== 'number') return;
       if (shouldSelect) {
         this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
@@ -2727,8 +2770,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       url: tab.url,
       windowId: tab.windowId,
       groupId: tab.groupId,
-      groupTitle: hasGroup ? (group?.title || `Group ${tab.groupId}`) : 'Ungrouped',
-      groupColor: hasGroup ? this.mapGroupColor(group?.color) : 'var(--text-tertiary)'
+      groupTitle: hasGroup ? group?.title || `Group ${tab.groupId}` : 'Ungrouped',
+      groupColor: hasGroup ? this.mapGroupColor(group?.color) : 'var(--text-tertiary)',
     };
   }
 
@@ -2741,14 +2784,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.selectedTabsBar.classList.remove('hidden');
     this.elements.selectedTabsBar.innerHTML = '';
     const grouped = new Map<string, Array<any>>();
-    this.selectedTabs.forEach(tab => {
+    this.selectedTabs.forEach((tab) => {
       const key = tab.groupId && tab.groupId >= 0 ? `group-${tab.groupId}` : 'ungrouped';
       if (!grouped.has(key)) grouped.set(key, []);
       const bucket = grouped.get(key);
       if (bucket) bucket.push(tab);
     });
 
-    grouped.forEach(tabs => {
+    grouped.forEach((tabs) => {
       const groupTitle = tabs[0]?.groupTitle || 'Ungrouped';
       const groupLabel = this.truncateText(groupTitle, 18) || 'Ungrouped';
       const groupColor = tabs[0]?.groupColor || 'var(--text-tertiary)';
@@ -2767,7 +2810,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.elements.selectedTabsBar.appendChild(groupWrap);
         return;
       }
-      tabs.forEach(tab => {
+      tabs.forEach((tab) => {
         const chip = document.createElement('div');
         chip.className = 'selected-tab-chip';
         chip.innerHTML = `
@@ -2812,7 +2855,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       pink: '#f06292',
       purple: '#a142f4',
       cyan: '#24c1e0',
-      orange: '#f29900'
+      orange: '#f29900',
     };
     return palette[colorName] || 'var(--text-tertiary)';
   }
@@ -2821,7 +2864,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (this.selectedTabs.size === 0) return '';
 
     let context = '\n\n[Context from selected tabs:]\n';
-    this.selectedTabs.forEach(tab => {
+    this.selectedTabs.forEach((tab) => {
       const tabTitle = tab.title || 'Untitled';
       context += `- Tab [${tab.id}] "${tabTitle}": ${tab.url}\n`;
     });
