@@ -1661,6 +1661,12 @@ textarea:disabled {
   font-size: 12px;
 }
 
+.access-form {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
 .access-banner {
   margin-top: 14px;
   padding: 12px;

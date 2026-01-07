@@ -72,6 +72,13 @@ export class AccountClient {
     });
   }
 
+  signInWithEmail(email: string): Promise<any> {
+    return this.request('/v1/auth/email', {
+      method: 'POST',
+      body: { email }
+    });
+  }
+
   getAccount(): Promise<any> {
     return this.request('/v1/account', { auth: true });
   }

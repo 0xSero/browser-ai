@@ -1,6 +1,6 @@
 # Billing & Auth Service
 
-Parchi ships with an optional Stripe-backed billing/auth service under `server/`. The extension connects to this service to issue device codes, verify sign-in, start Stripe Checkout, and open the customer portal.
+Parchi ships with an optional Stripe-backed billing/auth service under `server/`. The extension connects to this service to sign users in with email, start Stripe Checkout, and open the customer portal.
 
 ## Run the service locally
 
@@ -21,7 +21,7 @@ Set the following environment variables before starting the service:
 - `PORTAL_RETURN_URL`: Customer portal return URL.
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS.
 - `DATA_PATH`: Optional file path for local data storage.
-- `DEVICE_CODE_TTL_SEC`: Optional device code TTL in seconds (default 600).
+- `DEVICE_CODE_TTL_SEC`: Optional device code TTL in seconds (default 600) if you keep legacy device-code flows enabled.
 - `SESSION_TTL_SEC`: Optional session TTL in seconds (default 7 days).
 
 You can place these in `server/.env` for local development (the server loads dotenv automatically).
@@ -48,7 +48,7 @@ stripe prices create --product prod_XXXXXXXX --unit-amount 2000 --currency usd -
 
 1. Open the extension settings.
 2. Set **Account API base URL** to the service URL (for local dev: `http://localhost:8787`).
-3. Use the **Account** panel to generate a device code, open the verification page, and confirm the device.
+3. Use the **Account** panel to sign in with your email.
 
 ## Account portal
 
@@ -56,6 +56,6 @@ The billing service also serves a lightweight account portal at `/portal`. Use i
 
 ## Notes
 
-- The service stores device codes and sessions in a local JSON file by default. Replace with a real database in production.
+- The service stores sessions (and any device codes, if enabled) in a local JSON file by default. Replace with a real database in production.
 - Stripe webhooks are not included; add them if you need real-time subscription status updates.
 - The `/v1/billing/overview` endpoint returns entitlement, payment method summary, and recent invoices for the account UI.

@@ -85,13 +85,11 @@ class SidePanelUI {
       accountPanel: document.getElementById('accountPanel'),
       authSubtitle: document.getElementById('authSubtitle'),
       accessConfigPrompt: document.getElementById('accessConfigPrompt'),
+      authForm: document.getElementById('authForm'),
+      authEmail: document.getElementById('authEmail'),
       authStartBtn: document.getElementById('authStartBtn'),
-      authVerifyBtn: document.getElementById('authVerifyBtn'),
-      authCopyBtn: document.getElementById('authCopyBtn'),
       authOpenBtn: document.getElementById('authOpenBtn'),
       authOpenSettingsBtn: document.getElementById('authOpenSettingsBtn'),
-      authCodeValue: document.getElementById('authCodeValue'),
-      authCodeWrap: document.getElementById('authCodeWrap'),
       billingStartBtn: document.getElementById('billingStartBtn'),
       billingManageBtn: document.getElementById('billingManageBtn'),
       authLogoutBtn: document.getElementById('authLogoutBtn'),
@@ -263,9 +261,14 @@ class SidePanelUI {
       this.toggleAccessPanel();
     });
 
-    this.elements.authStartBtn?.addEventListener('click', () => this.startAuthFlow());
-    this.elements.authVerifyBtn?.addEventListener('click', () => this.verifyAuthFlow());
-    this.elements.authCopyBtn?.addEventListener('click', () => this.copyAuthCode());
+    this.elements.authStartBtn?.addEventListener('click', (event) => {
+      event?.preventDefault?.();
+      this.startEmailAuth();
+    });
+    this.elements.authForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.startEmailAuth();
+    });
     this.elements.authOpenBtn?.addEventListener('click', () => this.openAuthPage());
     this.elements.authOpenSettingsBtn?.addEventListener('click', () => this.openAccountSettings({ focusAccountApi: true }));
     this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
@@ -649,14 +652,8 @@ class SidePanelUI {
       }
     }
 
-    if (this.elements.authCodeWrap) {
-      this.elements.authCodeWrap.classList.toggle('hidden', !this.authState?.code);
-    }
-    if (this.elements.authCodeValue) {
-      this.elements.authCodeValue.textContent = this.authState?.code || '----';
-    }
     if (this.elements.authOpenBtn) {
-      const canOpenAccount = Boolean(this.authState?.verificationUrl || this.accountClient?.baseUrl);
+      const canOpenAccount = Boolean(this.accountClient?.baseUrl);
       this.elements.authOpenBtn.disabled = !canOpenAccount;
     }
     if (this.elements.planStatus) {
@@ -702,8 +699,8 @@ class SidePanelUI {
     }
     if (this.elements.authSubtitle) {
       this.elements.authSubtitle.textContent = apiConfigured
-        ? 'Link this browser with a one-time device code to start using Parchi.'
-        : 'Set the account API base URL in Settings before starting device sign-in.';
+        ? 'Sign in with your email to unlock billing and sync.'
+        : 'Set the account API base URL in Settings before signing in.';
     }
   }
 
@@ -812,88 +809,50 @@ class SidePanelUI {
     this.switchView('history');
   }
 
-  generateDeviceCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-      if (i === 3) code += '-';
-    }
-    return code;
-  }
-
-  async startAuthFlow() {
+  async startEmailAuth() {
     if (!this.ensureAccountApiBase()) return;
-    this.setAccessStatus('');
-    try {
-      const response = await this.accountClient.startDeviceCode();
-      const expiresIn = Number(response?.expiresIn || 600) * 1000;
-      this.authState = {
-        status: 'device_code',
-        code: response?.userCode || response?.code || this.generateDeviceCode(),
-        deviceCode: response?.deviceCode || '',
-        verificationUrl: response?.verificationUrl || '',
-        expiresAt: Date.now() + (expiresIn || 10 * 60 * 1000)
-      };
-      await this.persistAccessState();
-      this.updateAccessUI();
-      this.updateStatus('Use the device code to sign in', 'active');
-      this.setAccessStatus('Device code ready. Confirm on the account page.', 'success');
-      if (this.authState.verificationUrl) {
-        this.openExternalUrl(this.authState.verificationUrl);
-      }
-    } catch (error) {
-      this.setAccessStatus(error.message || 'Unable to start sign-in', 'error');
-      this.updateStatus(error.message || 'Unable to start sign-in', 'error');
-    }
-  }
-
-  async verifyAuthFlow() {
-    if (!this.ensureAccountApiBase()) return;
-    if (!this.authState?.deviceCode) {
-      this.setAccessStatus('Generate a device code first.', 'warning');
-      this.updateStatus('Generate a device code first.', 'warning');
+    const email = (this.elements.authEmail?.value || '').trim();
+    if (!email) {
+      this.setAccessStatus('Enter your email to sign in.', 'warning');
+      this.updateStatus('Email is required to sign in', 'warning');
+      this.elements.authEmail?.focus();
       return;
     }
+    if (this.elements.authStartBtn) {
+      this.elements.authStartBtn.disabled = true;
+    }
+    if (this.elements.authEmail) {
+      this.elements.authEmail.disabled = true;
+    }
+    this.setAccessStatus('Signing you in…');
     try {
-      const response = await this.accountClient.verifyDeviceCode(this.authState.deviceCode);
-      if (response?.status === 'pending') {
-        this.setAccessStatus('Waiting for confirmation…', 'warning');
-        this.updateStatus('Waiting for confirmation…', 'active');
-        return;
-      }
+      const response = await this.accountClient.signInWithEmail(email);
       const accessToken = response?.accessToken || response?.token;
       if (!accessToken) {
-        this.setAccessStatus('Sign-in not confirmed yet.', 'warning');
-        this.updateStatus('Sign-in not confirmed yet.', 'warning');
-        return;
+        throw new Error('Sign-in did not return an access token.');
       }
       this.authState = {
         status: 'signed_in',
         accessToken,
-        email: response?.user?.email || response?.email || this.authState?.email || 'Signed in'
+        email: response?.user?.email || email
       };
       this.entitlement = this.normalizeEntitlement(response?.entitlement || { active: false, plan: 'none' });
       await this.persistAccessState();
       await this.refreshAccountData({ silent: true });
       this.accessPanelVisible = true;
       this.updateAccessUI();
-      this.setAccessStatus('');
+      this.setAccessStatus('Signed in successfully.', 'success');
       this.updateStatus('Signed in — subscription required', 'warning');
     } catch (error) {
-      this.setAccessStatus(error.message || 'Unable to verify sign-in', 'error');
-      this.updateStatus(error.message || 'Unable to verify sign-in', 'error');
-    }
-  }
-
-  async copyAuthCode() {
-    const code = this.authState?.code;
-    if (!code) return;
-    try {
-      await navigator.clipboard.writeText(code);
-      this.updateStatus('Code copied to clipboard', 'success');
-    } catch (error) {
-      this.updateStatus('Unable to copy code', 'error');
+      this.setAccessStatus(error.message || 'Unable to sign in', 'error');
+      this.updateStatus(error.message || 'Unable to sign in', 'error');
+    } finally {
+      if (this.elements.authStartBtn) {
+        this.elements.authStartBtn.disabled = false;
+      }
+      if (this.elements.authEmail) {
+        this.elements.authEmail.disabled = false;
+      }
     }
   }
 

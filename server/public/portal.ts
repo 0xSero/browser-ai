@@ -1,11 +1,3 @@
-type DeviceCodePayload = {
-  deviceCode: string;
-  userCode: string;
-  verificationUrl: string;
-  expiresIn: number;
-  interval?: number;
-};
-
 type Entitlement = {
   active: boolean;
   plan: string;
@@ -37,14 +29,10 @@ const ACCESS_TOKEN_KEY = 'parchi_access_token';
 const elements = {
   authCard: document.getElementById('authCard') as HTMLElement | null,
   accountCard: document.getElementById('accountCard') as HTMLElement | null,
-  startAuthBtn: document.getElementById('startAuthBtn') as HTMLButtonElement | null,
   confirmAuthBtn: document.getElementById('confirmAuthBtn') as HTMLButtonElement | null,
   authForm: document.getElementById('authForm') as HTMLFormElement | null,
   authEmail: document.getElementById('authEmail') as HTMLInputElement | null,
   authStatus: document.getElementById('authStatus') as HTMLElement | null,
-  deviceCodeValue: document.getElementById('deviceCodeValue') as HTMLElement | null,
-  deviceCodeExpiry: document.getElementById('deviceCodeExpiry') as HTMLElement | null,
-  deviceVerifyLink: document.getElementById('deviceVerifyLink') as HTMLAnchorElement | null,
   tokenInput: document.getElementById('tokenInput') as HTMLInputElement | null,
   tokenApplyBtn: document.getElementById('tokenApplyBtn') as HTMLButtonElement | null,
   refreshBtn: document.getElementById('refreshBtn') as HTMLButtonElement | null,
@@ -59,51 +47,13 @@ const elements = {
 };
 
 const state = {
-  accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || '',
-  deviceCode: '',
-  userCode: '',
-  expiresAt: 0,
-  interval: 5,
-  countdownTimer: 0 as number | ReturnType<typeof setInterval>
+  accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || ''
 };
 
 function setAuthStatus(message: string, tone: 'error' | 'success' | '' = ''): void {
   if (!elements.authStatus) return;
   elements.authStatus.textContent = message;
   elements.authStatus.className = `status ${tone}`.trim();
-}
-
-function setDeviceCodeUI(payload: DeviceCodePayload): void {
-  state.deviceCode = payload.deviceCode;
-  state.userCode = payload.userCode;
-  state.expiresAt = Date.now() + payload.expiresIn * 1000;
-  state.interval = payload.interval || 5;
-
-  if (elements.deviceCodeValue) {
-    elements.deviceCodeValue.textContent = payload.userCode || '----';
-  }
-  if (elements.deviceVerifyLink) {
-    elements.deviceVerifyLink.href = payload.verificationUrl || '/device';
-  }
-  startCountdown();
-}
-
-function startCountdown(): void {
-  if (state.countdownTimer) {
-    clearInterval(state.countdownTimer as number);
-  }
-
-  state.countdownTimer = setInterval(() => {
-    if (!elements.deviceCodeExpiry) return;
-    const remaining = Math.max(0, state.expiresAt - Date.now());
-    const minutes = Math.floor(remaining / 60000);
-    const seconds = Math.floor((remaining % 60000) / 1000);
-    elements.deviceCodeExpiry.textContent = `Expires in ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    if (remaining <= 0) {
-      clearInterval(state.countdownTimer as number);
-      elements.deviceCodeExpiry.textContent = 'Code expired. Generate a new one.';
-    }
-  }, 1000);
 }
 
 function toggleView(isSignedIn: boolean): void {
@@ -129,27 +79,7 @@ async function apiFetch(path: string, options: RequestInit = {}, auth = false) {
   return payload;
 }
 
-async function startDeviceCode(): Promise<void> {
-  if (!elements.startAuthBtn) return;
-  elements.startAuthBtn.disabled = true;
-  setAuthStatus('Creating device code...');
-  try {
-    const payload = await apiFetch('/v1/auth/device-code', { method: 'POST' }) as DeviceCodePayload;
-    setDeviceCodeUI(payload);
-    setAuthStatus('Code ready. Confirm with your email.', 'success');
-  } catch (error) {
-    const err = error as Error;
-    setAuthStatus(err.message || 'Unable to start sign-in.', 'error');
-  } finally {
-    elements.startAuthBtn.disabled = false;
-  }
-}
-
-async function approveDeviceCode(email: string): Promise<void> {
-  if (!state.deviceCode || !state.userCode) {
-    setAuthStatus('Generate a device code first.', 'error');
-    return;
-  }
+async function signInWithEmail(email: string): Promise<void> {
   if (!email) {
     setAuthStatus('Enter a valid email address.', 'error');
     return;
@@ -157,40 +87,26 @@ async function approveDeviceCode(email: string): Promise<void> {
   if (elements.confirmAuthBtn) {
     elements.confirmAuthBtn.disabled = true;
   }
-  setAuthStatus('Confirming device...');
+  setAuthStatus('Signing you in...');
   try {
-    await apiFetch('/v1/auth/device-code/approve', {
+    const payload = await apiFetch('/v1/auth/email', {
       method: 'POST',
-      body: JSON.stringify({ userCode: state.userCode, email })
+      body: JSON.stringify({ email })
     });
-    await verifyDeviceCode();
-  } catch (error) {
-    const err = error as Error;
-    setAuthStatus(err.message || 'Unable to confirm device.', 'error');
-  } finally {
-    if (elements.confirmAuthBtn) {
-      elements.confirmAuthBtn.disabled = false;
+    if (!payload?.accessToken) {
+      throw new Error('Sign-in did not return an access token.');
     }
-  }
-}
-
-async function verifyDeviceCode(): Promise<void> {
-  const payload = await apiFetch('/v1/auth/device-code/verify', {
-    method: 'POST',
-    body: JSON.stringify({ deviceCode: state.deviceCode })
-  });
-
-  if (payload.status === 'pending') {
-    setAuthStatus('Waiting for approval...');
-    setTimeout(() => verifyDeviceCode(), state.interval * 1000);
-    return;
-  }
-
-  if (payload.accessToken) {
     state.accessToken = payload.accessToken;
     localStorage.setItem(ACCESS_TOKEN_KEY, payload.accessToken);
     setAuthStatus('Signed in.', 'success');
     await loadAccount();
+  } catch (error) {
+    const err = error as Error;
+    setAuthStatus(err.message || 'Unable to sign in.', 'error');
+  } finally {
+    if (elements.confirmAuthBtn) {
+      elements.confirmAuthBtn.disabled = false;
+    }
   }
 }
 
@@ -313,11 +229,10 @@ function signOut(): void {
   setAuthStatus('Signed out.', '');
 }
 
-elements.startAuthBtn?.addEventListener('click', () => startDeviceCode());
 elements.authForm?.addEventListener('submit', (event) => {
   event.preventDefault();
   const email = elements.authEmail?.value.trim() || '';
-  approveDeviceCode(email);
+  signInWithEmail(email);
 });
 
 elements.tokenApplyBtn?.addEventListener('click', () => {

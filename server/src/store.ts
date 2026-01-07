@@ -105,11 +105,12 @@ export class DataStore {
   }
 
   upsertUser({ email }: { email: string }): User {
-    let user = this.findUserByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = this.findUserByEmail(normalizedEmail);
     if (!user) {
       user = {
         id: `user_${createToken(8)}`,
-        email,
+        email: normalizedEmail,
         createdAt: new Date().toISOString(),
         stripeCustomerId: ''
       };
@@ -161,15 +162,26 @@ export class DataStore {
     if (entry.status !== 'approved') {
       return { status: 'pending' };
     }
+    const session = this.createSession(entry.userId, sessionTtlMs);
+    entry.status = 'used';
+    return { status: 'approved', session };
+  }
+
+  createSession(userId: string, sessionTtlMs: number): Session {
     const session = {
       token: `sess_${createToken(24)}`,
-      userId: entry.userId,
+      userId,
       createdAt: new Date().toISOString(),
       expiresAt: Date.now() + sessionTtlMs
     };
     this.data.sessions.push(session);
-    entry.status = 'used';
-    return { status: 'approved', session };
+    return session;
+  }
+
+  createSessionForEmail({ email, sessionTtlMs }: { email: string; sessionTtlMs: number }): { user: User; session: Session } {
+    const user = this.upsertUser({ email });
+    const session = this.createSession(user.id, sessionTtlMs);
+    return { user, session };
   }
 
   findSession(token: string): Session | undefined {

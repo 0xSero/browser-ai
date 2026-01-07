@@ -48,53 +48,27 @@
       <section id="authPanel" class="access-card">
         <p class="eyebrow">Account</p>
         <h2>Sign in to continue</h2>
-        <p id="authSubtitle" class="access-subtitle">Link this browser with a one-time device code to start using Parchi.</p>
+        <p id="authSubtitle" class="access-subtitle">Sign in with your email to unlock billing and sync.</p>
 
         <div id="accessConfigPrompt" class="access-banner hidden">
           <div>
             <div class="banner-title">Account API base URL required</div>
-            <div class="banner-body">Add the base URL in Settings to generate a device code and manage billing.</div>
+            <div class="banner-body">Add the base URL in Settings to sign in and manage billing.</div>
           </div>
           <button id="authOpenSettingsBtn" class="btn btn-secondary subtle">Open settings</button>
         </div>
 
-        <div class="access-steps">
-          <div class="access-step">
-            <span class="step-index">1</span>
-            <div>
-              <div class="step-title">Generate a code</div>
-              <div class="step-body">We will display a short code you can use to authenticate.</div>
-            </div>
+        <form id="authForm" class="access-form">
+          <div class="form-group full">
+            <label for="authEmail">Email</label>
+            <input id="authEmail" type="email" placeholder="you@company.com" autocomplete="email" required>
+            <small>We will create your account if needed.</small>
           </div>
-          <div class="access-step">
-            <span class="step-index">2</span>
-            <div>
-              <div class="step-title">Sign in on the account page</div>
-              <div class="step-body">Enter the code to confirm this device.</div>
-            </div>
+          <div class="access-actions">
+            <button id="authStartBtn" class="btn btn-primary" type="submit">Sign in</button>
+            <button id="authOpenBtn" class="btn btn-secondary" type="button">Open account page</button>
           </div>
-          <div class="access-step">
-            <span class="step-index">3</span>
-            <div>
-              <div class="step-title">Return here to continue</div>
-              <div class="step-body">Once confirmed, the assistant unlocks instantly.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="access-actions">
-          <button id="authStartBtn" class="btn btn-primary">Get sign-in code</button>
-          <button id="authVerifyBtn" class="btn btn-secondary">I signed in</button>
-          <button id="authOpenBtn" class="btn btn-secondary">Open account page</button>
-        </div>
-
-        <div id="authCodeWrap" class="device-code-wrap hidden">
-          <div class="device-code-row">
-            <div id="authCodeValue" class="device-code">----</div>
-            <button id="authCopyBtn" class="btn btn-secondary">Copy</button>
-          </div>
-          <p class="device-hint">Codes expire after 10 minutes.</p>
-        </div>
+        </form>
       </section>
 
       <section id="billingPanel" class="access-card hidden">

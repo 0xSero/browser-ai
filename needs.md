@@ -40,7 +40,7 @@ The extension will not run without at least one provider key. These are stored i
     - Some proxies are strict about tool call ordering; the provider layer already performs message sanitation and retries.
     - If your endpoint does not accept images, keep `sendScreenshotsAsImages` disabled.
 
-### 1.2 Billing/auth service keys (for Stripe + device sign-in)
+### 1.2 Billing/auth service keys (for Stripe + email sign-in)
 
 These keys are only needed if you use the optional billing/auth service under `server/`.
 
@@ -65,7 +65,7 @@ These keys are only needed if you use the optional billing/auth service under `s
 
 - BASE_URL
   - Where: Your public server URL (e.g., `https://billing.example.com`).
-  - Why: Device code verification links include this base.
+  - Why: Used for account portal links and redirect URLs.
 
 - ALLOWED_ORIGINS
   - Where: Your deployment configuration.
@@ -213,7 +213,7 @@ This isolates UI + tool execution logic without paying for tokens.
 
 ### 4.3 Example scenarios worth covering
 
-- Sign-in flow (device code -> verification -> access unlocked).
+- Sign-in flow (email sign-in -> access unlocked).
 - Subscription flow (checkout opens, entitlement synced).
 - Screenshot gating (disabled tool should be blocked).
 - Orchestrator + subagent completion (tool presence, summary reported).

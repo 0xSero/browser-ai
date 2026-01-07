@@ -253,6 +253,31 @@ app.post('/v1/auth/device-code/verify', async (req, res, next) => {
   }
 });
 
+app.post('/v1/auth/email', async (req, res, next) => {
+  try {
+    store.cleanupExpired();
+    const rawEmail = req.body?.email;
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+    if (!email) {
+      res.status(400).json({ error: 'email is required.' });
+      return;
+    }
+    const { user, session } = store.createSessionForEmail({
+      email,
+      sessionTtlMs: SESSION_TTL_SEC * 1000
+    });
+    await store.save();
+    const entitlement = await buildEntitlement(user);
+    res.json({
+      accessToken: session.token,
+      user: { id: user.id, email: user.email },
+      entitlement
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/v1/account', requireAuth, (req, res) => {
   const authed = req as AuthenticatedRequest;
   res.json({ user: { id: authed.user.id, email: authed.user.email } });
