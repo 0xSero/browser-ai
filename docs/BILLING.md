@@ -30,6 +30,10 @@ Set the following environment variables before starting the service:
 2. Set **Account API base URL** to the service URL (for local dev: `http://localhost:8787`).
 3. Use the **Account** panel to generate a device code, open the verification page, and confirm the device.
 
+## Account portal
+
+The billing service also serves a lightweight account portal at `/portal`. Use it to sign in, review billing, and jump into Stripe Checkout or the customer portal.
+
 ## Notes
 
 - The service stores device codes and sessions in a local JSON file by default. Replace with a real database in production.

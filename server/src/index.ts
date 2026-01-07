@@ -184,6 +184,10 @@ app.get('/device', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/device.html'));
 });
 
+app.get('/portal', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/portal.html'));
+});
+
 app.post('/v1/auth/device-code', async (req, res, next) => {
   try {
     store.cleanupExpired();
