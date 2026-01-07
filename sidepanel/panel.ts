@@ -68,6 +68,7 @@ class SidePanelUI {
   entitlement: Entitlement;
   billingOverview: BillingOverview | null;
   accessPanelVisible: boolean;
+  settingsOpen: boolean;
   accountClient: AccountClient;
   subagents: Map<string, { name: string; status: string; messages: any[]; tasks?: string[] }>;
   activeAgent: string;
@@ -191,7 +192,8 @@ class SidePanelUI {
       permissionTabs: document.getElementById('permissionTabs'),
       permissionScreenshots: document.getElementById('permissionScreenshots'),
       allowedDomains: document.getElementById('allowedDomains'),
-      accountApiBase: document.getElementById('accountApiBase')
+      accountApiBase: document.getElementById('accountApiBase'),
+      accessStatus: document.getElementById('accessStatus')
     };
 
     this.conversationHistory = [];
@@ -221,6 +223,7 @@ class SidePanelUI {
     this.entitlement = { active: false, plan: 'none' };
     this.billingOverview = null;
     this.accessPanelVisible = false;
+    this.settingsOpen = false;
     this.accountClient = new AccountClient({
       baseUrl: '',
       getAuthToken: () => this.authState?.accessToken || ''
@@ -421,13 +424,15 @@ class SidePanelUI {
   toggleSettings() {
     this.elements.settingsPanel.classList.toggle('hidden');
     const isOpen = !this.elements.settingsPanel.classList.contains('hidden');
+    this.settingsOpen = isOpen;
     if (isOpen) {
+      this.elements.accessPanel?.classList.add('hidden');
       this.elements.chatInterface?.classList.add('hidden');
       this.elements.historyPanel?.classList.add('hidden');
       this.switchSettingsTab(this.currentSettingsTab || 'general');
       return;
     }
-    this.switchView(this.currentView || 'chat');
+    this.updateAccessUI();
   }
 
   toggleCustomEndpoint() {
@@ -634,7 +639,8 @@ class SidePanelUI {
       this.elements.authCodeValue.textContent = this.authState?.code || '----';
     }
     if (this.elements.authOpenBtn) {
-      this.elements.authOpenBtn.disabled = !this.authState?.verificationUrl;
+      const canOpenAccount = Boolean(this.authState?.verificationUrl || this.accountClient?.baseUrl);
+      this.elements.authOpenBtn.disabled = !canOpenAccount;
     }
     if (this.elements.planStatus) {
       this.elements.planStatus.textContent = this.entitlement?.active
@@ -647,6 +653,11 @@ class SidePanelUI {
         ? 'Signed out'
         : (this.authState?.email || 'Signed in');
       this.elements.accountBtn.textContent = label;
+    }
+
+    if (this.settingsOpen) {
+      this.elements.accessPanel?.classList.add('hidden');
+      return;
     }
 
     const locked = showAccess;
@@ -678,8 +689,10 @@ class SidePanelUI {
   }
 
   openAuthPage() {
-    const url = this.authState?.verificationUrl;
+    const fallbackUrl = this.accountClient?.baseUrl ? `${this.accountClient.baseUrl}/portal` : '';
+    const url = this.authState?.verificationUrl || fallbackUrl;
     if (!url) {
+      this.setAccessStatus('Set Account API base URL in Settings to open the account page.', 'warning');
       this.updateStatus('No account page available yet.', 'warning');
       return;
     }
@@ -756,6 +769,8 @@ class SidePanelUI {
   }
 
   async startAuthFlow() {
+    if (!this.ensureAccountApiBase()) return;
+    this.setAccessStatus('');
     try {
       const response = await this.accountClient.startDeviceCode();
       const expiresIn = Number(response?.expiresIn || 600) * 1000;
@@ -769,27 +784,33 @@ class SidePanelUI {
       await this.persistAccessState();
       this.updateAccessUI();
       this.updateStatus('Use the device code to sign in', 'active');
+      this.setAccessStatus('Device code ready. Confirm on the account page.', 'success');
       if (this.authState.verificationUrl) {
         this.openExternalUrl(this.authState.verificationUrl);
       }
     } catch (error) {
+      this.setAccessStatus(error.message || 'Unable to start sign-in', 'error');
       this.updateStatus(error.message || 'Unable to start sign-in', 'error');
     }
   }
 
   async verifyAuthFlow() {
+    if (!this.ensureAccountApiBase()) return;
     if (!this.authState?.deviceCode) {
+      this.setAccessStatus('Generate a device code first.', 'warning');
       this.updateStatus('Generate a device code first.', 'warning');
       return;
     }
     try {
       const response = await this.accountClient.verifyDeviceCode(this.authState.deviceCode);
       if (response?.status === 'pending') {
+        this.setAccessStatus('Waiting for confirmation…', 'warning');
         this.updateStatus('Waiting for confirmation…', 'active');
         return;
       }
       const accessToken = response?.accessToken || response?.token;
       if (!accessToken) {
+        this.setAccessStatus('Sign-in not confirmed yet.', 'warning');
         this.updateStatus('Sign-in not confirmed yet.', 'warning');
         return;
       }
@@ -803,8 +824,10 @@ class SidePanelUI {
       await this.refreshAccountData({ silent: true });
       this.accessPanelVisible = true;
       this.updateAccessUI();
+      this.setAccessStatus('');
       this.updateStatus('Signed in — subscription required', 'warning');
     } catch (error) {
+      this.setAccessStatus(error.message || 'Unable to verify sign-in', 'error');
       this.updateStatus(error.message || 'Unable to verify sign-in', 'error');
     }
   }
@@ -821,7 +844,9 @@ class SidePanelUI {
   }
 
   async startSubscription() {
+    if (!this.ensureAccountApiBase()) return;
     if (!this.authState || this.authState.status !== 'signed_in') {
+      this.setAccessStatus('Sign in required before subscribing.', 'warning');
       this.updateStatus('Sign in required before subscribing', 'warning');
       return;
     }
@@ -829,17 +854,22 @@ class SidePanelUI {
       const response = await this.accountClient.createCheckout();
       if (response?.url) {
         this.openExternalUrl(response.url);
+        this.setAccessStatus('Checkout opened in a new tab.', 'success');
         this.updateStatus('Checkout opened in a new tab', 'active');
       } else {
+        this.setAccessStatus('Checkout link unavailable.', 'warning');
         this.updateStatus('Checkout link unavailable', 'warning');
       }
     } catch (error) {
+      this.setAccessStatus(error.message || 'Unable to start subscription', 'error');
       this.updateStatus(error.message || 'Unable to start subscription', 'error');
     }
   }
 
   manageBilling() {
+    if (!this.ensureAccountApiBase()) return;
     if (!this.authState || this.authState.status !== 'signed_in') {
+      this.setAccessStatus('Sign in required before opening billing.', 'warning');
       this.updateStatus('Sign in required before opening billing', 'warning');
       return;
     }
@@ -847,14 +877,36 @@ class SidePanelUI {
       .then(response => {
         if (response?.url) {
           this.openExternalUrl(response.url);
+          this.setAccessStatus('Billing portal opened in a new tab.', 'success');
           this.updateStatus('Billing portal opened in a new tab', 'success');
         } else {
+          this.setAccessStatus('Billing portal unavailable.', 'warning');
           this.updateStatus('Billing portal unavailable', 'warning');
         }
       })
       .catch(error => {
+        this.setAccessStatus(error.message || 'Unable to open billing portal', 'error');
         this.updateStatus(error.message || 'Unable to open billing portal', 'error');
       });
+  }
+
+  ensureAccountApiBase() {
+    if (this.accountClient?.baseUrl) return true;
+    this.setAccessStatus('Set Account API base URL in Settings to enable account actions.', 'warning');
+    this.updateStatus('Account API base URL is not configured', 'warning');
+    return false;
+  }
+
+  setAccessStatus(message: string, tone: 'success' | 'warning' | 'error' | '' = '') {
+    const statusEl = this.elements.accessStatus;
+    if (!statusEl) return;
+    if (!message) {
+      statusEl.textContent = '';
+      statusEl.className = 'access-status hidden';
+      return;
+    }
+    statusEl.textContent = message;
+    statusEl.className = `access-status ${tone}`.trim();
   }
 
   async signOut() {
@@ -864,6 +916,7 @@ class SidePanelUI {
     await this.persistAccessState();
     this.accessPanelVisible = true;
     this.updateAccessUI();
+    this.setAccessStatus('Signed out.', 'warning');
     this.updateStatus('Signed out', 'warning');
   }
 

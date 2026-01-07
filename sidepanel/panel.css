@@ -1735,6 +1735,31 @@ textarea:disabled {
   margin-top: 12px;
 }
 
+.access-status {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--panel-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.access-status.warning {
+  border-color: rgba(243, 187, 65, 0.35);
+  color: var(--status-warning);
+}
+
+.access-status.error {
+  border-color: rgba(231, 76, 60, 0.35);
+  color: var(--status-error);
+}
+
+.access-status.success {
+  border-color: rgba(46, 204, 113, 0.35);
+  color: var(--status-success);
+}
+
 .device-hint {
   margin-top: 8px;
   font-size: 11px;
