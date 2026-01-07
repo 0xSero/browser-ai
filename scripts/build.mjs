@@ -49,8 +49,16 @@ const run = () => {
   const manifestDest = path.join(distDir, 'manifest.json');
   const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const accountApiBase = process.env.ACCOUNT_API_BASE ? process.env.ACCOUNT_API_BASE.trim() : '';
-  if (accountApiBase) {
-    manifestData.parchi = { ...(manifestData.parchi || {}), accountApiBase };
+  const accountRequiredEnv = process.env.ACCOUNT_REQUIRED;
+  const accountRequired = accountRequiredEnv === undefined ? undefined : accountRequiredEnv === 'true';
+  if (accountApiBase || accountRequired !== undefined) {
+    manifestData.parchi = { ...(manifestData.parchi || {}) };
+    if (accountApiBase) {
+      manifestData.parchi.accountApiBase = accountApiBase;
+    }
+    if (accountRequired !== undefined) {
+      manifestData.parchi.requireAccount = accountRequired;
+    }
   }
   ensureDir(path.dirname(manifestDest));
   fs.writeFileSync(manifestDest, JSON.stringify(manifestData, null, 2));

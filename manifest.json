@@ -25,7 +25,8 @@
     "default_path": "sidepanel/panel.html"
   },
   "parchi": {
-    "accountApiBase": "http://localhost:8787"
+    "accountApiBase": "http://localhost:8787",
+    "requireAccount": false
   },
   "icons": {
     "16": "icons/icon16.png",

@@ -639,6 +639,7 @@ class SidePanelUI {
   }
 
   getAccessState() {
+    if (!this.isAccountRequired()) return 'ready';
     if (!this.authState || this.authState.status !== 'signed_in') return 'auth';
     if (!this.entitlement || !this.entitlement.active) return 'billing';
     return 'ready';
@@ -649,6 +650,7 @@ class SidePanelUI {
   }
 
   updateAccessUI() {
+    const accountRequired = this.isAccountRequired();
     const state = this.getAccessState();
     this.updateAccessConfigPrompt();
     const showAccess = this.accessPanelVisible || state !== 'ready';
@@ -683,9 +685,9 @@ class SidePanelUI {
     }
 
     if (this.elements.accountBtn) {
-      const label = state === 'auth'
-        ? 'Signed out'
-        : (this.authState?.email || 'Signed in');
+      const label = accountRequired
+        ? (state === 'auth' ? 'Signed out' : (this.authState?.email || 'Signed in'))
+        : (this.authState?.email || 'Account');
       this.elements.accountBtn.textContent = label;
     }
 
@@ -1325,6 +1327,19 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       // Ignore manifest read failures and fall back to empty.
     }
     return '';
+  }
+
+  isAccountRequired() {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      const config = manifest && (manifest as Record<string, any>).parchi;
+      if (config && typeof config.requireAccount === 'boolean') {
+        return config.requireAccount;
+      }
+    } catch (error) {
+      // Ignore manifest read failures and fall back to default.
+    }
+    return true;
   }
 
   async createNewConfig(name?: string) {
