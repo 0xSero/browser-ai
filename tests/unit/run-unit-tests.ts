@@ -6,6 +6,7 @@
  */
 
 import { createMessage, normalizeConversationHistory, toProviderMessages } from '../../ai/message-schema.js';
+import type { Message } from '../../ai/message-schema.js';
 
 const colors = {
   info: '\x1b[36m',
@@ -13,34 +14,59 @@ const colors = {
   error: '\x1b[31m',
   warning: '\x1b[33m',
   reset: '\x1b[0m'
-};
+} as const;
 
-function log(message, type = 'info') {
+function log(message: string, type: keyof typeof colors = 'info') {
   console.log(`${colors[type]}${message}${colors.reset}`);
 }
 
+type ToolSchema = {
+  type: 'object';
+  properties: Record<string, unknown>;
+  required?: string[];
+};
+
+type ToolDefinition = {
+  name: string;
+  description: string;
+  input_schema: ToolSchema;
+};
+
+type ProviderConfig = {
+  provider: string;
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  customEndpoint?: string;
+};
+
 class TestRunner {
+  passed: number;
+  failed: number;
+  errors: Array<{ test: string; error: string }>;
+
   constructor() {
     this.passed = 0;
     this.failed = 0;
     this.errors = [];
   }
 
-  test(description, fn) {
+  test(description: string, fn: () => void) {
     try {
       fn();
       this.passed++;
       log(`✓ ${description}`, 'success');
       return true;
     } catch (error) {
+      const err = error as Error;
       this.failed++;
-      this.errors.push({ test: description, error: error.message });
-      log(`✗ ${description}: ${error.message}`, 'error');
+      this.errors.push({ test: description, error: err.message });
+      log(`✗ ${description}: ${err.message}`, 'error');
       return false;
     }
   }
 
-  assertEqual(actual, expected, message = '') {
+  assertEqual(actual: unknown, expected: unknown, message = '') {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
       throw new Error(
         `${message}\nExpected: ${JSON.stringify(expected)}\nActual: ${JSON.stringify(actual)}`
@@ -48,25 +74,26 @@ class TestRunner {
     }
   }
 
-  assertTrue(condition, message = 'Assertion failed') {
+  assertTrue(condition: unknown, message = 'Assertion failed') {
     if (!condition) {
       throw new Error(message);
     }
   }
 
-  assertFalse(condition, message = 'Assertion failed') {
+  assertFalse(condition: unknown, message = 'Assertion failed') {
     if (condition) {
       throw new Error(message);
     }
   }
 
-  assertThrows(fn, message = 'Should have thrown an error') {
+  assertThrows(fn: () => void, message = 'Should have thrown an error') {
     try {
       fn();
       throw new Error(message);
     } catch (error) {
-      if (error.message === message) {
-        throw error;
+      const err = error as Error;
+      if (err.message === message) {
+        throw err;
       }
       // Expected error
     }
@@ -96,11 +123,11 @@ class TestRunner {
 }
 
 // Test Tool Definitions Structure
-function testToolDefinitions(runner) {
+function testToolDefinitions(runner: TestRunner) {
   log('\n=== Testing Tool Definitions ===', 'info');
 
   // Mock BrowserTools without Chrome APIs
-  const mockToolDefinitions = [
+  const mockToolDefinitions: ToolDefinition[] = [
     {
       name: 'navigate',
       description: 'Navigate to a URL',
@@ -127,16 +154,16 @@ function testToolDefinitions(runner) {
 
   runner.test('Required parameters are properly marked', () => {
     const navTool = mockToolDefinitions.find(t => t.name === 'navigate');
-    runner.assertTrue(navTool.input_schema.required.includes('url'), 'Navigate requires url');
+    runner.assertTrue(navTool?.input_schema.required?.includes('url'), 'Navigate requires url');
   });
 }
 
 // Test AI Provider Configuration
-function testAIProviderConfig(runner) {
+function testAIProviderConfig(runner: TestRunner) {
   log('\n=== Testing AI Provider Configuration ===', 'info');
 
   runner.test('OpenAI provider config is valid', () => {
-    const config = {
+    const config: ProviderConfig = {
       provider: 'openai',
       apiKey: 'sk-test123',
       model: 'gpt-4o',
@@ -148,7 +175,7 @@ function testAIProviderConfig(runner) {
   });
 
   runner.test('Anthropic provider config is valid', () => {
-    const config = {
+    const config: ProviderConfig = {
       provider: 'anthropic',
       apiKey: 'test-key',
       model: 'claude-3-5-sonnet-20241022',
@@ -160,7 +187,7 @@ function testAIProviderConfig(runner) {
   });
 
   runner.test('Custom provider config is valid', () => {
-    const config = {
+    const config: ProviderConfig = {
       provider: 'custom',
       apiKey: 'custom-key',
       model: 'custom-model',
@@ -169,12 +196,12 @@ function testAIProviderConfig(runner) {
     };
 
     runner.assertEqual(config.provider, 'custom');
-    runner.assertTrue(config.customEndpoint.startsWith('https://'), 'Custom endpoint should use HTTPS');
+    runner.assertTrue((config.customEndpoint ?? '').startsWith('https://'), 'Custom endpoint should use HTTPS');
   });
 }
 
 // Test Tool Schema Conversion
-function testToolSchemaConversion(runner) {
+function testToolSchemaConversion(runner: TestRunner) {
   log('\n=== Testing Tool Schema Conversion ===', 'info');
 
   runner.test('Convert to OpenAI format', () => {
@@ -228,7 +255,7 @@ function testToolSchemaConversion(runner) {
 }
 
 // Test Input Validation
-function testInputValidation(runner) {
+function testInputValidation(runner: TestRunner) {
   log('\n=== Testing Input Validation ===', 'info');
 
   runner.test('Validate URL format', () => {
@@ -271,12 +298,12 @@ function testInputValidation(runner) {
 }
 
 // Test Error Handling
-function testErrorHandling(runner) {
+function testErrorHandling(runner: TestRunner) {
   log('\n=== Testing Error Handling ===', 'info');
 
   runner.test('Missing required parameters throw error', () => {
     runner.assertThrows(() => {
-      const params = {}; // Missing required 'url'
+      const params: { url?: string } = {}; // Missing required 'url'
       if (!params.url) {
         throw new Error('Missing required parameter: url');
       }
@@ -284,7 +311,7 @@ function testErrorHandling(runner) {
   });
 
   runner.test('Invalid selector format detected', () => {
-    const invalidSelectors = ['', '  ', null, undefined];
+    const invalidSelectors: Array<string | null | undefined> = ['', '  ', null, undefined];
 
     invalidSelectors.forEach(selector => {
       if (!selector || selector.trim() === '') {
@@ -296,11 +323,14 @@ function testErrorHandling(runner) {
 }
 
 // Test Message Schema
-function testMessageSchema(runner) {
+function testMessageSchema(runner: TestRunner) {
   log('\n=== Testing Message Schema ===', 'info');
 
   runner.test('createMessage builds canonical message', () => {
     const msg = createMessage({ role: 'user', content: 'hello' });
+    if (!msg) {
+      throw new Error('Message should not be null');
+    }
     runner.assertTrue(typeof msg.id === 'string', 'Message should have id');
     runner.assertTrue(typeof msg.createdAt === 'string', 'Message should have createdAt');
     runner.assertEqual(msg.role, 'user');
@@ -310,15 +340,15 @@ function testMessageSchema(runner) {
   runner.test('normalizeConversationHistory filters invalid messages', () => {
     const normalized = normalizeConversationHistory([
       { role: 'user', content: 'ok' },
-      { role: 'invalid', content: 'skip' },
-      null
-    ]);
+      { role: 'invalid' as any, content: 'skip' },
+      null as any
+    ] as any);
     runner.assertEqual(normalized.length, 1);
     runner.assertEqual(normalized[0].role, 'user');
   });
 
   runner.test('toProviderMessages serializes tool calls and results', () => {
-    const history = [
+    const history: Message[] = [
       {
         role: 'assistant',
         content: '',
@@ -332,9 +362,12 @@ function testMessageSchema(runner) {
     ];
     const provider = toProviderMessages(history);
     runner.assertTrue(Array.isArray(provider[0].tool_calls), 'tool_calls should be an array');
-    runner.assertTrue(typeof provider[0].tool_calls[0].function.arguments === 'string', 'tool args serialized');
+    runner.assertTrue(typeof provider[0].tool_calls?.[0]?.function?.arguments === 'string', 'tool args serialized');
     runner.assertEqual(provider[1].role, 'tool');
-    runner.assertTrue(provider[1].content.includes('success'));
+    const toolContent = typeof provider[1].content === 'string'
+      ? provider[1].content
+      : JSON.stringify(provider[1].content);
+    runner.assertTrue(toolContent.includes('success'));
   });
 }
 

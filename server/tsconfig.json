@@ -10,18 +10,10 @@
     "noImplicitAny": false,
     "strictPropertyInitialization": false,
     "useUnknownInCatchVariables": false,
-    "types": ["chrome", "node"],
+    "types": ["node"],
     "lib": ["ES2022", "DOM"],
     "skipLibCheck": true
   },
-  "include": [
-    "background.ts",
-    "content.ts",
-    "ai/**/*.ts",
-    "tools/**/*.ts",
-    "sidepanel/**/*.ts",
-    "tests/**/*.ts",
-    "types/**/*.d.ts"
-  ],
-  "exclude": ["server/**", "dist/**", "node_modules/**"]
+  "include": ["src/**/*.ts", "public/**/*.ts"],
+  "exclude": ["dist/**", "node_modules/**"]
 }

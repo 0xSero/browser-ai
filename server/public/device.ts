@@ -1,6 +1,6 @@
-const form = document.getElementById('deviceForm');
-const statusEl = document.getElementById('status');
-const userCodeInput = document.getElementById('userCode');
+const form = document.getElementById('deviceForm') as HTMLFormElement | null;
+const statusEl = document.getElementById('status') as HTMLElement | null;
+const userCodeInput = document.getElementById('userCode') as HTMLInputElement | null;
 
 const params = new URLSearchParams(window.location.search);
 const code = params.get('code');
@@ -8,13 +8,15 @@ if (code && userCodeInput) {
   userCodeInput.value = code;
 }
 
-function setStatus(message, type = '') {
+function setStatus(message: string, type = ''): void {
+  if (!statusEl) return;
   statusEl.textContent = message;
   statusEl.className = `status ${type}`.trim();
 }
 
-form.addEventListener('submit', async (event) => {
+form?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!form) return;
   const formData = new FormData(form);
   const userCode = String(formData.get('userCode') || '').trim().toUpperCase();
   const email = String(formData.get('email') || '').trim();
@@ -36,6 +38,7 @@ form.addEventListener('submit', async (event) => {
     }
     setStatus('Device confirmed. Return to the extension to continue.', 'success');
   } catch (error) {
-    setStatus(error.message || 'Something went wrong.', 'error');
+    const err = error as Error;
+    setStatus(err.message || 'Something went wrong.', 'error');
   }
 });

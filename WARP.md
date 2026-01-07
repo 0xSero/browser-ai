@@ -10,7 +10,7 @@ npm test                # Full test suite (validation + unit tests)
 npm run validate        # Validate manifest, files, and structure
 npm run test:unit       # Unit tests only
 npm run lint            # Lint check
-npm run build           # Validate extension (no bundling)
+npm run build           # Compile TypeScript + copy assets into dist/
 ```
 
 ### Development Workflow
@@ -20,7 +20,7 @@ npm run dev             # Shows instructions for loading extension
 
 **Local Testing:**
 1. Open `chrome://extensions` → Enable Developer Mode
-2. Click "Load unpacked" → Select repository root
+2. Click "Load unpacked" → Select `dist/` (after `npm run build`)
 3. Pin extension to toolbar
 4. Open side panel via toolbar icon
 5. For tool testing: open `tests/integration/test-page.html` in browser

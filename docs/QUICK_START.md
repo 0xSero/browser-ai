@@ -5,10 +5,12 @@ Get up and running with Parchi in 5 minutes.
 ## Step 1: Install Extension
 
 1. Download or clone this repository
-2. Open Chrome and go to `chrome://extensions`
-3. Enable "Developer mode" (top right)
-4. Click "Load unpacked"
-5. Select the `browser-ai` folder
+2. Install dependencies: `npm install`
+3. Build the extension: `npm run build`
+4. Open Chrome and go to `chrome://extensions`
+5. Enable "Developer mode" (top right)
+6. Click "Load unpacked"
+7. Select the `browser-ai/dist` folder
 
 ## Step 2: Add Icons (Optional)
 

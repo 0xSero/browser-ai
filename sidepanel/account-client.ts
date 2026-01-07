@@ -1,18 +1,32 @@
+type AccountClientOptions = {
+  baseUrl?: string;
+  getAuthToken?: () => string;
+};
+
+type RequestOptions = {
+  method?: string;
+  body?: Record<string, unknown>;
+  auth?: boolean;
+};
+
 export class AccountClient {
-  constructor({ baseUrl = '', getAuthToken } = {}) {
+  baseUrl: string;
+  getAuthToken: () => string;
+
+  constructor({ baseUrl = '', getAuthToken }: AccountClientOptions = {}) {
     this.baseUrl = baseUrl;
     this.getAuthToken = typeof getAuthToken === 'function' ? getAuthToken : () => '';
   }
 
-  setBaseUrl(baseUrl = '') {
+  setBaseUrl(baseUrl = ''): void {
     this.baseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
   }
 
-  async request(path, { method = 'GET', body, auth = false } = {}) {
+  async request(path: string, { method = 'GET', body, auth = false }: RequestOptions = {}): Promise<any> {
     if (!this.baseUrl) {
       throw new Error('Account API base URL is not configured.');
     }
-    const headers = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
     if (auth) {
@@ -30,7 +44,7 @@ export class AccountClient {
     });
 
     const text = await response.text();
-    let payload = null;
+    let payload: Record<string, any> | null = null;
     if (text) {
       try {
         payload = JSON.parse(text);
@@ -47,26 +61,26 @@ export class AccountClient {
     return payload || {};
   }
 
-  startDeviceCode() {
+  startDeviceCode(): Promise<any> {
     return this.request('/v1/auth/device-code', { method: 'POST' });
   }
 
-  verifyDeviceCode(deviceCode) {
+  verifyDeviceCode(deviceCode: string): Promise<any> {
     return this.request('/v1/auth/device-code/verify', {
       method: 'POST',
       body: { deviceCode }
     });
   }
 
-  getAccount() {
+  getAccount(): Promise<any> {
     return this.request('/v1/account', { auth: true });
   }
 
-  getBillingOverview() {
+  getBillingOverview(): Promise<any> {
     return this.request('/v1/billing/overview', { auth: true });
   }
 
-  createCheckout({ returnUrl } = {}) {
+  createCheckout({ returnUrl }: { returnUrl?: string } = {}): Promise<any> {
     return this.request('/v1/billing/checkout', {
       method: 'POST',
       auth: true,
@@ -74,7 +88,7 @@ export class AccountClient {
     });
   }
 
-  createPortal({ returnUrl } = {}) {
+  createPortal({ returnUrl }: { returnUrl?: string } = {}): Promise<any> {
     return this.request('/v1/billing/portal', {
       method: 'POST',
       auth: true,

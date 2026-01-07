@@ -19,13 +19,13 @@ const colors = {
   error: '\x1b[31m',
   warning: '\x1b[33m',
   reset: '\x1b[0m'
-};
+} as const;
 
-function log(message, type = 'info') {
+function log(message: string, type: keyof typeof colors = 'info') {
   console.log(`${colors[type]}${message}${colors.reset}`);
 }
 
-function assert(condition, message) {
+function assert(condition: unknown, message: string) {
   if (!condition) {
     throw new Error(message);
   }
@@ -34,7 +34,7 @@ function assert(condition, message) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../..');
-const extensionPath = repoRoot;
+const extensionPath = path.join(repoRoot, 'dist');
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parchi-e2e-'));
 
 const timeoutMs = Number(process.env.E2E_TIMEOUT || 20000);
@@ -44,10 +44,15 @@ if (headless) {
   log('Extensions are not supported in headless mode; tests may fail.', 'warning');
 }
 
-const tests = [];
-const test = (name, fn) => tests.push({ name, fn });
+type TestContext = {
+  panel: import('playwright').Page;
+  context: import('playwright').BrowserContext;
+};
 
-async function getExtensionId(context) {
+const tests: Array<{ name: string; fn: (ctx: TestContext) => Promise<void> }> = [];
+const test = (name: string, fn: (ctx: TestContext) => Promise<void>) => tests.push({ name, fn });
+
+async function getExtensionId(context: import('playwright').BrowserContext): Promise<string> {
   let worker = context.serviceWorkers()[0];
   if (!worker) {
     worker = await context.waitForEvent('serviceworker', { timeout: timeoutMs });
@@ -56,7 +61,7 @@ async function getExtensionId(context) {
   return url.host;
 }
 
-async function seedAccessState(worker) {
+async function seedAccessState(worker: import('playwright').Worker): Promise<void> {
   await worker.evaluate(async () => {
     await chrome.storage.local.set({
       authState: {
@@ -115,6 +120,9 @@ async function run() {
 
   let context;
   try {
+    if (!fs.existsSync(path.join(extensionPath, 'manifest.json'))) {
+      throw new Error('Missing dist/manifest.json. Run npm run build first.');
+    }
     context = await chromium.launchPersistentContext(userDataDir, {
       headless,
       slowMo,

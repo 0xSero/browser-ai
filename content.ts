@@ -1,7 +1,15 @@
 // Content Script - Runs in the context of web pages
 // This script can access the DOM and communicate with the background script
 
+type HighlightEntry = {
+  element: HTMLElement;
+  originalOutline: string;
+  originalOutlineOffset: string;
+};
+
 class ContentScriptHandler {
+  highlightedElements: Set<HighlightEntry>;
+
   constructor() {
     this.highlightedElements = new Set();
     this.init();
@@ -74,7 +82,7 @@ class ContentScriptHandler {
   }
 
   highlightElement(selector) {
-    const element = document.querySelector(selector);
+    const element = document.querySelector<HTMLElement>(selector);
     if (!element) return;
 
     // Add highlight style
@@ -106,17 +114,18 @@ class ContentScriptHandler {
   }
 
   getElementInfo(selector) {
-    const element = document.querySelector(selector);
+    const element = document.querySelector<HTMLElement>(selector);
     if (!element) return null;
 
     const rect = element.getBoundingClientRect();
+    const typedElement = element as HTMLElement & { value?: string; type?: string };
     return {
       tagName: element.tagName,
       id: element.id,
       className: element.className,
       textContent: element.textContent?.substring(0, 200),
-      value: element.value,
-      type: element.type,
+      value: typedElement.value,
+      type: typedElement.type,
       position: {
         top: rect.top,
         left: rect.left,
@@ -140,7 +149,7 @@ class ContentScriptHandler {
   }
 
   simulateHover(selector) {
-    const element = document.querySelector(selector);
+    const element = document.querySelector<HTMLElement>(selector);
     if (!element) return;
 
     const mouseoverEvent = new MouseEvent('mouseover', {
@@ -152,16 +161,19 @@ class ContentScriptHandler {
   }
 
   getAllInputs() {
-    const inputs = document.querySelectorAll('input, textarea, select');
+    const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
     return Array.from(inputs).map((input, index) => {
       const label = this.findLabelForInput(input);
+      const placeholder = (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)
+        ? input.placeholder
+        : '';
       return {
         index,
         tagName: input.tagName,
         type: input.type,
         id: input.id,
         name: input.name,
-        placeholder: input.placeholder,
+        placeholder,
         value: input.value,
         label: label?.textContent?.trim(),
         selector: this.getOptimalSelector(input)
@@ -170,7 +182,7 @@ class ContentScriptHandler {
   }
 
   getAllButtons() {
-    const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"], [role="button"]');
+    const buttons = document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input[type="button"], input[type="submit"], [role="button"]');
     return Array.from(buttons).map((button, index) => ({
       index,
       tagName: button.tagName,
@@ -181,7 +193,7 @@ class ContentScriptHandler {
     }));
   }
 
-  findLabelForInput(input) {
+  findLabelForInput(input: HTMLElement & { id?: string }) {
     // Try to find associated label
     if (input.id) {
       const label = document.querySelector(`label[for="${input.id}"]`);
@@ -201,7 +213,7 @@ class ContentScriptHandler {
     return null;
   }
 
-  getOptimalSelector(element) {
+  getOptimalSelector(element: HTMLElement & { name?: string }) {
     // Try ID first
     if (element.id) {
       return `#${element.id}`;
@@ -213,7 +225,8 @@ class ContentScriptHandler {
     }
 
     // Try data attributes
-    for (const attr of element.attributes) {
+    for (let i = 0; i < element.attributes.length; i++) {
+      const attr = element.attributes[i];
       if (attr.name.startsWith('data-') && attr.value) {
         return `[${attr.name}="${attr.value}"]`;
       }
@@ -252,16 +265,16 @@ class ContentScriptHandler {
             return NodeFilter.FILTER_REJECT;
           }
 
-          const text = node.textContent.trim();
+          const text = node.textContent?.trim() || '';
           return text.length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
       }
     );
 
-    const textParts = [];
-    let node;
-    while (node = walker.nextNode()) {
-      textParts.push(node.textContent.trim());
+    const textParts: string[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      textParts.push(node.textContent?.trim() || '');
     }
 
     return textParts.join(' ').substring(0, 10000); // Limit to 10KB

@@ -1,8 +1,77 @@
 import { createMessage, normalizeConversationHistory } from '../ai/message-schema.js';
+import type { Message } from '../ai/message-schema.js';
 import { AccountClient } from './account-client.js';
+
+type AuthState = {
+  status: 'signed_out' | 'device_code' | 'signed_in';
+  code?: string;
+  deviceCode?: string;
+  verificationUrl?: string;
+  accessToken?: string;
+  email?: string;
+  expiresAt?: number;
+};
+
+type Entitlement = {
+  active: boolean;
+  plan: string;
+  renewsAt?: string;
+  status?: string;
+};
+
+type BillingOverview = {
+  entitlement?: Entitlement;
+  paymentMethod?: {
+    brand?: string;
+    last4?: string;
+    expMonth?: number;
+    expYear?: number;
+  } | null;
+  invoices?: Array<{
+    id?: string;
+    status?: string;
+    amountDue?: number;
+    currency?: string;
+    hostedInvoiceUrl?: string;
+    createdAt?: string;
+    periodEnd?: string;
+  }>;
+};
 
 // Side Panel UI Controller
 class SidePanelUI {
+  elements: Record<string, any>;
+  conversationHistory: Message[];
+  sessionId: string;
+  sessionStartedAt: number;
+  firstUserMessage: string;
+  currentConfig: string;
+  configs: Record<string, any>;
+  toolCallViews: Map<string, any>;
+  timelineItems: Map<string, any>;
+  selectedTabs: Map<number, any>;
+  tabGroupInfo: Map<number, chrome.tabGroups.TabGroup>;
+  scrollPositions: Map<string, number>;
+  pendingToolCount: number;
+  isStreaming: boolean;
+  streamingState: { container: HTMLElement; textEl: HTMLElement | null; thinking?: string | null } | null;
+  userScrolledUp: boolean;
+  isNearBottom: boolean;
+  chatResizeObserver: ResizeObserver | null;
+  contextUsage: { approxTokens: number; maxContextTokens: number; percent: number };
+  sessionTokensUsed: number;
+  auxAgentProfiles: string[];
+  currentView: 'chat' | 'history';
+  currentSettingsTab: 'general' | 'profiles';
+  profileEditorTarget: string;
+  authState: AuthState;
+  entitlement: Entitlement;
+  billingOverview: BillingOverview | null;
+  accessPanelVisible: boolean;
+  accountClient: AccountClient;
+  subagents: Map<string, { name: string; status: string; messages: any[]; tasks?: string[] }>;
+  activeAgent: string;
+
   constructor() {
     this.elements = {
       settingsBtn: document.getElementById('settingsBtn'),
@@ -91,8 +160,6 @@ class SidePanelUI {
       historyPanel: document.getElementById('historyPanel'),
       historyItems: document.getElementById('historyItems'),
       startNewSessionBtn: document.getElementById('startNewSessionBtn'),
-      agentGrid: document.getElementById('agentGrid'),
-      refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
       settingsTabGeneralBtn: document.getElementById('settingsTabGeneralBtn'),
       settingsTabProfilesBtn: document.getElementById('settingsTabProfilesBtn'),
       settingsTabGeneral: document.getElementById('settingsTabGeneral'),
@@ -143,6 +210,7 @@ class SidePanelUI {
     this.streamingState = null;
     this.userScrolledUp = false;
     this.isNearBottom = true;
+    this.chatResizeObserver = null;
     this.contextUsage = { approxTokens: 0, maxContextTokens: 196000, percent: 0 };
     this.sessionTokensUsed = 0; // Track highest context seen in session
     this.auxAgentProfiles = [];
@@ -150,7 +218,7 @@ class SidePanelUI {
     this.currentSettingsTab = 'general';
     this.profileEditorTarget = 'default';
     this.authState = { status: 'signed_out' };
-    this.entitlement = { active: false };
+    this.entitlement = { active: false, plan: 'none' };
     this.billingOverview = null;
     this.accessPanelVisible = false;
     this.accountClient = new AccountClient({
@@ -373,7 +441,7 @@ class SidePanelUI {
     this.elements.profileEditorEndpointGroup.style.display = provider === 'custom' ? 'block' : 'none';
   }
 
-  switchSettingsTab(tabName = 'general') {
+  switchSettingsTab(tabName: 'general' | 'profiles' = 'general') {
     this.currentSettingsTab = tabName;
     const general = this.elements.settingsTabGeneral;
     const profiles = this.elements.settingsTabProfiles;
@@ -491,10 +559,12 @@ class SidePanelUI {
     }
   }
 
-  normalizeAuthState(state) {
-    const normalized = { status: 'signed_out' };
+  normalizeAuthState(state: Record<string, any> | null | undefined): AuthState {
+    const normalized: AuthState = { status: 'signed_out' };
     if (!state || typeof state !== 'object') return normalized;
-    const status = ['signed_out', 'device_code', 'signed_in'].includes(state.status) ? state.status : 'signed_out';
+    const status: AuthState['status'] = (state.status === 'signed_out' || state.status === 'device_code' || state.status === 'signed_in')
+      ? state.status
+      : 'signed_out';
     normalized.status = status;
     if (state.code) normalized.code = String(state.code);
     if (state.deviceCode) normalized.deviceCode = String(state.deviceCode);
@@ -1073,7 +1143,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 - If blocked, explain what you tried and why it failed`;
   }
 
-  async createNewConfig(name) {
+  async createNewConfig(name?: string) {
     const trimmedName = (name || '').trim() || prompt('Enter profile name:') || '';
     if (!trimmedName) return;
     if (this.configs[trimmedName]) {
@@ -1313,7 +1383,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.updateStatus(`Profile "${target}" saved`, 'success');
   }
 
-  populateFormFromConfig(config = {}) {
+  populateFormFromConfig(config: Record<string, any> = {}) {
     this.elements.provider.value = config.provider || 'openai';
     this.elements.apiKey.value = config.apiKey || '';
     this.elements.model.value = config.model || 'gpt-4o';
@@ -1412,13 +1482,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.scrollToBottom({ force: true });
   }
 
-  deduplicateThinking(thinking) {
-    if (!thinking) return thinking;
+  deduplicateThinking(thinking: string | null) {
+    if (!thinking) return '';
 
     // Split into lines and deduplicate consecutive identical lines
     const lines = thinking.split('\n');
-    const deduplicated = [];
-    let lastLine = null;
+    const deduplicated: string[] = [];
+    let lastLine: string | null = null;
     let repeatCount = 0;
 
     for (const line of lines) {
@@ -1442,7 +1512,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     return deduplicated.join('\n');
   }
 
-  displayAssistantMessage(content, thinking = null) {
+  displayAssistantMessage(content: string, thinking: string | null = null) {
     const streamResult = this.finishStreamingMessage();
     const streamedContainer = streamResult?.container;
     const combinedThinking = [streamResult?.thinking, thinking].filter(Boolean).join('\n\n') || null;
@@ -1505,7 +1575,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const thinkingHeader = messageDiv.querySelector('.thinking-header');
     if (thinkingHeader) {
       thinkingHeader.addEventListener('click', () => {
-        thinkingHeader.closest('.thinking-block').classList.toggle('collapsed');
+        const block = thinkingHeader.closest('.thinking-block');
+        block?.classList.toggle('collapsed');
       });
     }
 
@@ -1525,7 +1596,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const escapeAttr = (value = '') => this.escapeAttribute(value);
 
     let working = String(text).replace(/\r\n/g, '\n');
-    const codeBlocks = [];
+    const codeBlocks: string[] = [];
     const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
     working = working.replace(codeBlockRegex, (_, lang = '', body = '') => {
       const placeholder = `@@CODE_BLOCK_${codeBlocks.length}@@`;
@@ -1552,8 +1623,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     };
 
     const lines = working.split('\n');
-    const blocks = [];
-    let paragraph = [];
+    const blocks: string[] = [];
+    let paragraph: string[] = [];
     let inUl = false;
     let inOl = false;
 
@@ -1834,7 +1905,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       </button>
     `;
 
-    banner.querySelector('.error-dismiss').addEventListener('click', () => banner.remove());
+    const dismissButton = banner.querySelector('.error-dismiss');
+    dismissButton?.addEventListener('click', () => banner.remove());
 
     // Insert after status bar
     const statusBar = this.elements.statusBar;
@@ -1914,7 +1986,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   updateActivityState() {
     if (!this.elements.statusMeta) return;
-    const labels = [];
+    const labels: string[] = [];
     if (this.pendingToolCount > 0) {
       labels.push(`${this.pendingToolCount} action${this.pendingToolCount > 1 ? 's' : ''} running`);
     }
@@ -2013,12 +2085,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     return this.escapeHtmlBasic(value).replace(/"/g, '&quot;');
   }
 
-  extractThinking(content, existingThinking = null) {
-    let thinking = existingThinking || null;
+  extractThinking(content: string | null | undefined, existingThinking: string | null = null) {
+    let thinking: string | null = existingThinking || null;
     let cleanedContent = content || '';
     const thinkRegex = /<think>([\s\S]*?)<\/think>/gi;
     let match;
-    const collected = [];
+    const collected: string[] = [];
     while ((match = thinkRegex.exec(cleanedContent)) !== null) {
       if (match[1]) collected.push(match[1].trim());
     }
@@ -2047,7 +2119,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.loadHistoryList();
   }
 
-  updateContextUsage(actualTokens = null) {
+  updateContextUsage(actualTokens: number | null = null) {
     // Use actual tokens if provided (from API response), otherwise estimate
     let approxTokens;
 
@@ -2144,7 +2216,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         `;
         this.elements.chatMessages.appendChild(messageDiv);
       } else if (msg.role === 'assistant') {
-        const parsed = this.extractThinking(msg.content, null);
+        const rawContent = typeof msg.content === 'string' ? msg.content : this.safeJsonStringify(msg.content);
+        const parsed = this.extractThinking(rawContent, null);
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant';
         let html = `<div class="message-header">Assistant</div>`;
@@ -2170,7 +2243,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         const thinkingHeader = messageDiv.querySelector('.thinking-header');
         if (thinkingHeader) {
           thinkingHeader.addEventListener('click', () => {
-            thinkingHeader.closest('.thinking-block').classList.toggle('collapsed');
+            const block = thinkingHeader.closest('.thinking-block');
+            block?.classList.toggle('collapsed');
           });
         }
 
@@ -2312,9 +2386,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
   }
 
-  async handleFileSelection(event) {
-    const input = event.target;
-    const files = Array.from(input.files || []);
+  async handleFileSelection(event: Event) {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) return;
+    const files = Array.from(input.files || []) as File[];
     if (!files.length) return;
 
     const maxPerFile = 4000;
@@ -2356,23 +2431,24 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.tabGroupInfo = new Map(groups.map(group => [group.id, group]));
     this.elements.tabList.innerHTML = '';
 
-    const groupedTabs = new Map();
-    const ungroupedTabs = [];
+    const groupedTabs = new Map<number, chrome.tabs.Tab[]>();
+    const ungroupedTabs: chrome.tabs.Tab[] = [];
 
-    tabs.forEach(tab => {
+    tabs.filter(tab => typeof tab.id === 'number').forEach(tab => {
       if (tab.groupId !== undefined && tab.groupId >= 0) {
         if (!groupedTabs.has(tab.groupId)) groupedTabs.set(tab.groupId, []);
-        groupedTabs.get(tab.groupId).push(tab);
+        const bucket = groupedTabs.get(tab.groupId);
+        if (bucket) bucket.push(tab);
       } else {
         ungroupedTabs.push(tab);
       }
     });
 
-    const renderGroup = (label, color, groupTabs, groupId = 'ungrouped') => {
+    const renderGroup = (label: string, color: string, groupTabs: chrome.tabs.Tab[], groupId: string | number = 'ungrouped') => {
       if (!groupTabs.length) return;
       const section = document.createElement('div');
       section.className = 'tab-group';
-      const allSelected = groupTabs.every(tab => this.selectedTabs.has(tab.id));
+      const allSelected = groupTabs.every(tab => typeof tab.id === 'number' && this.selectedTabs.has(tab.id));
       section.innerHTML = `
         <div class="tab-group-header" style="--group-color: ${color}">
           <div class="tab-group-label">${this.escapeHtml(label)}</div>
@@ -2387,7 +2463,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       });
 
       groupTabs.forEach(tab => {
-        const isSelected = this.selectedTabs.has(tab.id);
+        const tabId = tab.id;
+        const isSelected = typeof tabId === 'number' && this.selectedTabs.has(tabId);
         const item = document.createElement('div');
         item.className = `tab-item${isSelected ? ' selected' : ''}`;
         item.innerHTML = `
@@ -2414,6 +2491,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   toggleGroupSelection(groupTabs, shouldSelect) {
     groupTabs.forEach(tab => {
+      if (typeof tab.id !== 'number') return;
       if (shouldSelect) {
         this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
       } else {
@@ -2426,6 +2504,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   toggleTabSelection(tab, itemElement) {
+    if (typeof tab.id !== 'number') return;
     if (this.selectedTabs.has(tab.id)) {
       this.selectedTabs.delete(tab.id);
       itemElement.classList.remove('selected');
@@ -2460,11 +2539,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     this.elements.selectedTabsBar.classList.remove('hidden');
     this.elements.selectedTabsBar.innerHTML = '';
-    const grouped = new Map();
+    const grouped = new Map<string, Array<any>>();
     this.selectedTabs.forEach(tab => {
       const key = tab.groupId && tab.groupId >= 0 ? `group-${tab.groupId}` : 'ungrouped';
       if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(tab);
+      const bucket = grouped.get(key);
+      if (bucket) bucket.push(tab);
     });
 
     grouped.forEach(tabs => {
@@ -2482,6 +2562,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       `;
 
       const chipsRow = groupWrap.querySelector('.selected-tabs-chips');
+      if (!chipsRow) {
+        this.elements.selectedTabsBar.appendChild(groupWrap);
+        return;
+      }
       tabs.forEach(tab => {
         const chip = document.createElement('div');
         chip.className = 'selected-tab-chip';
@@ -2494,7 +2578,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
             </svg>
           </button>
         `;
-        chip.querySelector('button').addEventListener('click', (e) => {
+        const removeBtn = chip.querySelector('button');
+        removeBtn?.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectedTabs.delete(tab.id);
           this.updateSelectedTabsBar();

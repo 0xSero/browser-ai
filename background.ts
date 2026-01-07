@@ -2,8 +2,16 @@
 import { BrowserTools } from './tools/browser-tools.js';
 import { AIProvider } from './ai/provider.js';
 import { normalizeConversationHistory, toProviderMessages } from './ai/message-schema.js';
+import type { Message, ProviderMessage, ToolCall } from './ai/message-schema.js';
 
 class BackgroundService {
+  browserTools: BrowserTools;
+  aiProvider: AIProvider | null;
+  visionProvider: AIProvider | null;
+  currentSettings: Record<string, any> | null;
+  subAgentCount: number;
+  subAgentProfileCursor: number;
+
   constructor() {
     this.browserTools = new BrowserTools();
     this.aiProvider = null;
@@ -59,7 +67,7 @@ class BackgroundService {
     }
   }
 
-  async processUserMessage(userMessage, conversationHistory, selectedTabs = []) {
+  async processUserMessage(userMessage: string, conversationHistory: Message[], selectedTabs: chrome.tabs.Tab[] = []) {
     try {
       // Get settings
       const settings = await chrome.storage.local.get([
@@ -137,15 +145,17 @@ class BackgroundService {
         : null;
 
       // Initialize AI providers
-      this.aiProvider = new AIProvider({
+      const aiProvider = new AIProvider({
         ...orchestratorProfile,
         sendScreenshotsAsImages: Boolean(settings.enableScreenshots && settings.sendScreenshotsAsImages)
       });
+      this.aiProvider = aiProvider;
 
-      this.visionProvider = (visionProfile && visionProfile.apiKey) ? new AIProvider({
+      const visionProvider = (visionProfile && visionProfile.apiKey) ? new AIProvider({
         ...visionProfile,
         sendScreenshotsAsImages: true
       }) : null;
+      this.visionProvider = visionProvider;
 
       // Get available tools
       const tools = this.getToolsForSession(settings, orchestratorEnabled, teamProfiles);
@@ -153,27 +163,30 @@ class BackgroundService {
       // Get current tab info for context
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       const sessionTabs = this.browserTools.getSessionTabSummaries();
-      const workingTabId = this.browserTools.getCurrentSessionTabId() || activeTab?.id;
+      const sessionTabContext = sessionTabs
+        .filter(tab => typeof tab.id === 'number')
+        .map(tab => ({ id: tab.id as number, title: tab.title, url: tab.url }));
+      const workingTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
       const workingTab = sessionTabs.find(tab => tab.id === workingTabId);
       const context = {
         currentUrl: workingTab?.url || activeTab?.url || 'unknown',
         currentTitle: workingTab?.title || activeTab?.title || 'unknown',
         tabId: workingTabId,
-        availableTabs: sessionTabs,
+        availableTabs: sessionTabContext,
         orchestratorEnabled,
         teamProfiles
       };
 
       const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
-      const providerHistory = toProviderMessages(normalizedHistory);
+      const providerHistory: ProviderMessage[] = toProviderMessages(normalizedHistory);
       const compactedHistory = this.compactConversationHistory(providerHistory);
 
       // Call AI with tools
-      const supportsStreaming = typeof this.aiProvider.supportsStreaming === 'function'
-        ? this.aiProvider.supportsStreaming()
+      const supportsStreaming = typeof aiProvider.supportsStreaming === 'function'
+        ? aiProvider.supportsStreaming()
         : (settings.provider !== 'anthropic');
       const streamEnabled = supportsStreaming && settings.streamResponses !== false;
-      const response = await this.aiProvider.chat(
+      const response = await aiProvider.chat(
         compactedHistory,
         tools,
         context,
@@ -215,15 +228,15 @@ class BackgroundService {
           }
 
           // Execute all tool calls (errors are caught and returned to AI, not thrown)
-          const toolResults = [];
+          const toolResults: Array<{ id: string; success: boolean; result?: any; error?: any }> = [];
           for (const toolCall of currentResponse.toolCalls) {
             try {
-              const result = await this.executeToolCall(toolCall, this.aiProvider, { silent: false, settings });
+              const result = await this.executeToolCall(toolCall, aiProvider, { silent: false, settings });
               toolResults.push({ id: toolCall.id, success: !result?.error, result });
             } catch (err) {
               console.error('Tool execution error (continuing):', err);
               // Still add the error result so the AI knows what happened
-              this.aiProvider.addToolResult(toolCall.id, {
+              aiProvider.addToolResult(toolCall.id, {
                 success: false,
                 error: err.message || 'Tool execution failed'
               });
@@ -233,7 +246,7 @@ class BackgroundService {
 
           // Continue the conversation (AI will see tool results and decide next action)
           try {
-            currentResponse = await this.aiProvider.continueConversation();
+            currentResponse = await aiProvider.continueConversation();
             apiRetryCount = 0; // Reset on success
           } catch (continueErr) {
             console.error('Error continuing conversation:', continueErr);
@@ -250,7 +263,7 @@ class BackgroundService {
               // If tool ordering error persists, try to fix by force-clearing tool history
               if (isToolOrderingError && apiRetryCount >= 2) {
                 console.warn('Force-clearing tool history due to persistent errors');
-                this.aiProvider.clearToolHistory();
+                aiProvider.clearToolHistory();
               }
 
               currentResponse = { content: '', toolCalls: [] };
@@ -265,7 +278,7 @@ class BackgroundService {
               // Force-clear tool history and try to get a final response
               if (isToolOrderingError) {
                 console.warn('Final recovery: clearing all tool history');
-                this.aiProvider.clearToolHistory();
+                aiProvider.clearToolHistory();
               }
 
               currentResponse = { content: '', toolCalls: [] };
@@ -284,11 +297,11 @@ class BackgroundService {
         }
 
         // Ask the model to finish the task with a final summary before exiting
-        this.aiProvider.requestFinalResponse(
+        aiProvider.requestFinalResponse(
           'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.'
         );
         followupAttempts++;
-        currentResponse = await this.aiProvider.continueConversation();
+        currentResponse = await aiProvider.continueConversation();
       }
 
       // Send final response when no more tool calls
@@ -307,11 +320,15 @@ class BackgroundService {
     }
   }
 
-  async executeToolCall(toolCall, provider = this.aiProvider, options = {}) {
+  async executeToolCall(
+    toolCall: ToolCall,
+    provider: AIProvider | null = this.aiProvider,
+    options: { silent?: boolean; settings?: Record<string, any> } = {}
+  ) {
     // Declare in outer scope so catch can reference them safely
     let rawName = '';
     let toolName = '';
-    let args = {};
+    let args: Record<string, any> = {};
     try {
       // Normalize tool name and attempt a best-effort inference when missing
       rawName = (toolCall && typeof toolCall.name === 'string') ? toolCall.name.trim() : '';
@@ -560,7 +577,7 @@ class BackgroundService {
     });
   }
 
-  resolveProfile(settings, name = 'default') {
+  resolveProfile(settings: Record<string, any>, name: string = 'default') {
     const base = {
       provider: settings.provider,
       apiKey: settings.apiKey,
@@ -579,9 +596,11 @@ class BackgroundService {
     return { ...base, ...profile };
   }
 
-  resolveTeamProfiles(settings) {
+  resolveTeamProfiles(settings: Record<string, any>) {
     const names = Array.isArray(settings.auxAgentProfiles) ? settings.auxAgentProfiles : [];
-    const unique = Array.from(new Set(names)).filter(name => typeof name === 'string' && name.trim());
+    const unique = Array.from(new Set(names)).filter(
+      (name): name is string => typeof name === 'string' && name.trim().length > 0
+    );
     return unique.map(name => {
       const profile = this.resolveProfile(settings, name);
       return {
@@ -592,14 +611,18 @@ class BackgroundService {
     });
   }
 
-  getToolsForSession(settings, includeOrchestrator = false, teamProfiles = []) {
+  getToolsForSession(
+    settings: Record<string, any>,
+    includeOrchestrator = false,
+    teamProfiles: Array<{ name: string }> = []
+  ) {
     let tools = this.browserTools.getToolDefinitions();
     if (settings && settings.enableScreenshots === false) {
       tools = tools.filter(tool => tool.name !== 'screenshot');
     }
     if (includeOrchestrator) {
       const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map(profile => profile.name).filter(Boolean) : [];
-      const profileSchema = {
+      const profileSchema: { type: string; description: string; enum?: string[] } = {
         type: 'string',
         description: teamNames.length
           ? `Name of saved profile to use. Available: ${teamNames.join(', ')}`
@@ -639,10 +662,10 @@ class BackgroundService {
     return tools;
   }
 
-  compactConversationHistory(history = []) {
+  compactConversationHistory(history: Message[] = []): Message[] {
     const maxMessages = 12;
     const maxChars = 6000;
-    const safeHistory = Array.isArray(history) ? [...history] : [];
+    const safeHistory: Message[] = Array.isArray(history) ? [...history] : [];
 
     // Calculate total characters
     const totalChars = safeHistory.reduce((acc, msg) => {
@@ -670,7 +693,7 @@ class BackgroundService {
     const trimmed = safeHistory.slice(0, safeHistory.length - preserveCount);
 
     // Create compact summary of trimmed messages
-    const summaryPieces = [];
+    const summaryPieces: string[] = [];
     for (let i = 0; i < Math.min(trimmed.length, 8); i++) {
       const msg = trimmed[trimmed.length - 1 - i]; // Start from most recent trimmed
       const role = msg?.role || 'unknown';
@@ -678,15 +701,19 @@ class BackgroundService {
       if (typeof msg?.content === 'string') {
         preview = msg.content.slice(0, 100);
       } else if (Array.isArray(msg?.content)) {
-        const textPart = msg.content.find(p => p?.text || typeof p === 'string');
-        preview = (textPart?.text || textPart || '').slice(0, 100);
+        const textPart = msg.content.find(p => (typeof p === 'string') || (p && typeof p === 'object' && 'text' in p));
+        if (typeof textPart === 'string') {
+          preview = textPart.slice(0, 100);
+        } else if (textPart && typeof textPart === 'object' && 'text' in textPart) {
+          preview = String((textPart as { text?: string }).text || '').slice(0, 100);
+        }
       }
       if (preview) {
         summaryPieces.unshift(`${role}: ${preview}${preview.length >= 100 ? '...' : ''}`);
       }
     }
 
-    const compactNote = {
+    const compactNote: Message = {
       role: 'user',
       content: `[Context compacted: ${trimmed.length} earlier messages]\nRecent context:\n${summaryPieces.join('\n')}`
     };
@@ -736,12 +763,15 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
     });
     const tools = this.getToolsForSession(this.currentSettings || {}, false);
     const sessionTabs = this.browserTools.getSessionTabSummaries();
+    const sessionTabContext = sessionTabs
+      .filter(tab => typeof tab.id === 'number')
+      .map(tab => ({ id: tab.id as number, title: tab.title, url: tab.url }));
     const taskLines = Array.isArray(args.tasks)
       ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join('\n')
       : (args.goal || args.task || args.prompt || '');
 
     // Don't include system message in history - it's passed via provider settings
-    const subHistory = [
+    const subHistory: Message[] = [
       {
         role: 'user',
         content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`
@@ -749,11 +779,12 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
     ];
 
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const subTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
     const context = {
       currentUrl: activeTab?.url || 'unknown',
       currentTitle: activeTab?.title || 'unknown',
-      tabId: this.browserTools.getCurrentSessionTabId() || activeTab?.id,
-      availableTabs: sessionTabs
+      tabId: subTabId,
+      availableTabs: sessionTabContext
     };
 
     let response = await subProvider.chat(subHistory, tools, context, { stream: false });
@@ -762,7 +793,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
 
     while (response.toolCalls && response.toolCalls.length > 0 && iterations < maxIterations) {
       for (const call of response.toolCalls) {
-        await this.executeToolCall(call, subProvider, { silent: true, settings: this.currentSettings });
+        await this.executeToolCall(call, subProvider, { silent: true, settings: this.currentSettings || undefined });
       }
       iterations += 1;
       response = await subProvider.continueConversation();

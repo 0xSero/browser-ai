@@ -12,16 +12,39 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.join(__dirname, '..');
+const PROJECT_DIR = path.join(ROOT_DIR, '..');
+
+type Manifest = {
+  manifest_version?: number;
+  name?: string;
+  version?: string;
+  description?: string;
+  permissions?: string[];
+  host_permissions?: string[];
+  background?: { service_worker?: string };
+  side_panel?: { default_path?: string };
+  action?: Record<string, unknown>;
+  icons?: Record<string, string>;
+};
 
 class ExtensionValidator {
+  errors: Array<{ test: string; error: string }>;
+  warnings: string[];
+  passed: number;
+  failed: number;
+  manifest: Manifest | null;
+  packageJSON: Record<string, any>;
+
   constructor() {
     this.errors = [];
     this.warnings = [];
     this.passed = 0;
     this.failed = 0;
+    this.manifest = null;
+    this.packageJSON = {};
   }
 
-  log(message, type = 'info') {
+  log(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') {
     const colors = {
       info: '\x1b[36m',
       success: '\x1b[32m',
@@ -32,7 +55,7 @@ class ExtensionValidator {
     console.log(`${colors[type]}${message}${colors.reset}`);
   }
 
-  test(description, fn) {
+  test(description: string, fn: () => void) {
     try {
       fn();
       this.passed++;
@@ -46,21 +69,21 @@ class ExtensionValidator {
     }
   }
 
-  warn(message) {
+  warn(message: string) {
     this.warnings.push(message);
     this.log(`⚠ ${message}`, 'warning');
   }
 
-  fileExists(filePath) {
-    const fullPath = path.join(ROOT_DIR, filePath);
+  fileExists(filePath: string, baseDir: string = ROOT_DIR) {
+    const fullPath = path.join(baseDir, filePath);
     if (!fs.existsSync(fullPath)) {
       throw new Error(`File not found: ${filePath}`);
     }
     return fullPath;
   }
 
-  validateJSON(filePath) {
-    const fullPath = this.fileExists(filePath);
+  validateJSON(filePath: string, baseDir: string = ROOT_DIR) {
+    const fullPath = this.fileExists(filePath, baseDir);
     const content = fs.readFileSync(fullPath, 'utf8');
     try {
       return JSON.parse(content);
@@ -77,66 +100,70 @@ class ExtensionValidator {
     });
 
     this.test('manifest_version is 3', () => {
-      if (this.manifest.manifest_version !== 3) {
+      if (this.manifest?.manifest_version !== 3) {
         throw new Error('Must use Manifest V3');
       }
     });
 
     this.test('name is present', () => {
-      if (!this.manifest.name) {
+      if (!this.manifest?.name) {
         throw new Error('Manifest must have a name');
       }
     });
 
     this.test('version is present and valid', () => {
-      if (!this.manifest.version) {
+      if (!this.manifest?.version) {
         throw new Error('Manifest must have a version');
       }
-      if (!/^\d+\.\d+\.\d+/.test(this.manifest.version)) {
+      if (!/^\d+\.\d+\.\d+/.test(String(this.manifest?.version || ''))) {
         throw new Error('Version must be in format X.Y.Z');
       }
     });
 
     this.test('description is present', () => {
-      if (!this.manifest.description) {
+      if (!this.manifest?.description) {
         throw new Error('Manifest must have a description');
       }
     });
 
     this.test('required permissions are declared', () => {
       const required = ['sidePanel', 'activeTab', 'scripting', 'tabs', 'storage'];
-      const missing = required.filter(p => !this.manifest.permissions?.includes(p));
+      const permissions = Array.isArray(this.manifest?.permissions) ? this.manifest.permissions : [];
+      const missing = required.filter(p => !permissions.includes(p));
       if (missing.length > 0) {
         throw new Error(`Missing permissions: ${missing.join(', ')}`);
       }
     });
 
     this.test('host_permissions includes <all_urls>', () => {
-      if (!this.manifest.host_permissions?.includes('<all_urls>')) {
+      const hostPermissions = Array.isArray(this.manifest?.host_permissions)
+        ? this.manifest.host_permissions
+        : [];
+      if (!hostPermissions.includes('<all_urls>')) {
         throw new Error('Must include <all_urls> in host_permissions');
       }
     });
 
     this.test('background service worker is configured', () => {
-      if (!this.manifest.background?.service_worker) {
+      if (!this.manifest?.background?.service_worker) {
         throw new Error('Must have background.service_worker');
       }
     });
 
     this.test('side_panel is configured', () => {
-      if (!this.manifest.side_panel?.default_path) {
+      if (!this.manifest?.side_panel?.default_path) {
         throw new Error('Must have side_panel.default_path');
       }
     });
 
     this.test('action is configured', () => {
-      if (!this.manifest.action) {
+      if (!this.manifest?.action) {
         throw new Error('Must have action configuration');
       }
     });
 
     // Check for icons
-    if (!this.manifest.icons) {
+    if (!this.manifest?.icons) {
       this.warn('No icons configured - extension will work but won\'t show an icon');
     }
   }
@@ -198,7 +225,7 @@ class ExtensionValidator {
     this.log('\n=== Validating package.json ===', 'info');
 
     this.test('package.json exists and is valid', () => {
-      this.packageJSON = this.validateJSON('package.json');
+      this.packageJSON = this.validateJSON('package.json', PROJECT_DIR);
     });
 
     this.test('package.json has required scripts', () => {
@@ -222,7 +249,7 @@ class ExtensionValidator {
 
     docs.forEach(doc => {
       this.test(`${doc} exists`, () => {
-        this.fileExists(doc);
+        this.fileExists(doc, PROJECT_DIR);
       });
     });
   }
@@ -234,8 +261,7 @@ class ExtensionValidator {
       'sidepanel',
       'ai',
       'tools',
-      'icons',
-      'docs'
+      'icons'
     ];
 
     requiredDirs.forEach(dir => {

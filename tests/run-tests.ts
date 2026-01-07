@@ -16,13 +16,13 @@ const colors = {
   error: '\x1b[31m',
   warning: '\x1b[33m',
   reset: '\x1b[0m'
-};
+} as const;
 
-function log(message, type = 'info') {
+function log(message: string, type: keyof typeof colors = 'info') {
   console.log(`${colors[type]}${message}${colors.reset}`);
 }
 
-async function runCommand(command, description) {
+async function runCommand(command: string, description: string) {
   log(`\n▶ ${description}...`, 'info');
   try {
     const { stdout, stderr } = await execAsync(command);
@@ -45,10 +45,10 @@ async function main() {
   let allPassed = true;
 
   // Run validation
-  allPassed = await runCommand('node tests/validate-extension.js', 'Extension Validation') && allPassed;
+  allPassed = await runCommand('node dist/tests/validate-extension.js', 'Extension Validation') && allPassed;
 
   // Run unit tests
-  allPassed = await runCommand('node tests/unit/run-unit-tests.js', 'Unit Tests') && allPassed;
+  allPassed = await runCommand('node dist/tests/unit/run-unit-tests.js', 'Unit Tests') && allPassed;
 
   // Summary
   log('\n' + '═'.repeat(40), 'info');

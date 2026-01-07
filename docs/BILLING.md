@@ -7,6 +7,7 @@ Parchi ships with an optional Stripe-backed billing/auth service under `server/`
 ```bash
 cd server
 npm install
+npm run build
 npm run dev
 ```
 

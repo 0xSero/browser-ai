@@ -1,11 +1,83 @@
 // AI Provider - Handles OpenAI and Anthropic API calls
+import type { ContentPart, Message, MessageContent, ToolCall, Usage } from './message-schema.js';
+
+type ToolDefinition = {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  parameters?: Record<string, unknown>;
+};
+
+type StreamCallbacks = {
+  onStart?: () => void;
+  onDelta?: (payload: { content?: string }) => void;
+  onComplete?: () => void;
+};
+
+type ChatOptions = {
+  stream?: boolean;
+  streamCallbacks?: StreamCallbacks | null;
+};
+
+type ChatResponse = {
+  content: string;
+  thinking?: string | null;
+  toolCalls?: ToolCall[];
+  usage?: Usage | null;
+};
+
+type ModelContext = {
+  currentUrl: string;
+  currentTitle: string;
+  tabId: number | null;
+  availableTabs: Array<{ id: number; title?: string; url?: string }>;
+  orchestratorEnabled?: boolean;
+  teamProfiles?: Array<{ name: string; provider?: string; model?: string }>;
+};
+
+type OpenAIChatPayload = {
+  model: string;
+  messages: Message[];
+  tools: Array<Record<string, unknown>>;
+  tool_choice: string;
+  temperature: number;
+  max_tokens: number;
+  stream?: boolean;
+  stream_options?: { include_usage: boolean };
+};
+
+const isContentPartObject = (part: ContentPart): part is Exclude<ContentPart, string> => {
+  return typeof part === 'object' && part !== null;
+};
+
 export class AIProvider {
-  constructor(settings) {
-    this.provider = settings.provider;
-    this.apiKey = settings.apiKey;
-    this.model = settings.model;
-    this.customEndpoint = settings.customEndpoint;
-    this.systemPrompt = settings.systemPrompt;
+  provider: string;
+  apiKey: string;
+  model: string;
+  customEndpoint: string;
+  systemPrompt: string;
+  sendScreenshotsAsImages: boolean;
+  screenshotQuality: string;
+  showThinking: boolean;
+  maxTokens: number;
+  temperature: number;
+  requestTimeout: number;
+  messages: Message[];
+  streamEnabled: boolean;
+  streamCallbacks: StreamCallbacks | null;
+  maxModelTokens: number;
+  availableTools: ToolDefinition[];
+
+  constructor(settings: Record<string, any>) {
+    this.provider = settings.provider || 'openai';
+    this.apiKey = settings.apiKey || '';
+    this.model = settings.model || '';
+    this.customEndpoint = settings.customEndpoint || '';
+    this.systemPrompt = settings.systemPrompt || '';
     this.sendScreenshotsAsImages = settings.sendScreenshotsAsImages !== undefined ? settings.sendScreenshotsAsImages : false;
     this.screenshotQuality = settings.screenshotQuality || 'high';
     this.showThinking = settings.showThinking !== undefined ? settings.showThinking : true;
@@ -16,9 +88,10 @@ export class AIProvider {
     this.streamEnabled = false;
     this.streamCallbacks = null;
     this.maxModelTokens = settings.maxTokens || 2048;
+    this.availableTools = [];
   }
 
-  async chat(conversationHistory, tools, context, options = {}) {
+  async chat(conversationHistory: Message[], tools: ToolDefinition[], context: ModelContext, options: ChatOptions = {}): Promise<ChatResponse> {
     // Build messages array with system prompt
     this.messages = [
       {
@@ -44,7 +117,7 @@ export class AIProvider {
     }
   }
 
-  enhanceSystemPrompt(basePrompt, context) {
+  enhanceSystemPrompt(basePrompt: string, context: ModelContext): string {
     const tabsSection = Array.isArray(context.availableTabs) && context.availableTabs.length
       ? `Tabs selected (${context.availableTabs.length}). Use focusTab or switchTab before acting:\n${context.availableTabs.map(tab => `  - [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`).join('\n')}`
       : 'No additional tabs selected; actions target the current tab.';
@@ -84,16 +157,16 @@ Safety:
 Base every answer strictly on real tool output.`;
   }
 
-  async callOpenAI(tools, options = {}) {
+  async callOpenAI(tools: ToolDefinition[], options: ChatOptions = {}): Promise<ChatResponse> {
     const endpoint = this.provider === 'custom'
       ? this.customEndpoint
       : 'https://api.openai.com/v1';
 
     // Always sanitize messages to ensure tool calls have matching results
     // This helps with both native OpenAI and proxy endpoints (OpenRouter, etc.)
-    let messages = this.sanitizeForProxy(this.messages);
+    let messages: Message[] = this.sanitizeForProxy(this.messages);
 
-    const payload = {
+    const payload: OpenAIChatPayload = {
       model: this.model,
       messages: messages,
       tools: this.convertToolsToOpenAI(tools),
@@ -152,7 +225,7 @@ Base every answer strictly on real tool output.`;
                 return null; // Remove tool result messages
               }
               return msg;
-            }).filter(Boolean);
+            }).filter((msg): msg is Message => Boolean(msg));
             messages = this.ensureAlternatingRoles(messages);
           }
 
@@ -170,7 +243,7 @@ Base every answer strictly on real tool output.`;
     }
 
     if (options.stream) {
-      return await this.handleOpenAIStream(response, options.streamCallbacks);
+      return await this.handleOpenAIStream(response, options.streamCallbacks || undefined);
     }
 
     const data = await response.json();
@@ -188,8 +261,8 @@ Base every answer strictly on real tool output.`;
   }
 
   // Sanitize messages for proxy endpoints that might route to Anthropic
-  sanitizeForProxy(messages) {
-    const result = [];
+  sanitizeForProxy(messages: Message[]): Message[] {
+    const result: Message[] = [];
     let i = 0;
 
     while (i < messages.length) {
@@ -197,11 +270,11 @@ Base every answer strictly on real tool output.`;
       if (!msg) { i++; continue; }
 
       // Handle assistant with tool_calls (OpenAI format)
-      if (msg.role === 'assistant' && msg.tool_calls?.length > 0) {
+      if (msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         result.push(msg);
 
         // Collect all following tool results
-        const toolResults = [];
+        const toolResults: Message[] = [];
         let j = i + 1;
         while (j < messages.length && messages[j]?.role === 'tool') {
           toolResults.push(messages[j]);
@@ -209,7 +282,7 @@ Base every answer strictly on real tool output.`;
         }
 
         // Ensure we have results for all tool calls
-        const callIds = new Set(msg.tool_calls.map(tc => tc.id));
+        const callIds = new Set((msg.tool_calls || []).map(tc => tc.id));
         const resultIds = new Set(toolResults.map(tr => tr.tool_call_id));
 
         for (const id of callIds) {
@@ -236,8 +309,8 @@ Base every answer strictly on real tool output.`;
   }
 
   // Ensure proper message ordering for OpenAI format
-  ensureAlternatingRolesOpenAI(messages) {
-    const result = [];
+  ensureAlternatingRolesOpenAI(messages: Message[]): Message[] {
+    const result: Message[] = [];
     for (const msg of messages) {
       // Tool messages can follow assistant messages
       if (msg.role === 'tool') {
@@ -247,7 +320,7 @@ Base every answer strictly on real tool output.`;
 
       // For user/assistant, check alternation
       const last = result[result.length - 1];
-      if (last && last.role === msg.role && msg.role !== 'tool') {
+      if (last && last.role === msg.role) {
         // Merge consecutive same-role messages
         if (typeof last.content === 'string' && typeof msg.content === 'string') {
           last.content += '\n' + msg.content;
@@ -260,12 +333,12 @@ Base every answer strictly on real tool output.`;
     return result;
   }
 
-  async callAnthropic(tools) {
+  async callAnthropic(tools: ToolDefinition[]): Promise<ChatResponse> {
     const endpoint = 'https://api.anthropic.com/v1/messages';
 
     // Extract system message
     const systemMessage = this.messages.find(m => m.role === 'system');
-    let conversationMessages = this.messages.filter(m => m.role !== 'system');
+    let conversationMessages: Message[] = this.messages.filter(m => m.role !== 'system');
 
     // Sanitize messages for Anthropic format
     conversationMessages = this.sanitizeAnthropicMessages(conversationMessages);
@@ -313,18 +386,22 @@ Base every answer strictly on real tool output.`;
               .filter(m => m.role !== 'system')
               .map(msg => {
                 if (msg.role === 'assistant' && Array.isArray(msg.content)) {
-                  const textContent = msg.content.filter(c => c?.type === 'text');
+                  const textContent = msg.content.filter(
+                    c => isContentPartObject(c) && c.type === 'text'
+                  );
                   if (textContent.length === 0) return null;
                   return { role: 'assistant', content: textContent };
                 }
                 if (msg.role === 'user' && Array.isArray(msg.content)) {
-                  const nonToolContent = msg.content.filter(c => c?.type !== 'tool_result');
+                  const nonToolContent = msg.content.filter(
+                    c => !isContentPartObject(c) || c.type !== 'tool_result'
+                  );
                   if (nonToolContent.length === 0) return null;
                   return { role: 'user', content: nonToolContent };
                 }
                 return msg;
               })
-              .filter(Boolean);
+              .filter((msg): msg is Message => Boolean(msg));
             conversationMessages = this.ensureAlternatingRoles(conversationMessages);
           }
 
@@ -350,16 +427,19 @@ Base every answer strictly on real tool output.`;
     });
 
     // Extract thinking (text before tool use)
-    let thinking = null;
+    let thinking: string | null = null;
     let content = '';
 
-    const textBlock = data.content.find(block => block.type === 'text');
-    if (textBlock) {
+    const contentBlocks: ContentPart[] = Array.isArray(data.content) ? data.content : [];
+    const textBlock = contentBlocks.find(block => isContentPartObject(block) && block.type === 'text');
+    if (textBlock && isContentPartObject(textBlock)) {
       content = textBlock.text || '';
     }
 
     // Check for tool use
-    const toolUseBlocks = data.content.filter(block => block.type === 'tool_use');
+    const toolUseBlocks = contentBlocks.filter(
+      (block): block is Exclude<ContentPart, string> => isContentPartObject(block) && block.type === 'tool_use'
+    );
 
     if (toolUseBlocks.length > 0) {
       // Thinking is the text before tool use
@@ -380,9 +460,9 @@ Base every answer strictly on real tool output.`;
         thinking: thinking,
         usage: usage,
         toolCalls: toolUseBlocks.map(block => ({
-          id: block.id,
-          name: block.name,
-          args: block.input
+          id: String(block.id || this.createImplicitToolCallId()),
+          name: String(block.name || ''),
+          args: this.parseArgs(block.input)
         }))
       };
     }
@@ -395,14 +475,17 @@ Base every answer strictly on real tool output.`;
     };
   }
 
-  addToolResult(toolCallId, result) {
+  addToolResult(toolCallId: string, result: Record<string, any>) {
     if (this.provider === 'anthropic') {
       // Anthropic format - tool results must be in a user message
       // Check if we need to append to existing user message with tool_results
       const lastMsg = this.messages[this.messages.length - 1];
-      const isExistingToolResultMsg = lastMsg?.role === 'user' &&
-        Array.isArray(lastMsg.content) &&
-        lastMsg.content.some(c => c.type === 'tool_result');
+      const toolResultArray = lastMsg?.role === 'user' && Array.isArray(lastMsg.content)
+        ? lastMsg.content
+        : null;
+      const isExistingToolResultMsg = Boolean(
+        toolResultArray && toolResultArray.some(c => isContentPartObject(c) && c.type === 'tool_result')
+      );
 
       let toolResultContent;
       if (this.shouldSendAsImage(result)) {
@@ -429,8 +512,8 @@ Base every answer strictly on real tool output.`;
       }
 
       // Append to existing tool_result message or create new one
-      if (isExistingToolResultMsg) {
-        lastMsg.content.push(toolResultContent);
+      if (isExistingToolResultMsg && toolResultArray) {
+        toolResultArray.push(toolResultContent);
       } else {
         this.messages.push({
           role: 'user',
@@ -482,7 +565,7 @@ Base every answer strictly on real tool output.`;
     }
   }
 
-  requestFinalResponse(message = null) {
+  requestFinalResponse(message: string | null = null) {
     const prompt = message || 'You must provide a final response that explicitly answers the user, referencing the data you collected for each task.';
     this.messages.push({
       role: 'user',
@@ -490,7 +573,7 @@ Base every answer strictly on real tool output.`;
     });
   }
 
-  shouldSendAsImage(result) {
+  shouldSendAsImage(result: Record<string, any>) {
     // Only send images if enabled AND we're using a provider that supports it
     if (!this.sendScreenshotsAsImages || !result.success || !result.dataUrl || !result.dataUrl.startsWith('data:image/')) {
       return false;
@@ -511,7 +594,7 @@ Base every answer strictly on real tool output.`;
     return false;
   }
 
-  async continueConversation() {
+  async continueConversation(): Promise<ChatResponse> {
     // Continue conversation after tool execution
     // Use the tools that were provided in the initial chat() call
     const tools = this.availableTools || [];
@@ -538,7 +621,7 @@ Base every answer strictly on real tool output.`;
     }
   }
 
-  convertToolsToOpenAI(tools) {
+  convertToolsToOpenAI(tools: ToolDefinition[]): Array<Record<string, unknown>> {
     return tools.map(tool => ({
       type: 'function',
       function: {
@@ -549,7 +632,7 @@ Base every answer strictly on real tool output.`;
     }));
   }
 
-  convertToolsToAnthropic(tools) {
+  convertToolsToAnthropic(tools: ToolDefinition[]): Array<Record<string, unknown>> {
     return tools.map(tool => ({
       name: tool.name,
       description: tool.description,
@@ -558,22 +641,22 @@ Base every answer strictly on real tool output.`;
   }
 
   // Sanitize and fix message ordering for Anthropic
-  sanitizeAnthropicMessages(messages) {
+  sanitizeAnthropicMessages(messages: Message[]): Message[] {
     // Phase 1: Collect ALL tool_use IDs and ALL tool_result entries from the entire history
-    const allToolResults = new Map(); // tool_use_id -> tool_result content
+    const allToolResults = new Map<string, Exclude<ContentPart, string>>(); // tool_use_id -> tool_result content
 
     for (const msg of messages) {
       if (msg?.role === 'user' && Array.isArray(msg.content)) {
         for (const block of msg.content) {
-          if (block?.type === 'tool_result' && block.tool_use_id) {
-            allToolResults.set(block.tool_use_id, block);
+          if (isContentPartObject(block) && block.type === 'tool_result' && block.tool_use_id) {
+            allToolResults.set(String(block.tool_use_id), block);
           }
         }
       }
     }
 
     // Phase 2: Build clean message sequence
-    const result = [];
+    const result: Message[] = [];
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
@@ -581,19 +664,21 @@ Base every answer strictly on real tool output.`;
 
       // Handle assistant messages with tool_use
       if (msg.role === 'assistant' && Array.isArray(msg.content)) {
-        const toolUseBlocks = msg.content.filter(c => c?.type === 'tool_use');
+        const toolUseBlocks = msg.content.filter(
+          (c): c is Exclude<ContentPart, string> => isContentPartObject(c) && c.type === 'tool_use'
+        );
 
         if (toolUseBlocks.length > 0) {
           // Add the assistant message
           result.push(msg);
 
           // Build tool_result array - match by ID, add placeholders for missing
-          const toolResultsForThis = [];
+          const toolResultsForThis: Exclude<ContentPart, string>[] = [];
           for (const toolUse of toolUseBlocks) {
-            const matchingResult = allToolResults.get(toolUse.id);
+            const matchingResult = allToolResults.get(String(toolUse.id || ''));
             if (matchingResult) {
               toolResultsForThis.push(matchingResult);
-              allToolResults.delete(toolUse.id); // Mark as used
+              allToolResults.delete(String(toolUse.id || '')); // Mark as used
             } else {
               // No matching result - add placeholder
               toolResultsForThis.push({
@@ -616,7 +701,9 @@ Base every answer strictly on real tool output.`;
       // Handle regular user messages (skip tool_result-only messages, they're handled above)
       if (msg.role === 'user') {
         if (Array.isArray(msg.content)) {
-          const nonToolContent = msg.content.filter(c => c?.type !== 'tool_result');
+          const nonToolContent = msg.content.filter(
+            c => !isContentPartObject(c) || c.type !== 'tool_result'
+          );
           if (nonToolContent.length === 0) continue; // Skip tool_result-only messages
           // Keep message but filter out tool_results
           result.push({ ...msg, content: nonToolContent });
@@ -637,11 +724,11 @@ Base every answer strictly on real tool output.`;
   }
 
   // Ensure messages alternate between user and assistant
-  ensureAlternatingRoles(messages) {
+  ensureAlternatingRoles(messages: Message[]): Message[] {
     if (messages.length === 0) return messages;
 
-    const result = [];
-    let lastRole = null;
+    const result: Message[] = [];
+    let lastRole: string | null = null;
 
     for (const msg of messages) {
       if (msg.role === lastRole) {
@@ -682,7 +769,7 @@ Base every answer strictly on real tool output.`;
         }
         // For Anthropic format, filter out tool_use blocks
         if (Array.isArray(msg.content)) {
-          const textOnly = msg.content.filter(c => c?.type === 'text');
+          const textOnly = msg.content.filter(c => isContentPartObject(c) && c.type === 'text');
           if (textOnly.length > 0) {
             return { role: 'assistant', content: textOnly };
           }
@@ -693,18 +780,18 @@ Base every answer strictly on real tool output.`;
       if (msg.role === 'tool') return null;
       // For user messages with tool_result, filter them out
       if (msg.role === 'user' && Array.isArray(msg.content)) {
-        const nonTool = msg.content.filter(c => c?.type !== 'tool_result');
+        const nonTool = msg.content.filter(c => !isContentPartObject(c) || c.type !== 'tool_result');
         if (nonTool.length === 0) return null;
         return { ...msg, content: nonTool };
       }
       return msg;
-    }).filter(Boolean);
+    }).filter((msg): msg is Message => Boolean(msg));
 
     // Ensure alternating roles after cleanup
     this.messages = this.ensureAlternatingRoles(this.messages);
   }
 
-  async describeImage(dataUrl, prompt = 'Describe what is visible in this screenshot clearly and concisely.') {
+  async describeImage(dataUrl: string, prompt = 'Describe what is visible in this screenshot clearly and concisely.'): Promise<string> {
     if (!dataUrl || !dataUrl.startsWith('data:image/')) {
       throw new Error('No valid image provided for vision description.');
     }
@@ -740,8 +827,11 @@ Base every answer strictly on real tool output.`;
       }
 
       const data = await response.json();
-      const textBlock = Array.isArray(data.content) ? data.content.find(block => block.type === 'text') : null;
-      return textBlock?.text || 'No description returned.';
+      const blocks: ContentPart[] = Array.isArray(data.content) ? data.content : [];
+      const textBlock = blocks.find(block => isContentPartObject(block) && block.type === 'text');
+      return textBlock && isContentPartObject(textBlock)
+        ? (textBlock.text || 'No description returned.')
+        : 'No description returned.';
     }
 
     // OpenAI or compatible vision
@@ -782,10 +872,11 @@ Base every answer strictly on real tool output.`;
     return this.extractMessageText(message?.content) || 'No description returned.';
   }
 
-  parseArgs(raw) {
+  parseArgs(raw: unknown): Record<string, unknown> {
     try {
       if (raw == null) return {};
-      if (typeof raw === 'object') return raw;
+      if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+      if (Array.isArray(raw)) return { value: raw };
       if (typeof raw === 'string') {
         let str = raw.trim();
         str = str.replace(/<\|?begin[^>]*\|?>/gi, '')
@@ -804,12 +895,12 @@ Base every answer strictly on real tool output.`;
     return {};
   }
 
-  extractImplicitToolCallsFromText(text) {
+  extractImplicitToolCallsFromText(text: string): ToolCall[] {
     if (!text || typeof text !== 'string') return [];
     const indicatorRegex = /(tool[_\s-]?call|tool[_\s-]?use|function[_\s-]?call|<\s*(?:tool|function)_call)/i;
     if (!indicatorRegex.test(text)) return [];
 
-    const snippets = [];
+    const snippets: string[] = [];
     const codeBlockRegex = /```(?:json)?([\s\S]*?)```/gi;
     let match;
     while ((match = codeBlockRegex.exec(text))) {
@@ -829,7 +920,7 @@ Base every answer strictly on real tool output.`;
       snippets.push(text);
     }
 
-    const results = [];
+    const results: ToolCall[] = [];
     for (const snippet of snippets) {
       const objects = this.extractJsonObjects(snippet);
       for (const obj of objects) {
@@ -847,8 +938,8 @@ Base every answer strictly on real tool output.`;
     return results;
   }
 
-  extractJsonObjects(snippet) {
-    const objects = [];
+  extractJsonObjects(snippet: string): Array<Record<string, unknown>> {
+    const objects: Array<Record<string, unknown>> = [];
     if (!snippet || typeof snippet !== 'string') return objects;
     const trimmed = snippet.trim();
     if (!trimmed) return objects;
@@ -856,9 +947,11 @@ Base every answer strictly on real tool output.`;
     const direct = this.tryParseJson(trimmed);
     if (direct !== null) {
       if (Array.isArray(direct)) {
-        direct.forEach(item => objects.push(item));
+        direct.forEach(item => {
+          if (item && typeof item === 'object') objects.push(item as Record<string, unknown>);
+        });
       } else {
-        objects.push(direct);
+        if (direct && typeof direct === 'object') objects.push(direct as Record<string, unknown>);
       }
       return objects;
     }
@@ -868,16 +961,18 @@ Base every answer strictly on real tool output.`;
       const parsed = this.tryParseJson(segment);
       if (parsed !== null) {
         if (Array.isArray(parsed)) {
-          parsed.forEach(item => objects.push(item));
-        } else {
-          objects.push(parsed);
+          parsed.forEach(item => {
+            if (item && typeof item === 'object') objects.push(item as Record<string, unknown>);
+          });
+        } else if (parsed && typeof parsed === 'object') {
+          objects.push(parsed as Record<string, unknown>);
         }
       }
     }
     return objects;
   }
 
-  tryParseJson(text) {
+  tryParseJson(text: string): unknown {
     if (!text) return null;
     try {
       return JSON.parse(text);
@@ -886,10 +981,10 @@ Base every answer strictly on real tool output.`;
     }
   }
 
-  extractJsonSegments(text) {
-    const segments = [];
+  extractJsonSegments(text: string): string[] {
+    const segments: string[] = [];
     if (!text) return segments;
-    const stack = [];
+    const stack: Array<'}' | ']'> = [];
     let startIndex = -1;
 
     for (let i = 0; i < text.length; i++) {
@@ -920,10 +1015,10 @@ Base every answer strictly on real tool output.`;
     return segments;
   }
 
-  normalizeImplicitToolCall(data) {
+  normalizeImplicitToolCall(data: unknown): ToolCall[] | ToolCall | null {
     if (!data) return null;
     if (Array.isArray(data)) {
-      const nestedResults = [];
+      const nestedResults: ToolCall[] = [];
       for (const item of data) {
         const normalized = this.normalizeImplicitToolCall(item);
         if (Array.isArray(normalized)) {
@@ -936,27 +1031,28 @@ Base every answer strictly on real tool output.`;
     }
     if (typeof data !== 'object') return null;
 
-    const candidates = [data];
-    if (data.tool && typeof data.tool === 'object') {
-      candidates.push(data.tool);
+    const payload = data as Record<string, any>;
+    const candidates: Array<Record<string, any>> = [payload];
+    if (payload.tool && typeof payload.tool === 'object') {
+      candidates.push(payload.tool);
     }
-    if (data.function && typeof data.function === 'object') {
-      candidates.push(data.function);
+    if (payload.function && typeof payload.function === 'object') {
+      candidates.push(payload.function);
     }
-    if (Array.isArray(data.toolCalls)) {
-      candidates.push(...data.toolCalls);
+    if (Array.isArray(payload.toolCalls)) {
+      candidates.push(...payload.toolCalls);
     }
-    if (Array.isArray(data.tool_calls)) {
-      candidates.push(...data.tool_calls);
+    if (Array.isArray(payload.tool_calls)) {
+      candidates.push(...payload.tool_calls);
     }
-    if (Array.isArray(data.actions)) {
-      candidates.push(...data.actions);
+    if (Array.isArray(payload.actions)) {
+      candidates.push(...payload.actions);
     }
-    if (Array.isArray(data.steps)) {
-      candidates.push(...data.steps);
+    if (Array.isArray(payload.steps)) {
+      candidates.push(...payload.steps);
     }
 
-    const results = [];
+    const results: ToolCall[] = [];
     for (const candidate of candidates) {
       if (!candidate || typeof candidate !== 'object') continue;
       const name = this.extractImplicitToolName(candidate);
@@ -1001,7 +1097,7 @@ Base every answer strictly on real tool output.`;
     return results.length ? results : null;
   }
 
-  extractImplicitToolName(candidate) {
+  extractImplicitToolName(candidate: Record<string, any>): string {
     if (!candidate || typeof candidate !== 'object') return '';
     const possibleNames = [
       candidate.name,
@@ -1027,11 +1123,11 @@ Base every answer strictly on real tool output.`;
     return '';
   }
 
-  createImplicitToolCallId() {
+  createImplicitToolCallId(): string {
     return `implicit_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
   }
 
-  formatOpenAIMessage(message, usage = null) {
+  formatOpenAIMessage(message: Message, usage: Usage | null = null): ChatResponse {
     const textContent = this.extractMessageText(message?.content);
     const toolCalls = this.extractToolCalls(message);
 
@@ -1052,13 +1148,13 @@ Base every answer strictly on real tool output.`;
     };
   }
 
-  extractMessageText(content) {
+  extractMessageText(content: MessageContent | null | undefined): string {
     if (!content) return '';
     if (typeof content === 'string') return content;
     if (Array.isArray(content)) {
       return content.map(part => {
         if (typeof part === 'string') return part;
-        if (part && typeof part === 'object' && 'text' in part) {
+        if (isContentPartObject(part) && 'text' in part) {
           return part.text || '';
         }
         return '';
@@ -1067,8 +1163,8 @@ Base every answer strictly on real tool output.`;
     return '';
   }
 
-  extractToolCalls(message) {
-    const toolCalls = [];
+  extractToolCalls(message: Message | null | undefined): ToolCall[] {
+    const toolCalls: ToolCall[] = [];
     if (Array.isArray(message?.tool_calls) && message.tool_calls.length > 0) {
       for (const tc of message.tool_calls) {
         const fn = tc["function"] || tc.function || tc.func || tc.tool || {};
@@ -1083,7 +1179,7 @@ Base every answer strictly on real tool output.`;
       toolCalls.push({ id: `call_${Date.now()}`, name: fc.name || '', args });
     } else if (Array.isArray(message?.content)) {
       for (const part of message.content) {
-        if (part && (part.type === 'tool_use' || part.type === 'tool_call')) {
+        if (isContentPartObject(part) && (part.type === 'tool_use' || part.type === 'tool_call')) {
           const args =
             this.parseArgs(part.input ?? part.arguments ?? part.args ?? part.parameters);
           toolCalls.push({
@@ -1108,7 +1204,7 @@ Base every answer strictly on real tool output.`;
     return toolCalls;
   }
 
-  async handleOpenAIStream(response, callbacks = {}) {
+  async handleOpenAIStream(response: Response, callbacks: StreamCallbacks = {}): Promise<ChatResponse> {
     if (!response.body) {
       throw new Error('Streaming response has no body');
     }
@@ -1117,12 +1213,12 @@ Base every answer strictly on real tool output.`;
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
     let aggregatedContent = '';
-    let streamUsage = null; // Track usage from streaming
-    const toolCallMap = new Map();
-    const invoke = (name, payload) => {
+    let streamUsage: Usage | null = null; // Track usage from streaming
+    const toolCallMap = new Map<number, { id: string; type: string; function: { name: string; arguments: string } }>();
+    const invoke = (name: keyof StreamCallbacks, payload?: { content?: string }) => {
       try {
         if (typeof callbacks?.[name] === 'function') {
-          callbacks[name](payload);
+          callbacks[name](payload as { content?: string });
         }
       } catch (error) {
         console.warn('Stream callback error:', error);
@@ -1131,11 +1227,11 @@ Base every answer strictly on real tool output.`;
 
     invoke('onStart');
 
-    const appendContent = (delta) => {
+    const appendContent = (delta: string | ContentPart[] | undefined) => {
       if (!delta) return;
       if (Array.isArray(delta)) {
         for (const part of delta) {
-          if (part?.text) {
+          if (isContentPartObject(part) && part.text) {
             aggregatedContent += part.text;
           }
         }
@@ -1145,7 +1241,7 @@ Base every answer strictly on real tool output.`;
       invoke('onDelta', { content: aggregatedContent });
     };
 
-    const captureToolCalls = (toolCallsDelta) => {
+    const captureToolCalls = (toolCallsDelta: Array<Record<string, any>>) => {
       if (!Array.isArray(toolCallsDelta)) return;
       for (const tc of toolCallsDelta) {
         const index = typeof tc.index === 'number' ? tc.index : toolCallMap.size;
@@ -1244,7 +1340,7 @@ Base every answer strictly on real tool output.`;
     invoke('onComplete');
 
     const finalToolCalls = Array.from(toolCallMap.values());
-    const assistantMessage = {
+    const assistantMessage: Message = {
       role: 'assistant',
       content: aggregatedContent,
       tool_calls: finalToolCalls.length ? finalToolCalls : undefined

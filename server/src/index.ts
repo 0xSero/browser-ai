@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,6 +21,15 @@ const PORTAL_RETURN_URL = process.env.PORTAL_RETURN_URL || '';
 const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, '../data/store.json');
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(item => item.trim()) : [];
 
+type User = {
+  id: string;
+  email: string;
+  createdAt: string;
+  stripeCustomerId: string;
+};
+
+type AuthenticatedRequest = Request & { user: User };
+
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' }) : null;
 const store = new DataStore(DATA_PATH);
 
@@ -39,7 +49,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-function resolveBaseUrl(req) {
+function resolveBaseUrl(req: Request): string {
   if (BASE_URL) return BASE_URL.replace(/\/+$/, '');
   return `${req.protocol}://${req.get('host')}`;
 }
@@ -56,7 +66,7 @@ function requirePriceId() {
   }
 }
 
-function requireAuth(req, res, next) {
+function requireAuth(req: Request, res: Response, next: NextFunction) {
   store.cleanupExpired();
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -74,28 +84,30 @@ function requireAuth(req, res, next) {
     res.status(401).json({ error: 'User not found.' });
     return;
   }
-  req.user = user;
+  (req as AuthenticatedRequest).user = user;
   next();
 }
 
-async function ensureCustomer(user) {
+async function ensureCustomer(user: User): Promise<string> {
   requireStripe();
+  const stripeClient = stripe!;
   if (user.stripeCustomerId) return user.stripeCustomerId;
-  const customer = await stripe.customers.create({ email: user.email });
+  const customer = await stripeClient.customers.create({ email: user.email });
   user.stripeCustomerId = customer.id;
   await store.save();
   return customer.id;
 }
 
-async function fetchSubscription(customerId) {
+async function fetchSubscription(customerId: string) {
   requireStripe();
-  const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
+  const stripeClient = stripe!;
+  const subs = await stripeClient.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
   if (!subs.data.length) return null;
   const preferred = subs.data.find(sub => ['active', 'trialing', 'past_due'].includes(sub.status));
   return preferred || subs.data[0];
 }
 
-async function buildEntitlement(user) {
+async function buildEntitlement(user: User) {
   if (!stripe || !user.stripeCustomerId) {
     return { active: false, plan: 'none', status: 'none', renewsAt: '' };
   }
@@ -113,16 +125,22 @@ async function buildEntitlement(user) {
   return { active, plan, status, renewsAt };
 }
 
-async function buildBillingOverview(user) {
+async function buildBillingOverview(user: User) {
   const entitlement = await buildEntitlement(user);
   if (!stripe || !user.stripeCustomerId) {
     return { entitlement, paymentMethod: null, invoices: [] };
   }
-  const customer = await stripe.customers.retrieve(user.stripeCustomerId);
-  let paymentMethod = null;
-  const defaultPayment = customer?.invoice_settings?.default_payment_method;
-  if (defaultPayment) {
-    const pm = await stripe.paymentMethods.retrieve(defaultPayment);
+  const stripeClient = stripe!;
+  const customer = await stripeClient.customers.retrieve(user.stripeCustomerId);
+  let paymentMethod: { brand?: string; last4?: string; expMonth?: number; expYear?: number } | null = null;
+  const customerData = customer as Stripe.Customer | Stripe.DeletedCustomer;
+  const isDeletedCustomer = 'deleted' in customerData && customerData.deleted === true;
+  const defaultPayment = !isDeletedCustomer
+    ? (customerData as Stripe.Customer).invoice_settings?.default_payment_method
+    : null;
+  const defaultPaymentId = typeof defaultPayment === 'string' ? defaultPayment : defaultPayment?.id;
+  if (defaultPaymentId) {
+    const pm = await stripeClient.paymentMethods.retrieve(defaultPaymentId);
     if (pm?.card) {
       paymentMethod = {
         brand: pm.card.brand,
@@ -132,7 +150,7 @@ async function buildBillingOverview(user) {
       };
     }
   } else {
-    const pmList = await stripe.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card', limit: 1 });
+    const pmList = await stripeClient.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card', limit: 1 });
     const pm = pmList.data[0];
     if (pm?.card) {
       paymentMethod = {
@@ -144,7 +162,7 @@ async function buildBillingOverview(user) {
     }
   }
 
-  const invoiceList = await stripe.invoices.list({ customer: user.stripeCustomerId, limit: 5 });
+  const invoiceList = await stripeClient.invoices.list({ customer: user.stripeCustomerId, limit: 5 });
   const invoices = invoiceList.data.map(inv => ({
     id: inv.id,
     status: inv.status,
@@ -231,12 +249,13 @@ app.post('/v1/auth/device-code/verify', async (req, res, next) => {
 });
 
 app.get('/v1/account', requireAuth, (req, res) => {
-  res.json({ user: { id: req.user.id, email: req.user.email } });
+  const authed = req as AuthenticatedRequest;
+  res.json({ user: { id: authed.user.id, email: authed.user.email } });
 });
 
 app.get('/v1/billing/overview', requireAuth, async (req, res, next) => {
   try {
-    const overview = await buildBillingOverview(req.user);
+    const overview = await buildBillingOverview((req as AuthenticatedRequest).user);
     res.json(overview);
   } catch (error) {
     next(error);
@@ -247,9 +266,10 @@ app.post('/v1/billing/checkout', requireAuth, async (req, res, next) => {
   try {
     requireStripe();
     requirePriceId();
-    const customerId = await ensureCustomer(req.user);
+    const customerId = await ensureCustomer((req as AuthenticatedRequest).user);
+    const stripeClient = stripe!;
     const returnUrl = req.body?.returnUrl || '';
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeClient.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
@@ -265,9 +285,10 @@ app.post('/v1/billing/checkout', requireAuth, async (req, res, next) => {
 app.post('/v1/billing/portal', requireAuth, async (req, res, next) => {
   try {
     requireStripe();
-    const customerId = await ensureCustomer(req.user);
+    const customerId = await ensureCustomer((req as AuthenticatedRequest).user);
+    const stripeClient = stripe!;
     const returnUrl = req.body?.returnUrl || PORTAL_RETURN_URL || `${resolveBaseUrl(req)}/public/success.html`;
-    const portal = await stripe.billingPortal.sessions.create({
+    const portal = await stripeClient.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl
     });

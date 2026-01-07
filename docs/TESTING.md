@@ -158,7 +158,7 @@ Integration tests verify the extension works with real browser interactions.
 
 ### Test Page
 
-Load `tests/integration/test-page.html` in your browser to access interactive test scenarios.
+Load `tests/integration/test-page.html` in your browser to access interactive test scenarios. Build the extension first (`npm run build`) and load `dist/` in Chrome.
 
 ## Automated E2E Tests (Playwright)
 

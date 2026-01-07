@@ -51,9 +51,14 @@ Parchi is a premium warm-paper inspired Chrome (Chromium) extension built for pr
    git clone <repo-url>
    cd browser-ai
    ```
-2. Ensure `icons/` contains `icon16.png`, `icon48.png`, `icon128.png` (optional but recommended).
-3. Open `chrome://extensions`, enable Developer Mode, and load the unpacked `browser-ai` directory.
-4. Pin the extension to the toolbar if desired.
+2. Install dependencies and build:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. Ensure `icons/` contains `icon16.png`, `icon48.png`, `icon128.png` (optional but recommended).
+4. Open `chrome://extensions`, enable Developer Mode, and load the unpacked `browser-ai/dist` directory.
+5. Pin the extension to the toolbar if desired.
 
 ## Configuration
 
@@ -102,6 +107,7 @@ content.js    → DOM helpers for highlighting, hover simulation, metadata
 npm test         # Runs the full testing suite
 npm run validate # Validates extension files and manifest
 npm run test:unit # Unit tests
+npm run typecheck # TypeScript checks
 
 # Corepack-free alternative
 node scripts/run-checks.mjs

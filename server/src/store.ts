@@ -2,7 +2,37 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 
-const DEFAULT_DATA = {
+type User = {
+  id: string;
+  email: string;
+  createdAt: string;
+  stripeCustomerId: string;
+};
+
+type DeviceCodeEntry = {
+  deviceCode: string;
+  userCode: string;
+  status: 'pending' | 'approved' | 'used';
+  userId: string;
+  createdAt: string;
+  expiresAt: number;
+  approvedAt?: string;
+};
+
+type Session = {
+  token: string;
+  userId: string;
+  createdAt: string;
+  expiresAt: number;
+};
+
+type DataStoreShape = {
+  users: User[];
+  deviceCodes: DeviceCodeEntry[];
+  sessions: Session[];
+};
+
+const DEFAULT_DATA: DataStoreShape = {
   users: [],
   deviceCodes: [],
   sessions: []
@@ -24,24 +54,29 @@ function createToken(size = 24) {
 }
 
 export class DataStore {
-  constructor(filePath) {
+  filePath: string;
+  data: DataStoreShape;
+  loaded: boolean;
+
+  constructor(filePath: string) {
     this.filePath = filePath;
     this.data = { ...DEFAULT_DATA };
     this.loaded = false;
   }
 
-  async load() {
+  async load(): Promise<void> {
     try {
       const content = await fs.readFile(this.filePath, 'utf8');
-      this.data = JSON.parse(content);
+      this.data = JSON.parse(content) as DataStoreShape;
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      const err = error as NodeJS.ErrnoException;
+      if (err.code !== 'ENOENT') throw err;
       await this.save();
     }
     this.loaded = true;
   }
 
-  async save() {
+  async save(): Promise<void> {
     const dir = path.dirname(this.filePath);
     await fs.mkdir(dir, { recursive: true });
     const tmpPath = `${this.filePath}.tmp`;
@@ -49,27 +84,27 @@ export class DataStore {
     await fs.rename(tmpPath, this.filePath);
   }
 
-  ensureLoaded() {
+  ensureLoaded(): void {
     if (!this.loaded) {
       throw new Error('Data store not loaded.');
     }
   }
 
-  cleanupExpired() {
+  cleanupExpired(): void {
     const now = Date.now();
     this.data.deviceCodes = this.data.deviceCodes.filter(code => code.expiresAt > now);
     this.data.sessions = this.data.sessions.filter(session => session.expiresAt > now);
   }
 
-  findUserByEmail(email) {
+  findUserByEmail(email: string): User | undefined {
     return this.data.users.find(user => user.email === email);
   }
 
-  findUserById(id) {
+  findUserById(id: string): User | undefined {
     return this.data.users.find(user => user.id === id);
   }
 
-  upsertUser({ email }) {
+  upsertUser({ email }: { email: string }): User {
     let user = this.findUserByEmail(email);
     if (!user) {
       user = {
@@ -83,10 +118,10 @@ export class DataStore {
     return user;
   }
 
-  createDeviceCode({ expiresInMs }) {
+  createDeviceCode({ expiresInMs }: { expiresInMs: number }): DeviceCodeEntry {
     const deviceCode = `device_${createToken(12)}`;
     const userCode = createUserCode();
-    const entry = {
+    const entry: DeviceCodeEntry = {
       deviceCode,
       userCode,
       status: 'pending',
@@ -98,7 +133,7 @@ export class DataStore {
     return entry;
   }
 
-  approveDeviceCode({ userCode, email }) {
+  approveDeviceCode({ userCode, email }: { userCode: string; email: string }): { entry: DeviceCodeEntry; user: User } {
     const entry = this.data.deviceCodes.find(code => code.userCode === userCode);
     if (!entry) {
       throw new Error('Invalid device code.');
@@ -113,7 +148,9 @@ export class DataStore {
     return { entry, user };
   }
 
-  verifyDeviceCode({ deviceCode, sessionTtlMs }) {
+  verifyDeviceCode({ deviceCode, sessionTtlMs }: { deviceCode: string; sessionTtlMs: number }):
+    | { status: 'pending' }
+    | { status: 'approved'; session: Session } {
     const entry = this.data.deviceCodes.find(code => code.deviceCode === deviceCode);
     if (!entry) {
       throw new Error('Invalid device code.');
@@ -135,7 +172,7 @@ export class DataStore {
     return { status: 'approved', session };
   }
 
-  findSession(token) {
+  findSession(token: string): Session | undefined {
     return this.data.sessions.find(session => session.token === token);
   }
 }

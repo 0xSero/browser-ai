@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
-    "start": "node src/index.js"
+    "build": "tsc -p tsconfig.json && node ../scripts/build.mjs",
+    "dev": "node dist/src/index.js",
+    "start": "node dist/src/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "stripe": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21"
   }
 }
