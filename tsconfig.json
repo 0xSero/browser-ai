@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "types": ["chrome", "node"],
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "background.js",
+    "content.js",
+    "sidepanel/**/*.js",
+    "tools/**/*.js",
+    "ai/**/*.js",
+    "tests/**/*.js",
+    "server/**/*.js"
+  ],
+  "exclude": ["node_modules"]
+}

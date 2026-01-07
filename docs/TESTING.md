@@ -160,6 +160,38 @@ Integration tests verify the extension works with real browser interactions.
 
 Load `tests/integration/test-page.html` in your browser to access interactive test scenarios.
 
+## Automated E2E Tests (Playwright)
+
+For automated UI coverage, use the Playwright-based E2E harness. It launches Chromium with the extension loaded and validates the side panel UI plus tab selector behavior.
+
+### Setup
+
+1. Install dev dependencies: `npm install`
+2. Install Chromium for Playwright: `npx playwright install chromium`
+
+### Run
+
+```
+npm run test:e2e
+```
+
+Notes:
+- Extensions are not supported in headless mode; tests run in a visible browser.
+- The harness seeds a signed-in state in `chrome.storage.local` to skip the auth gate.
+- Use `E2E_TIMEOUT` and `E2E_SLOWMO` env vars to tune the run.
+
+## Type Safety
+
+Type checking uses `tsconfig.json` with `checkJs` + `allowJs` so the existing JS codebase gets type feedback without a build step.
+
+Run:
+
+```
+npm run typecheck
+```
+
+This relies on `@types/chrome`, `@types/node`, and `typescript` in `devDependencies`.
+
 ### Test Scenarios
 
 #### 1. Navigation Tests

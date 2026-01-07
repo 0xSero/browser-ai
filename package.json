@@ -8,6 +8,8 @@
     "validate": "node tests/validate-extension.js",
     "test:unit": "node tests/unit/run-unit-tests.js",
     "test:integration": "echo 'Load tests/integration/test-page.html in browser and run tests'",
+    "test:e2e": "node tests/e2e/run-e2e.js",
+    "typecheck": "tsc --noEmit",
     "lint": "echo 'Linting extension files...' && node tests/lint-check.js",
     "build": "node tests/validate-extension.js && echo 'Extension validated successfully'",
     "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'"
@@ -22,5 +24,10 @@
   ],
   "author": "",
   "license": "MIT",
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^22.10.5",
+    "playwright": "^1.49.1",
+    "typescript": "^5.6.3"
+  }
 }
