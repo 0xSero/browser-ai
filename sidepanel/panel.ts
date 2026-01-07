@@ -83,10 +83,13 @@ class SidePanelUI {
       authPanel: document.getElementById('authPanel'),
       billingPanel: document.getElementById('billingPanel'),
       accountPanel: document.getElementById('accountPanel'),
+      authSubtitle: document.getElementById('authSubtitle'),
+      accessConfigPrompt: document.getElementById('accessConfigPrompt'),
       authStartBtn: document.getElementById('authStartBtn'),
       authVerifyBtn: document.getElementById('authVerifyBtn'),
       authCopyBtn: document.getElementById('authCopyBtn'),
       authOpenBtn: document.getElementById('authOpenBtn'),
+      authOpenSettingsBtn: document.getElementById('authOpenSettingsBtn'),
       authCodeValue: document.getElementById('authCodeValue'),
       authCodeWrap: document.getElementById('authCodeWrap'),
       billingStartBtn: document.getElementById('billingStartBtn'),
@@ -192,7 +195,12 @@ class SidePanelUI {
       permissionTabs: document.getElementById('permissionTabs'),
       permissionScreenshots: document.getElementById('permissionScreenshots'),
       allowedDomains: document.getElementById('allowedDomains'),
+      accountSettingsSection: document.getElementById('accountSettingsSection'),
+      accountApiBaseGroup: document.getElementById('accountApiBaseGroup'),
       accountApiBase: document.getElementById('accountApiBase'),
+      exportSettingsBtn: document.getElementById('exportSettingsBtn'),
+      importSettingsBtn: document.getElementById('importSettingsBtn'),
+      importSettingsInput: document.getElementById('importSettingsInput'),
       accessStatus: document.getElementById('accessStatus')
     };
 
@@ -259,6 +267,7 @@ class SidePanelUI {
     this.elements.authVerifyBtn?.addEventListener('click', () => this.verifyAuthFlow());
     this.elements.authCopyBtn?.addEventListener('click', () => this.copyAuthCode());
     this.elements.authOpenBtn?.addEventListener('click', () => this.openAuthPage());
+    this.elements.authOpenSettingsBtn?.addEventListener('click', () => this.openAccountSettings({ focusAccountApi: true }));
     this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
     this.elements.billingManageBtn?.addEventListener('click', () => this.manageBilling());
     this.elements.authLogoutBtn?.addEventListener('click', () => this.signOut());
@@ -339,6 +348,12 @@ class SidePanelUI {
     this.elements.cancelSettingsBtn.addEventListener('click', () => {
       this.toggleSettings();
     });
+
+    this.elements.exportSettingsBtn?.addEventListener('click', () => this.exportSettings());
+    this.elements.importSettingsBtn?.addEventListener('click', () => {
+      this.elements.importSettingsInput?.click();
+    });
+    this.elements.importSettingsInput?.addEventListener('change', (event) => this.importSettings(event));
 
     // Send message
     this.elements.sendBtn.addEventListener('click', () => {
@@ -546,6 +561,7 @@ class SidePanelUI {
       this.elements.accountApiBase.value = settings.accountApiBase || '';
     }
     this.accountClient.setBaseUrl(settings.accountApiBase || '');
+    this.updateAccessConfigPrompt();
 
     this.refreshConfigDropdown();
     this.setActiveConfig(this.currentConfig, true);
@@ -611,6 +627,7 @@ class SidePanelUI {
 
   updateAccessUI() {
     const state = this.getAccessState();
+    this.updateAccessConfigPrompt();
     const showAccess = this.accessPanelVisible || state !== 'ready';
     const showAccount = this.accessPanelVisible && state !== 'auth';
     const showBilling = state === 'billing' && !showAccount;
@@ -678,6 +695,18 @@ class SidePanelUI {
     }
   }
 
+  updateAccessConfigPrompt() {
+    const apiConfigured = Boolean(this.accountClient?.baseUrl);
+    if (this.elements.accessConfigPrompt) {
+      this.elements.accessConfigPrompt.classList.toggle('hidden', apiConfigured);
+    }
+    if (this.elements.authSubtitle) {
+      this.elements.authSubtitle.textContent = apiConfigured
+        ? 'Link this browser with a one-time device code to start using Parchi.'
+        : 'Set the account API base URL in Settings before starting device sign-in.';
+    }
+  }
+
   toggleAccessPanel() {
     this.accessPanelVisible = !this.accessPanelVisible;
     this.updateAccessUI();
@@ -692,8 +721,9 @@ class SidePanelUI {
     const fallbackUrl = this.accountClient?.baseUrl ? `${this.accountClient.baseUrl}/portal` : '';
     const url = this.authState?.verificationUrl || fallbackUrl;
     if (!url) {
-      this.setAccessStatus('Set Account API base URL in Settings to open the account page.', 'warning');
+      this.setAccessStatus('Set the account API base URL in Settings to open the account page.', 'warning');
       this.updateStatus('No account page available yet.', 'warning');
+      this.openAccountSettings({ focusAccountApi: true });
       return;
     }
     this.openExternalUrl(url);
@@ -734,13 +764,37 @@ class SidePanelUI {
   }
 
   openSettingsFromAccount() {
+    this.openAccountSettings();
+  }
+
+  openAccountSettings({ focusAccountApi = false } = {}) {
     this.accessPanelVisible = false;
     this.updateAccessUI();
     if (this.elements.settingsPanel?.classList.contains('hidden')) {
       this.toggleSettings();
-    } else {
-      this.switchSettingsTab('general');
     }
+    this.switchSettingsTab('general');
+    const accountSection = this.elements.accountSettingsSection;
+    if (accountSection && accountSection instanceof HTMLDetailsElement) {
+      accountSection.open = true;
+    }
+    if (focusAccountApi) {
+      this.focusAccountApiBase();
+    }
+  }
+
+  focusAccountApiBase() {
+    const group = this.elements.accountApiBaseGroup;
+    const input = this.elements.accountApiBase;
+    if (!input) return;
+    requestAnimationFrame(() => {
+      if (group?.classList) {
+        group.classList.add('highlight');
+        window.setTimeout(() => group.classList.remove('highlight'), 1600);
+      }
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
   }
 
   openProfilesFromAccount() {
@@ -892,8 +946,9 @@ class SidePanelUI {
 
   ensureAccountApiBase() {
     if (this.accountClient?.baseUrl) return true;
-    this.setAccessStatus('Set Account API base URL in Settings to enable account actions.', 'warning');
+    this.setAccessStatus('Open Settings → Account & billing and add the account API base URL.', 'warning');
     this.updateStatus('Account API base URL is not configured', 'warning');
+    this.openAccountSettings({ focusAccountApi: true });
     return false;
   }
 
@@ -1084,6 +1139,89 @@ class SidePanelUI {
     this.toggleSettings();
   }
 
+  async exportSettings() {
+    try {
+      const keys = [
+        'configs',
+        'activeConfig',
+        'auxAgentProfiles',
+        'visionBridge',
+        'visionProfile',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'showThinking',
+        'streamResponses',
+        'autoScroll',
+        'confirmActions',
+        'saveHistory',
+        'toolPermissions',
+        'allowedDomains',
+        'accountApiBase'
+      ];
+      const settings = await chrome.storage.local.get(keys);
+      const payload = {
+        ...settings,
+        exportedAt: new Date().toISOString(),
+        exportVersion: 1
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `parchi-settings-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      this.updateStatus('Settings export downloaded', 'success');
+    } catch (error) {
+      this.updateStatus('Unable to export settings', 'error');
+    }
+  }
+
+  async importSettings(event) {
+    const input = event?.target;
+    const file = input?.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const payload: Record<string, any> = {};
+      const allowedKeys = [
+        'configs',
+        'activeConfig',
+        'auxAgentProfiles',
+        'visionBridge',
+        'visionProfile',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'showThinking',
+        'streamResponses',
+        'autoScroll',
+        'confirmActions',
+        'saveHistory',
+        'toolPermissions',
+        'allowedDomains',
+        'accountApiBase'
+      ];
+      allowedKeys.forEach((key) => {
+        if (data[key] !== undefined) {
+          payload[key] = data[key];
+        }
+      });
+      if (payload.configs && typeof payload.configs !== 'object') {
+        throw new Error('Invalid configs payload');
+      }
+      await chrome.storage.local.set(payload);
+      await this.loadSettings();
+      this.renderProfileGrid();
+      this.updateAccessUI();
+      this.updateStatus('Settings imported successfully', 'success');
+    } catch (error) {
+      this.updateStatus('Unable to import settings', 'error');
+    } finally {
+      if (input) input.value = '';
+    }
+  }
+
   collectCurrentFormProfile() {
     return {
       provider: this.elements.provider.value,
@@ -1149,6 +1287,7 @@ class SidePanelUI {
     };
     await chrome.storage.local.set(payload);
     this.accountClient.setBaseUrl(payload.accountApiBase);
+    this.updateAccessConfigPrompt();
     this.updateContextUsage();
     if (!silent) {
       this.updateStatus('Settings saved successfully', 'success');

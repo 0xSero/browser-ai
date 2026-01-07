@@ -1295,6 +1295,12 @@ textarea:disabled {
   margin-bottom: 0;
 }
 
+.form-group.highlight {
+  outline: 2px solid rgba(243, 187, 65, 0.4);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
+
 .form-group.full {
   grid-column: 1 / -1;
 }
@@ -1339,6 +1345,13 @@ textarea:disabled {
 .config-row {
   display: flex;
   gap: 6px;
+  align-items: center;
+}
+
+.settings-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
 }
 
@@ -1646,6 +1659,29 @@ textarea:disabled {
 .access-subtitle {
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.access-banner {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.access-banner .banner-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.access-banner .banner-body {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 .access-steps {

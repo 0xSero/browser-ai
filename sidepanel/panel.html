@@ -48,7 +48,15 @@
       <section id="authPanel" class="access-card">
         <p class="eyebrow">Account</p>
         <h2>Sign in to continue</h2>
-        <p class="access-subtitle">Link this browser with a one-time device code to start using Parchi.</p>
+        <p id="authSubtitle" class="access-subtitle">Link this browser with a one-time device code to start using Parchi.</p>
+
+        <div id="accessConfigPrompt" class="access-banner hidden">
+          <div>
+            <div class="banner-title">Account API base URL required</div>
+            <div class="banner-body">Add the base URL in Settings to generate a device code and manage billing.</div>
+          </div>
+          <button id="authOpenSettingsBtn" class="btn btn-secondary subtle">Open settings</button>
+        </div>
 
         <div class="access-steps">
           <div class="access-step">
@@ -375,16 +383,34 @@
             </div>
           </details>
 
-          <details class="settings-section settings-collapsible">
+          <details id="accountSettingsSection" class="settings-section settings-collapsible">
             <summary>
               <span class="settings-collapsible-title">Account & billing</span>
               <span class="settings-collapsible-hint">Sign-in service configuration</span>
             </summary>
             <div class="settings-collapsible-body">
-              <div class="form-group full">
+              <div id="accountApiBaseGroup" class="form-group full">
                 <label for="accountApiBase">Account API base URL</label>
                 <input type="text" id="accountApiBase" placeholder="https://billing.example.com">
                 <small>Used for device sign-in, Stripe checkout, and billing status.</small>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-section settings-collapsible">
+            <summary>
+              <span class="settings-collapsible-title">Backup & restore</span>
+              <span class="settings-collapsible-hint">Export or import settings</span>
+            </summary>
+            <div class="settings-collapsible-body">
+              <div class="form-group full">
+                <label>Settings backup</label>
+                <div class="settings-inline">
+                  <button id="exportSettingsBtn" class="btn btn-secondary">Export settings</button>
+                  <button id="importSettingsBtn" class="btn btn-secondary">Import settings</button>
+                  <input id="importSettingsInput" type="file" accept="application/json" class="hidden">
+                </div>
+                <small>Exports include API keys. Store securely.</small>
               </div>
             </div>
           </details>
