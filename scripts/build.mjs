@@ -45,7 +45,15 @@ const run = () => {
   execSync('tsc -p tsconfig.json', { stdio: 'inherit' });
   execSync('tsc -p server/tsconfig.json', { stdio: 'inherit' });
 
-  copyFile(path.join(rootDir, 'manifest.json'), path.join(distDir, 'manifest.json'));
+  const manifestPath = path.join(rootDir, 'manifest.json');
+  const manifestDest = path.join(distDir, 'manifest.json');
+  const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const accountApiBase = process.env.ACCOUNT_API_BASE ? process.env.ACCOUNT_API_BASE.trim() : '';
+  if (accountApiBase) {
+    manifestData.parchi = { ...(manifestData.parchi || {}), accountApiBase };
+  }
+  ensureDir(path.dirname(manifestDest));
+  fs.writeFileSync(manifestDest, JSON.stringify(manifestData, null, 2));
   copyFile(path.join(rootDir, 'sidepanel', 'panel.html'), path.join(distDir, 'sidepanel', 'panel.html'));
   copyFile(path.join(rootDir, 'sidepanel', 'panel.css'), path.join(distDir, 'sidepanel', 'panel.css'));
   copyDirFiltered(path.join(rootDir, 'icons'), path.join(distDir, 'icons'));

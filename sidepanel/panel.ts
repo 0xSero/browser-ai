@@ -254,7 +254,7 @@ class SidePanelUI {
   setupEventListeners() {
     // Settings toggle
     this.elements.settingsBtn.addEventListener('click', () => {
-      this.toggleSettings();
+      void this.toggleSettings();
     });
 
     this.elements.accountBtn?.addEventListener('click', () => {
@@ -344,12 +344,12 @@ class SidePanelUI {
 
     // Save settings
     this.elements.saveSettingsBtn.addEventListener('click', () => {
-      this.saveSettings();
+      void this.saveSettings();
     });
 
     // Cancel settings
     this.elements.cancelSettingsBtn.addEventListener('click', () => {
-      this.toggleSettings();
+      void this.cancelSettings();
     });
 
     this.elements.exportSettingsBtn?.addEventListener('click', () => this.exportSettings());
@@ -439,18 +439,29 @@ class SidePanelUI {
     this.chatResizeObserver.observe(this.elements.chatMessages);
   }
 
-  toggleSettings() {
-    this.elements.settingsPanel.classList.toggle('hidden');
+  async toggleSettings(saveOnClose = true) {
     const isOpen = !this.elements.settingsPanel.classList.contains('hidden');
-    this.settingsOpen = isOpen;
     if (isOpen) {
-      this.elements.accessPanel?.classList.add('hidden');
-      this.elements.chatInterface?.classList.add('hidden');
-      this.elements.historyPanel?.classList.add('hidden');
-      this.switchSettingsTab(this.currentSettingsTab || 'general');
+      if (saveOnClose) {
+        this.configs[this.currentConfig] = this.collectCurrentFormProfile();
+        await this.persistAllSettings({ silent: true });
+      }
+      this.elements.settingsPanel.classList.add('hidden');
+      this.settingsOpen = false;
+      this.updateAccessUI();
       return;
     }
-    this.updateAccessUI();
+    this.elements.settingsPanel.classList.remove('hidden');
+    this.settingsOpen = true;
+    this.elements.accessPanel?.classList.add('hidden');
+    this.elements.chatInterface?.classList.add('hidden');
+    this.elements.historyPanel?.classList.add('hidden');
+    this.switchSettingsTab(this.currentSettingsTab || 'general');
+  }
+
+  async cancelSettings() {
+    await this.loadSettings();
+    await this.toggleSettings(false);
   }
 
   toggleCustomEndpoint() {
@@ -465,6 +476,10 @@ class SidePanelUI {
   }
 
   switchSettingsTab(tabName: 'general' | 'profiles' = 'general') {
+    if (this.currentSettingsTab === 'general' && tabName === 'profiles') {
+      this.configs[this.currentConfig] = this.collectCurrentFormProfile();
+      void this.persistAllSettings({ silent: true });
+    }
     this.currentSettingsTab = tabName;
     const general = this.elements.settingsTabGeneral;
     const profiles = this.elements.settingsTabProfiles;
@@ -560,10 +575,15 @@ class SidePanelUI {
     if (this.elements.permissionTabs) this.elements.permissionTabs.value = String(toolPermissions.tabs);
     if (this.elements.permissionScreenshots) this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
     if (this.elements.allowedDomains) this.elements.allowedDomains.value = settings.allowedDomains || '';
+    const fallbackAccountBase = this.getDefaultAccountApiBase();
+    const accountApiBase = settings.accountApiBase || fallbackAccountBase;
     if (this.elements.accountApiBase) {
-      this.elements.accountApiBase.value = settings.accountApiBase || '';
+      this.elements.accountApiBase.value = accountApiBase || '';
     }
-    this.accountClient.setBaseUrl(settings.accountApiBase || '');
+    this.accountClient.setBaseUrl(accountApiBase || '');
+    if (!settings.accountApiBase && accountApiBase) {
+      await chrome.storage.local.set({ accountApiBase });
+    }
     this.updateAccessConfigPrompt();
 
     this.refreshConfigDropdown();
@@ -768,7 +788,7 @@ class SidePanelUI {
     this.accessPanelVisible = false;
     this.updateAccessUI();
     if (this.elements.settingsPanel?.classList.contains('hidden')) {
-      this.toggleSettings();
+      void this.toggleSettings();
     }
     this.switchSettingsTab('general');
     const accountSection = this.elements.accountSettingsSection;
@@ -798,7 +818,7 @@ class SidePanelUI {
     this.accessPanelVisible = false;
     this.updateAccessUI();
     if (this.elements.settingsPanel?.classList.contains('hidden')) {
-      this.toggleSettings();
+      void this.toggleSettings();
     }
     this.switchSettingsTab('profiles');
   }
@@ -1095,7 +1115,7 @@ class SidePanelUI {
   async saveSettings() {
     this.configs[this.currentConfig] = this.collectCurrentFormProfile();
     await this.persistAllSettings();
-    this.toggleSettings();
+    await this.toggleSettings(false);
   }
 
   async exportSettings() {
@@ -1294,6 +1314,19 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 - If blocked, explain what you tried and why it failed`;
   }
 
+  getDefaultAccountApiBase() {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      const config = manifest && (manifest as Record<string, any>).parchi;
+      if (config && typeof config.accountApiBase === 'string') {
+        return config.accountApiBase.trim();
+      }
+    } catch (error) {
+      // Ignore manifest read failures and fall back to empty.
+    }
+    return '';
+  }
+
   async createNewConfig(name?: string) {
     const trimmedName = (name || '').trim() || prompt('Enter profile name:') || '';
     if (!trimmedName) return;
@@ -1343,7 +1376,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       alert('Profile not found');
       return;
     }
+    this.configs[this.currentConfig] = this.collectCurrentFormProfile();
     this.setActiveConfig(newConfig);
+    await this.persistAllSettings({ silent: true });
   }
 
   refreshConfigDropdown() {
