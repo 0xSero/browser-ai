@@ -48,7 +48,7 @@ class SidePanelUI {
   currentConfig: string;
   configs: Record<string, any>;
   toolCallViews: Map<string, any>;
-  timelineItems: Map<string, any>;
+  toolTreeViews: Map<string, any>;
   selectedTabs: Map<number, any>;
   tabGroupInfo: Map<number, chrome.tabGroups.TabGroup>;
   scrollPositions: Map<string, number>;
@@ -74,6 +74,7 @@ class SidePanelUI {
   activeAgent: string;
   activityPanelOpen: boolean;
   latestThinking: string | null;
+  activeToolName: string | null;
 
   constructor() {
     this.elements = {
@@ -98,57 +99,6 @@ class SidePanelUI {
       accountGreeting: document.getElementById('accountGreeting'),
       accountSubtext: document.getElementById('accountSubtext'),
       accountRefreshBtn: document.getElementById('accountRefreshBtn'),
-      accountPlanStatus: document.getElementById('accountPlanStatus'),
-      accountPlanBadge: document.getElementById('accountPlanBadge'),
-      accountPlanDetails: document.getElementById('accountPlanDetails'),
-      accountCheckoutBtn: document.getElementById('accountCheckoutBtn'),
-      accountPortalBtn: document.getElementById('accountPortalBtn'),
-      accountBillingSummary: document.getElementById('accountBillingSummary'),
-      accountInvoices: document.getElementById('accountInvoices'),
-      accountSettingsSummary: document.getElementById('accountSettingsSummary'),
-      accountConfigs: document.getElementById('accountConfigs'),
-      accountHistory: document.getElementById('accountHistory'),
-      accountOpenSettingsBtn: document.getElementById('accountOpenSettingsBtn'),
-      accountOpenProfilesBtn: document.getElementById('accountOpenProfilesBtn'),
-      accountOpenHistoryBtn: document.getElementById('accountOpenHistoryBtn'),
-      accountLogoutBtn: document.getElementById('accountLogoutBtn'),
-      planStatus: document.getElementById('planStatus'),
-      provider: document.getElementById('provider'),
-      apiKey: document.getElementById('apiKey'),
-      model: document.getElementById('model'),
-      customEndpoint: document.getElementById('customEndpoint'),
-      customEndpointGroup: document.getElementById('customEndpointGroup'),
-      systemPrompt: document.getElementById('systemPrompt'),
-      temperature: document.getElementById('temperature'),
-      temperatureValue: document.getElementById('temperatureValue'),
-      maxTokens: document.getElementById('maxTokens'),
-      contextLimit: document.getElementById('contextLimit'),
-      timeout: document.getElementById('timeout'),
-      enableScreenshots: document.getElementById('enableScreenshots'),
-      sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
-      screenshotQuality: document.getElementById('screenshotQuality'),
-      visionBridge: document.getElementById('visionBridge'),
-      visionProfile: document.getElementById('visionProfile'),
-      orchestratorToggle: document.getElementById('orchestratorToggle'),
-      orchestratorProfile: document.getElementById('orchestratorProfile'),
-      showThinking: document.getElementById('showThinking'),
-      streamResponses: document.getElementById('streamResponses'),
-      autoScroll: document.getElementById('autoScroll'),
-      confirmActions: document.getElementById('confirmActions'),
-      saveHistory: document.getElementById('saveHistory'),
-      activeConfig: document.getElementById('activeConfig'),
-      newConfigBtn: document.getElementById('newConfigBtn'),
-      deleteConfigBtn: document.getElementById('deleteConfigBtn'),
-      agentGrid: document.getElementById('agentGrid'),
-      refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
-      saveSettingsBtn: document.getElementById('saveSettingsBtn'),
-      cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
-      chatMessages: document.getElementById('chatMessages'),
-      composer: document.getElementById('composer'),
-      userInput: document.getElementById('userInput'),
-      fileBtn: document.getElementById('fileBtn'),
-      fileInput: document.getElementById('fileInput'),
-      sendBtn: document.getElementById('sendBtn'),
       statusBar: document.getElementById('statusBar'),
       statusText: document.getElementById('statusText'),
       statusMeta: document.getElementById('statusMeta'),
@@ -158,6 +108,7 @@ class SidePanelUI {
       toolLog: document.getElementById('toolLog'),
       thinkingPanel: document.getElementById('thinkingPanel'),
       agentNav: document.getElementById('agentNav'),
+
       tabSelectorBtn: document.getElementById('tabSelectorBtn'),
       tabSelector: document.getElementById('tabSelector'),
       tabList: document.getElementById('tabList'),
@@ -207,6 +158,77 @@ class SidePanelUI {
       importSettingsBtn: document.getElementById('importSettingsBtn'),
       importSettingsInput: document.getElementById('importSettingsInput'),
       accessStatus: document.getElementById('accessStatus'),
+
+      // Form elements - Provider & model
+      provider: document.getElementById('provider'),
+      apiKey: document.getElementById('apiKey'),
+      model: document.getElementById('model'),
+      customEndpoint: document.getElementById('customEndpoint'),
+      customEndpointGroup: document.getElementById('customEndpointGroup'),
+
+      // Form elements - Model parameters
+      temperature: document.getElementById('temperature'),
+      temperatureValue: document.getElementById('temperatureValue'),
+      maxTokens: document.getElementById('maxTokens'),
+      contextLimit: document.getElementById('contextLimit'),
+      timeout: document.getElementById('timeout'),
+
+      // Form elements - Screenshots & vision
+      enableScreenshots: document.getElementById('enableScreenshots'),
+      sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
+      screenshotQuality: document.getElementById('screenshotQuality'),
+      visionBridge: document.getElementById('visionBridge'),
+      visionProfile: document.getElementById('visionProfile'),
+
+      // Form elements - Behavior
+      showThinking: document.getElementById('showThinking'),
+      streamResponses: document.getElementById('streamResponses'),
+      autoScroll: document.getElementById('autoScroll'),
+      confirmActions: document.getElementById('confirmActions'),
+      saveHistory: document.getElementById('saveHistory'),
+
+      // Form elements - Orchestrator
+      orchestratorToggle: document.getElementById('orchestratorToggle'),
+      orchestratorProfile: document.getElementById('orchestratorProfile'),
+
+      // Form elements - System prompt
+      systemPrompt: document.getElementById('systemPrompt'),
+
+      // Settings actions
+      saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+      cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
+
+      // Profile management
+      activeConfig: document.getElementById('activeConfig'),
+      newConfigBtn: document.getElementById('newConfigBtn'),
+      deleteConfigBtn: document.getElementById('deleteConfigBtn'),
+      refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
+      agentGrid: document.getElementById('agentGrid'),
+
+      // Chat interface
+      chatMessages: document.getElementById('chatMessages'),
+      userInput: document.getElementById('userInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      composer: document.getElementById('composer'),
+      fileBtn: document.getElementById('fileBtn'),
+      fileInput: document.getElementById('fileInput'),
+      planStatus: document.getElementById('planStatus'),
+
+      // Account panel elements
+      accountCheckoutBtn: document.getElementById('accountCheckoutBtn'),
+      accountPortalBtn: document.getElementById('accountPortalBtn'),
+      accountLogoutBtn: document.getElementById('accountLogoutBtn'),
+      accountOpenSettingsBtn: document.getElementById('accountOpenSettingsBtn'),
+      accountOpenProfilesBtn: document.getElementById('accountOpenProfilesBtn'),
+      accountOpenHistoryBtn: document.getElementById('accountOpenHistoryBtn'),
+      accountPlanStatus: document.getElementById('accountPlanStatus'),
+      accountPlanBadge: document.getElementById('accountPlanBadge'),
+      accountPlanDetails: document.getElementById('accountPlanDetails'),
+      accountBillingSummary: document.getElementById('accountBillingSummary'),
+      accountSettingsSummary: document.getElementById('accountSettingsSummary'),
+      accountConfigs: document.getElementById('accountConfigs'),
+      accountHistory: document.getElementById('accountHistory'),
+      accountInvoices: document.getElementById('accountInvoices'),
     };
 
     this.conversationHistory = [];
@@ -216,7 +238,7 @@ class SidePanelUI {
     this.currentConfig = 'default';
     this.configs = { default: {} };
     this.toolCallViews = new Map();
-    this.timelineItems = new Map();
+    this.toolTreeViews = new Map();
     this.selectedTabs = new Map();
     this.tabGroupInfo = new Map();
     this.scrollPositions = new Map();
@@ -246,6 +268,7 @@ class SidePanelUI {
     this.activeAgent = 'main';
     this.activityPanelOpen = false;
     this.latestThinking = null;
+    this.activeToolName = null;
     this.init();
   }
 
@@ -300,6 +323,9 @@ class SidePanelUI {
       this.toggleCustomEndpoint();
       this.updateScreenshotToggleState();
     });
+
+    // Custom endpoint validation
+    this.elements.customEndpoint?.addEventListener('input', () => this.validateCustomEndpoint());
 
     // Temperature slider
     this.elements.temperature.addEventListener('input', () => {
@@ -413,16 +439,19 @@ class SidePanelUI {
         this.pendingToolCount += 1;
         this.clearErrorBanner();
         this.updateActivityState();
+        this.activeToolName = message.tool || null;
         this.displayToolExecution(message.tool, message.args, null, message.id);
       } else if (message.type === 'tool_execution_result') {
         this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
         this.updateActivityState();
+        this.activeToolName = null;
         this.displayToolExecution(message.tool, message.args, message.result, message.id);
       } else if (message.type === 'tool_execution') {
         if (!message.result) {
           this.pendingToolCount += 1;
           this.clearErrorBanner(); // Clear errors when new activity starts
           this.updateActivityState();
+          this.activeToolName = message.tool || null;
         } else {
           this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
           this.updateActivityState();
@@ -496,6 +525,22 @@ class SidePanelUI {
   toggleCustomEndpoint() {
     const isCustom = this.elements.provider.value === 'custom';
     this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
+    if (isCustom && !this.elements.customEndpoint.value) {
+      this.elements.customEndpoint.placeholder = 'https://api.example.com/v1/chat/completions';
+    }
+  }
+
+  validateCustomEndpoint() {
+    const url = this.elements.customEndpoint.value.trim();
+    if (!url) return true;
+    try {
+      new URL(url);
+      this.elements.customEndpoint.style.borderColor = '';
+      return true;
+    } catch {
+      this.elements.customEndpoint.style.borderColor = 'var(--status-error)';
+      return false;
+    }
   }
 
   toggleProfileEditorEndpoint() {
@@ -1154,6 +1199,10 @@ class SidePanelUI {
   }
 
   async saveSettings() {
+    if (this.elements.provider.value === 'custom' && !this.validateCustomEndpoint()) {
+      this.updateStatus('Invalid custom endpoint URL', 'error');
+      return;
+    }
     this.configs[this.currentConfig] = this.collectCurrentFormProfile();
     await this.persistAllSettings();
     await this.toggleSettings(false);
@@ -1681,6 +1730,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     this.pendingToolCount = 0;
     this.isStreaming = false;
+    this.activeToolName = null;
     this.updateActivityState();
 
     // Get selected tabs context
@@ -2084,10 +2134,19 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       } else {
         this.scrollToolLogToBottom();
       }
+
+      const treeEntry = this.createToolTreeItem(entryId, toolName, args);
+      this.toolTreeViews.set(entryId, treeEntry);
+      const tree = this.ensureToolTree();
+      tree.appendChild(treeEntry.container);
     }
 
     if (result !== null && result !== undefined) {
       this.updateToolMessage(entry, result);
+      const treeEntry = this.toolTreeViews.get(entryId);
+      if (treeEntry) {
+        this.updateToolTreeItem(treeEntry, result);
+      }
       const isError = result && (result.error || result.success === false);
       if (isError) {
         this.showErrorBanner(`${toolName}: ${result.error || 'Tool execution failed'}`);
@@ -2280,48 +2339,86 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     return '';
   }
 
-  addTimelineItem(id, toolName, args) {
-    if (!this.elements.toolTimeline) return;
-    const row = document.createElement('div');
-    row.className = 'tool-timeline-item';
-    row.dataset.id = id || `temp-${Date.now()}`;
-    row.dataset.start = String(Date.now());
+  createToolTreeItem(entryId, toolName, args) {
+    const container = document.createElement('div');
+    container.className = 'tool-tree-item running';
+    container.dataset.id = entryId;
+    container.dataset.start = String(Date.now());
 
-    // Get a compact args preview
     const argsPreview = this.getArgsPreview(args);
+    const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
 
-    row.innerHTML = `
-      <span class="tool-timeline-status running"></span>
-      <span class="tool-timeline-name">${this.escapeHtml(toolName)}</span>
-      ${argsPreview ? `<span class="tool-timeline-args">${this.escapeHtml(argsPreview)}</span>` : ''}
+    container.innerHTML = `
+      <span class="tool-tree-status"></span>
+      <div class="tool-tree-content">
+        <div class="tool-tree-header">
+          <span>${this.escapeHtml(toolName || 'tool')}</span>
+          <span class="tool-tree-meta">Running</span>
+        </div>
+        ${argsPreview ? `<div class="tool-tree-args">${this.escapeHtml(argsPreview)}</div>` : ''}
+        <div class="tool-tree-body">
+          <pre>${this.escapeHtml(argsText || 'No args')}</pre>
+          <pre class="tool-tree-result">Waiting...</pre>
+        </div>
+        <button class="tool-tree-toggle" type="button">Details</button>
+      </div>
     `;
-    this.elements.toolTimeline.appendChild(row);
 
-    // Keep max 20 items for cleaner display
-    while (this.elements.toolTimeline.children.length > 20) {
-      this.elements.toolTimeline.removeChild(this.elements.toolTimeline.firstChild);
-    }
-    if (id) this.timelineItems.set(id, row);
+    const toggleBtn = container.querySelector('.tool-tree-toggle');
+    toggleBtn?.addEventListener('click', () => {
+      container.classList.toggle('expanded');
+      const expanded = container.classList.contains('expanded');
+      toggleBtn.textContent = expanded ? 'Hide' : 'Details';
+    });
+
+    return {
+      container,
+      statusEl: container.querySelector('.tool-tree-meta'),
+      resultEl: container.querySelector('.tool-tree-result'),
+      toggleBtn,
+    };
   }
 
-  updateTimelineItem(id, result) {
-    if (!id || !this.timelineItems.has(id)) return;
-    const row = this.timelineItems.get(id);
-    const statusEl = row.querySelector('.tool-timeline-status');
-    const start = Number.parseInt(row.dataset.start || '0', 10);
-    const dur = start ? Date.now() - start : 0;
+  updateToolTreeItem(entry, result) {
+    if (!entry?.container) return;
     const isError = result && (result.error || result.success === false);
+    entry.container.classList.remove('running', 'success', 'error');
+    entry.container.classList.add(isError ? 'error' : 'success');
 
-    statusEl.className = `tool-timeline-status ${isError ? 'error' : 'success'}`;
-
-    // Add or update duration meta
-    let metaEl = row.querySelector('.tool-timeline-meta');
-    if (!metaEl) {
-      metaEl = document.createElement('span');
-      metaEl.className = 'tool-timeline-meta';
-      row.appendChild(metaEl);
+    if (entry.statusEl) {
+      entry.statusEl.textContent = isError ? 'Error' : 'Done';
     }
-    metaEl.textContent = `${dur}ms`;
+
+    if (entry.resultEl) {
+      const resultText = this.truncateText(this.safeJsonStringify(result), 2000);
+      entry.resultEl.textContent = resultText || (isError ? 'Tool failed' : 'Done');
+    }
+
+    if (isError && entry.container) {
+      entry.container.classList.add('expanded');
+      if (entry.toggleBtn) {
+        entry.toggleBtn.textContent = 'Hide';
+      }
+    }
+
+    const start = Number.parseInt(entry.container.dataset.start || '0', 10);
+    const dur = start ? Date.now() - start : 0;
+    if (entry.statusEl && !isError) {
+      entry.statusEl.textContent = `Done · ${dur}ms`;
+    }
+  }
+
+  ensureToolTree() {
+    if (!this.elements.chatMessages) {
+      return document.createElement('div');
+    }
+    let tree = this.elements.chatMessages.querySelector('.tool-tree');
+    if (!tree) {
+      tree = document.createElement('div');
+      tree.className = 'tool-tree';
+      this.elements.chatMessages.appendChild(tree);
+    }
+    return tree;
   }
 
   updateStatus(text, type = 'default') {
@@ -2366,6 +2463,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (hasThinking) {
       segments.push('thinking');
     }
+    if (this.activeToolName) {
+      segments.push(`${this.activeToolName}…`);
+    }
     toggle.textContent = segments.length ? `Activity · ${segments.join(' · ')}` : 'Activity';
     const hasActiveWork = this.pendingToolCount > 0 || this.isStreaming;
     toggle.classList.toggle('active', hasActiveWork);
@@ -2408,7 +2508,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (this.elements.toolLog) {
       this.elements.toolLog.innerHTML = '';
     }
+    if (this.elements.chatMessages) {
+      const tree = this.elements.chatMessages.querySelector('.tool-tree');
+      if (tree) tree.remove();
+    }
+    this.toolTreeViews.clear();
     this.latestThinking = null;
+    this.activeToolName = null;
     this.updateThinkingPanel(null, false);
     this.updateActivityToggle();
   }
@@ -2620,7 +2726,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   renderConversationHistory() {
     this.elements.chatMessages.innerHTML = '';
     this.toolCallViews.clear();
+    this.toolTreeViews.clear();
     this.resetActivityPanel();
+
     this.conversationHistory.forEach((msg) => {
       if (msg.role === 'user') {
         const messageDiv = document.createElement('div');
@@ -2715,7 +2823,6 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.subagents.clear(); // Clear subagents
     this.activeAgent = 'main';
     this.elements.chatMessages.innerHTML = '';
-    this.timelineItems.clear();
     this.toolCallViews.clear();
     this.resetActivityPanel();
     this.hideAgentNav();

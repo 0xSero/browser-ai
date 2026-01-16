@@ -1,6 +1,7 @@
 import { normalizeConversationHistory, toProviderMessages } from './ai/message-schema.js';
 import type { Message, ProviderMessage, ToolCall } from './ai/message-schema.js';
 import { AIProvider } from './ai/provider.js';
+import { isValidFinalResponse } from './ai/retry-engine.js';
 // Background Service Worker
 import { BrowserTools } from './tools/browser-tools.js';
 
@@ -210,7 +211,11 @@ class BackgroundService {
       let apiRetryCount = 0;
       const maxApiRetries = 3;
 
-      const hasUsableContent = (resp) => resp && typeof resp.content === 'string' && resp.content.trim().length > 0;
+      const hasUsableContent = (resp) =>
+        resp &&
+        typeof resp.content === 'string' &&
+        resp.content.trim().length > 0 &&
+        isValidFinalResponse(resp.content);
 
       while (true) {
         // Execute tools until none remain
@@ -290,9 +295,7 @@ class BackgroundService {
         if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
           if (!hasUsableContent(currentResponse)) {
             currentResponse.content =
-              currentResponse.content && currentResponse.content.trim()
-                ? currentResponse.content
-                : 'I completed the requested actions but could not produce a final summary. Please try again.';
+              'I completed the requested actions but could not produce a final summary. Please try again.';
           }
           break;
         }
