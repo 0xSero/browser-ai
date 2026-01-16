@@ -598,6 +598,7 @@
         <span id="statusDot" class="status-dot"></span>
         <span id="statusText">Ready</span>
         <span id="statusMeta" class="status-meta hidden"></span>
+        <button id="activityToggleBtn" class="tool-log-toggle" type="button">Activity</button>
       </div>
 
       <!-- Agent Navigation (shows when subagents are active) -->
@@ -605,6 +606,28 @@
         <div class="agent-nav-item main-agent active" data-agent="main">
           <span class="agent-status"></span>
           <span>Main Agent</span>
+        </div>
+      </div>
+
+      <div id="activityPanel" class="activity-panel" aria-hidden="true">
+        <div class="activity-header">
+          <span>Activity</span>
+          <button id="activityCloseBtn" class="icon-btn" title="Close activity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="activity-body">
+          <div class="activity-section">
+            <div class="activity-section-title">Thinking</div>
+            <div id="thinkingPanel" class="thinking-panel empty">No reasoning captured yet.</div>
+          </div>
+          <div class="activity-section">
+            <div class="activity-section-title">Tools</div>
+            <div id="toolLog" class="tool-log"></div>
+          </div>
         </div>
       </div>
 

@@ -72,6 +72,8 @@ class SidePanelUI {
   accountClient: AccountClient;
   subagents: Map<string, { name: string; status: string; messages: any[]; tasks?: string[] }>;
   activeAgent: string;
+  activityPanelOpen: boolean;
+  latestThinking: string | null;
 
   constructor() {
     this.elements = {
@@ -150,6 +152,11 @@ class SidePanelUI {
       statusBar: document.getElementById('statusBar'),
       statusText: document.getElementById('statusText'),
       statusMeta: document.getElementById('statusMeta'),
+      activityToggleBtn: document.getElementById('activityToggleBtn'),
+      activityPanel: document.getElementById('activityPanel'),
+      activityCloseBtn: document.getElementById('activityCloseBtn'),
+      toolLog: document.getElementById('toolLog'),
+      thinkingPanel: document.getElementById('thinkingPanel'),
       agentNav: document.getElementById('agentNav'),
       tabSelectorBtn: document.getElementById('tabSelectorBtn'),
       tabSelector: document.getElementById('tabSelector'),
@@ -237,6 +244,8 @@ class SidePanelUI {
     // Subagent tracking
     this.subagents = new Map(); // id -> { name, status, messages }
     this.activeAgent = 'main';
+    this.activityPanelOpen = false;
+    this.latestThinking = null;
     this.init();
   }
 
@@ -386,6 +395,9 @@ class SidePanelUI {
     this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
     this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));
 
+    this.elements.activityToggleBtn?.addEventListener('click', () => this.toggleActivityPanel());
+    this.elements.activityCloseBtn?.addEventListener('click', () => this.toggleActivityPanel(false));
+
     // Profile editor controls
     this.elements.profileEditorProvider?.addEventListener('change', () => this.toggleProfileEditorEndpoint());
     this.elements.profileEditorTemperature?.addEventListener('input', () => {
@@ -397,7 +409,16 @@ class SidePanelUI {
 
     // Listen for messages from background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'tool_execution') {
+      if (message.type === 'tool_execution_start') {
+        this.pendingToolCount += 1;
+        this.clearErrorBanner();
+        this.updateActivityState();
+        this.displayToolExecution(message.tool, message.args, null, message.id);
+      } else if (message.type === 'tool_execution_result') {
+        this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
+        this.updateActivityState();
+        this.displayToolExecution(message.tool, message.args, message.result, message.id);
+      } else if (message.type === 'tool_execution') {
         if (!message.result) {
           this.pendingToolCount += 1;
           this.clearErrorBanner(); // Clear errors when new activity starts
@@ -407,7 +428,7 @@ class SidePanelUI {
           this.updateActivityState();
         }
         this.displayToolExecution(message.tool, message.args, message.result, message.id);
-      } else if (message.type === 'assistant_response') {
+      } else if (message.type === 'assistant_response' || message.type === 'assistant_final') {
         this.displayAssistantMessage(message.content, message.thinking);
         // Update context usage with actual token count if available
         if (message.usage?.inputTokens) {
@@ -415,18 +436,24 @@ class SidePanelUI {
         } else {
           this.updateContextUsage();
         }
-      } else if (message.type === 'error') {
+      } else if (message.type === 'assistant_stream_start') {
+        this.handleAssistantStream({ status: 'start' });
+      } else if (message.type === 'assistant_stream_delta') {
+        this.handleAssistantStream({ status: 'delta', content: message.content });
+      } else if (message.type === 'assistant_stream_stop') {
+        this.handleAssistantStream({ status: 'stop' });
+      } else if (message.type === 'assistant_stream') {
+        this.handleAssistantStream(message);
+      } else if (message.type === 'run_error' || message.type === 'error') {
         this.showErrorBanner(message.message);
         this.updateStatus('Error', 'error');
-      } else if (message.type === 'warning') {
+      } else if (message.type === 'run_warning' || message.type === 'warning') {
         this.showErrorBanner(message.message);
       } else if (message.type === 'subagent_start') {
         this.addSubagent(message.id, message.name, message.tasks);
         this.updateStatus(`Sub-agent "${message.name}" started`, 'active');
       } else if (message.type === 'subagent_complete') {
         this.updateSubagentStatus(message.id, message.success ? 'completed' : 'error');
-      } else if (message.type === 'assistant_stream') {
-        this.handleAssistantStream(message);
       }
     });
   }
@@ -1750,6 +1777,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const parsed = this.extractThinking(content, combinedThinking);
     content = parsed.content;
     thinking = parsed.thinking;
+    this.updateThinkingPanel(thinking, false);
 
     // If we are about to render a new message, remove the temporary streamed one
     if (streamedContainer) {
@@ -1971,7 +1999,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.updateStreamingMessage(event.content || '');
     } else if (event.status === 'stop') {
       this.isStreaming = false;
-      this.finishStreamingMessage();
+      this.completeStreamingMessage();
     }
     this.updateActivityState();
   }
@@ -1991,6 +2019,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       container,
       textEl: container.querySelector('.streaming-text'),
     };
+    this.updateThinkingPanel(null, true);
     this.scrollToBottom();
   }
 
@@ -2003,6 +2032,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       const cleaned = this.extractThinking(content || '');
       // Store thinking for later use
       this.streamingState.thinking = cleaned.thinking;
+      if (cleaned.thinking) {
+        this.updateThinkingPanel(cleaned.thinking, true);
+      }
       // Only show non-thinking content
       const displayContent = cleaned.content || '';
       this.streamingState.textEl.innerHTML = this.renderMarkdown(displayContent);
@@ -2010,17 +2042,25 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.scrollToBottom();
   }
 
-  finishStreamingMessage() {
-    // Preserve thinking before clearing state
-    const streamingThinking = this.streamingState?.thinking;
-    const container = this.streamingState?.container;
-
-    if (container) {
-      // Clean up indicators but don't remove the container yet
-      const indicator = container.querySelector('.typing-indicator');
-      if (indicator) indicator.remove();
-      container.classList.remove('streaming');
+  completeStreamingMessage() {
+    if (!this.streamingState?.container) return;
+    const indicator = this.streamingState.container.querySelector('.typing-indicator');
+    if (indicator) indicator.remove();
+    this.streamingState.container.classList.remove('streaming');
+    if (this.streamingState.thinking) {
+      this.updateThinkingPanel(this.streamingState.thinking, false);
+    } else {
+      this.updateThinkingPanel(null, false);
     }
+  }
+
+  finishStreamingMessage() {
+    if (!this.streamingState) return null;
+    // Preserve thinking before clearing state
+    const streamingThinking = this.streamingState.thinking;
+    const container = this.streamingState.container;
+
+    this.completeStreamingMessage();
     this.streamingState = null;
     this.isStreaming = false;
     this.updateActivityState();
@@ -2036,8 +2076,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!entry) {
       entry = this.createToolMessage(entryId, toolName, args);
       this.toolCallViews.set(entryId, entry);
-      this.elements.chatMessages.appendChild(entry.container);
-      this.scrollToBottom();
+      const logContainer = this.elements.toolLog || this.elements.chatMessages;
+      if (!logContainer) return;
+      logContainer.appendChild(entry.container);
+      if (logContainer === this.elements.chatMessages) {
+        this.scrollToBottom();
+      } else {
+        this.scrollToolLogToBottom();
+      }
     }
 
     if (result !== null && result !== undefined) {
@@ -2047,52 +2093,116 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.showErrorBanner(`${toolName}: ${result.error || 'Tool execution failed'}`);
       }
     }
+    this.updateActivityToggle();
   }
 
   createToolMessage(entryId, toolName, args) {
+    if (!this.elements.toolLog) {
+      const container = document.createElement('div');
+      container.className = 'message tool';
+      container.dataset.id = entryId;
+      const safeToolName = toolName || 'tool';
+      const argsPreview = this.getArgsPreview(args);
+      const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
+
+      const details = document.createElement('details');
+      details.className = 'tool-event running';
+      details.innerHTML = `
+        <summary>
+          <span class="tool-event-dot"></span>
+          <span class="tool-event-name">${this.escapeHtml(safeToolName)}</span>
+          <span class="tool-event-preview">${this.escapeHtml(argsPreview || 'No args')}</span>
+          <span class="tool-event-status">Running</span>
+        </summary>
+        <div class="tool-event-body">
+          <div class="tool-event-section">
+            <div class="tool-event-label">Args</div>
+            <pre class="tool-event-args-pre">${this.escapeHtml(argsText || 'No args')}</pre>
+          </div>
+          <div class="tool-event-section">
+            <div class="tool-event-label">Result</div>
+            <pre class="tool-event-result-pre">Waiting...</pre>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(details);
+      return {
+        container,
+        details,
+        statusEl: details.querySelector('.tool-event-status'),
+        resultEl: details.querySelector('.tool-event-result-pre'),
+        previewEl: details.querySelector('.tool-event-preview'),
+      };
+    }
+
     const container = document.createElement('div');
-    container.className = 'message tool';
+    container.className = 'tool-log-item running';
     container.dataset.id = entryId;
     const safeToolName = toolName || 'tool';
     const argsPreview = this.getArgsPreview(args);
     const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
 
-    const details = document.createElement('details');
-    details.className = 'tool-event running';
-    details.innerHTML = `
-      <summary>
-        <span class="tool-event-dot"></span>
-        <span class="tool-event-name">${this.escapeHtml(safeToolName)}</span>
-        <span class="tool-event-preview">${this.escapeHtml(argsPreview || 'No args')}</span>
-        <span class="tool-event-status">Running</span>
-      </summary>
-      <div class="tool-event-body">
-        <div class="tool-event-section">
-          <div class="tool-event-label">Args</div>
-          <pre class="tool-event-args-pre">${this.escapeHtml(argsText || 'No args')}</pre>
-        </div>
-        <div class="tool-event-section">
-          <div class="tool-event-label">Result</div>
-          <pre class="tool-event-result-pre">Waiting...</pre>
-        </div>
+    container.innerHTML = `
+      <div class="tool-log-header">
+        <div class="tool-log-title"><span>${this.escapeHtml(safeToolName)}</span></div>
+        <span class="tool-log-status">Running</span>
       </div>
+      <div class="tool-log-meta">${this.escapeHtml(argsPreview || 'No args')}</div>
+      <div class="tool-log-body">
+        <div class="tool-log-args">${this.escapeHtml(argsText || 'No args')}</div>
+        <div class="tool-log-result">Waiting...</div>
+      </div>
+      <button class="tool-log-toggle" type="button">Details</button>
     `;
 
-    container.appendChild(details);
+    const toggleBtn = container.querySelector('.tool-log-toggle');
+    toggleBtn?.addEventListener('click', () => {
+      container.classList.toggle('expanded');
+      const expanded = container.classList.contains('expanded');
+      toggleBtn.textContent = expanded ? 'Hide' : 'Details';
+    });
+
     return {
       container,
-      details,
-      statusEl: details.querySelector('.tool-event-status'),
-      resultEl: details.querySelector('.tool-event-result-pre'),
-      previewEl: details.querySelector('.tool-event-preview'),
+      statusEl: container.querySelector('.tool-log-status'),
+      resultEl: container.querySelector('.tool-log-result'),
+      previewEl: container.querySelector('.tool-log-meta'),
+      toggleBtn,
     };
   }
 
   updateToolMessage(entry, result) {
-    if (!entry?.details) return;
+    if (!entry) return;
     const isError = result && (result.error || result.success === false);
-    entry.details.classList.remove('running', 'success', 'error');
-    entry.details.classList.add(isError ? 'error' : 'success');
+
+    if (entry.details) {
+      entry.details.classList.remove('running', 'success', 'error');
+      entry.details.classList.add(isError ? 'error' : 'success');
+      if (entry.statusEl) entry.statusEl.textContent = isError ? 'Error' : 'Done';
+
+      if (entry.resultEl) {
+        const resultText = this.truncateText(this.safeJsonStringify(result), 2000);
+        entry.resultEl.textContent = resultText || (isError ? 'Tool failed' : 'Done');
+      }
+
+      if (entry.previewEl) {
+        const preview = isError ? result?.error || 'Tool failed' : result?.message || result?.summary || '';
+        if (preview) {
+          entry.previewEl.textContent = this.truncateText(String(preview), 120);
+        }
+      }
+
+      if (isError) {
+        entry.details.open = true;
+      }
+      return;
+    }
+
+    if (entry.container) {
+      entry.container.classList.remove('running', 'success', 'error');
+      entry.container.classList.add(isError ? 'error' : 'success');
+    }
     if (entry.statusEl) entry.statusEl.textContent = isError ? 'Error' : 'Done';
 
     if (entry.resultEl) {
@@ -2107,8 +2217,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       }
     }
 
-    if (isError) {
-      entry.details.open = true;
+    if (isError && entry.container) {
+      entry.container.classList.add('expanded');
+      if (entry.toggleBtn) {
+        entry.toggleBtn.textContent = 'Hide';
+      }
+    }
+
+    if (this.elements.toolLog) {
+      this.scrollToolLogToBottom();
     }
   }
 
@@ -2234,6 +2351,71 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.statusMeta.textContent = '';
       this.elements.statusMeta.classList.add('hidden');
     }
+    this.updateActivityToggle();
+  }
+
+  updateActivityToggle() {
+    const toggle = this.elements.activityToggleBtn;
+    if (!toggle) return;
+    const toolCount = this.toolCallViews.size;
+    const hasThinking = Boolean(this.latestThinking);
+    const segments: string[] = [];
+    if (toolCount > 0) {
+      segments.push(`${toolCount} tool${toolCount === 1 ? '' : 's'}`);
+    }
+    if (hasThinking) {
+      segments.push('thinking');
+    }
+    toggle.textContent = segments.length ? `Activity · ${segments.join(' · ')}` : 'Activity';
+    const hasActiveWork = this.pendingToolCount > 0 || this.isStreaming;
+    toggle.classList.toggle('active', hasActiveWork);
+  }
+
+  toggleActivityPanel(force?: boolean) {
+    const shouldOpen = typeof force === 'boolean' ? force : !this.activityPanelOpen;
+    this.activityPanelOpen = shouldOpen;
+    if (this.elements.activityPanel) {
+      this.elements.activityPanel.classList.toggle('open', shouldOpen);
+      this.elements.activityPanel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+    }
+    this.elements.activityToggleBtn?.classList.toggle('open', shouldOpen);
+    this.elements.chatInterface?.classList.toggle('activity-open', shouldOpen);
+    if (shouldOpen) {
+      this.scrollToolLogToBottom();
+    }
+  }
+
+  updateThinkingPanel(thinking: string | null, isStreaming = false) {
+    const panel = this.elements.thinkingPanel;
+    if (!panel) return;
+    const content = thinking ? thinking.trim() : '';
+    if (content) {
+      const cleaned = this.deduplicateThinking(content);
+      this.latestThinking = cleaned;
+      panel.textContent = cleaned;
+      panel.classList.remove('empty');
+    } else {
+      if (!isStreaming) {
+        this.latestThinking = null;
+      }
+      panel.textContent = isStreaming ? 'Thinking…' : 'No reasoning captured yet.';
+      panel.classList.add('empty');
+    }
+    panel.classList.toggle('streaming', isStreaming);
+  }
+
+  resetActivityPanel() {
+    if (this.elements.toolLog) {
+      this.elements.toolLog.innerHTML = '';
+    }
+    this.latestThinking = null;
+    this.updateThinkingPanel(null, false);
+    this.updateActivityToggle();
+  }
+
+  scrollToolLogToBottom() {
+    if (!this.elements.toolLog) return;
+    this.elements.toolLog.scrollTop = this.elements.toolLog.scrollHeight;
   }
 
   scrollToBottom({ force = false } = {}) {
@@ -2317,11 +2499,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   extractThinking(content: string | null | undefined, existingThinking: string | null = null) {
     let thinking: string | null = existingThinking || null;
     let cleanedContent = content || '';
-    const thinkRegex = /<think>([\s\S]*?)<\/think>/gi;
+    const thinkRegex = /<(think|thinking)>([\s\S]*?)<\/\1>/gi;
     let match;
     const collected: string[] = [];
     while ((match = thinkRegex.exec(cleanedContent)) !== null) {
-      if (match[1]) collected.push(match[1].trim());
+      if (match[2]) collected.push(match[2].trim());
     }
     if (collected.length > 0) {
       thinking = [existingThinking, ...collected].filter(Boolean).join('\n\n').trim();
@@ -2437,6 +2619,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   renderConversationHistory() {
     this.elements.chatMessages.innerHTML = '';
+    this.toolCallViews.clear();
+    this.resetActivityPanel();
     this.conversationHistory.forEach((msg) => {
       if (msg.role === 'user') {
         const messageDiv = document.createElement('div');
@@ -2533,6 +2717,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.chatMessages.innerHTML = '';
     this.timelineItems.clear();
     this.toolCallViews.clear();
+    this.resetActivityPanel();
     this.hideAgentNav();
     this.updateStatus('Ready for a new session', 'success');
     this.switchView('chat');
