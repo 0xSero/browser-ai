@@ -85,13 +85,13 @@ button {
     overflow: hidden;
 }
 
-/* Sidebar - now on right side */
+/* Sidebar (legacy) - hidden in favor of activity panel */
 .sidebar {
+    display: none;
     width: var(--sidebar-width);
     height: 100%;
     background: var(--card);
     border-left: 1px solid var(--border);
-    display: flex;
     flex-direction: column;
     flex-shrink: 0;
     transform: translateX(0);

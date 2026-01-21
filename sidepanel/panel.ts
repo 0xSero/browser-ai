@@ -368,12 +368,12 @@ class SidePanelUI {
   }
 
   setupEventListeners() {
-    // Sidebar toggle
+    // Sidebar toggle (wired to activity panel)
     this.elements.openSidebarBtn?.addEventListener("click", () => {
-      this.elements.sidebar?.classList.remove("closed");
+      this.toggleActivityPanel();
     });
     this.elements.closeSidebarBtn?.addEventListener("click", () => {
-      this.elements.sidebar?.classList.add("closed");
+      this.toggleActivityPanel(false);
     });
 
     // Sidebar navigation
