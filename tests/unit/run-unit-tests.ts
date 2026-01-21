@@ -9,12 +9,12 @@ import { applyCompaction, buildCompactionSummaryMessage, shouldCompact } from '.
 import { createMessage, normalizeConversationHistory, toProviderMessages } from '../../ai/message-schema.js';
 import type { Message } from '../../ai/message-schema.js';
 import { createExponentialBackoff, isValidFinalResponse } from '../../ai/retry-engine.js';
-import { extractThinking } from '../../sidepanel/notes-utils.js';
+import { extractThinking } from '../../sidepanel/utils/notes-utils.js';
 import {
   buildToolEventSnapshot,
   categorizeToolName,
   extractScreenshotUrls,
-} from '../../sidepanel/run-history-utils.js';
+} from '../../sidepanel/utils/run-history-utils.js';
 import { buildRunPlan, normalizePlanStatus, normalizePlanSteps } from '../../types/plan.js';
 import type { RunPlan } from '../../types/plan.js';
 import { RUNTIME_MESSAGE_SCHEMA_VERSION, isRuntimeMessage } from '../../types/runtime-messages.js';

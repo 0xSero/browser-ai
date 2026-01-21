@@ -1,0 +1,69 @@
+                            <section id="authPanel" class="access-card">
+                                <div class="panel-header">
+                                    <span class="panel-title">Sign in</span>
+                                </div>
+                                <p id="authSubtitle" class="text-muted">
+                                    Sign in with email to unlock billing.
+                                </p>
+                                <div
+                                    id="accessConfigPrompt"
+                                    class="access-banner hidden"
+                                >
+                                    <span
+                                        >Set Account API URL in Settings
+                                        first.</span
+                                    >
+                                    <button
+                                        id="authOpenSettingsBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Settings
+                                    </button>
+                                </div>
+                                <form id="authForm" class="access-form">
+                                    <div class="form-group">
+                                        <label for="authEmail">Email</label>
+                                        <input
+                                            id="authEmail"
+                                            type="email"
+                                            placeholder="you@example.com"
+                                            autocomplete="email"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="form-row">
+                                        <button
+                                            id="authStartBtn"
+                                            class="btn btn-primary"
+                                            type="submit"
+                                        >
+                                            Sign in
+                                        </button>
+                                        <button
+                                            id="authOpenBtn"
+                                            class="btn btn-secondary"
+                                            type="button"
+                                        >
+                                            Open account
+                                        </button>
+                                    </div>
+                                </form>
+                                <div class="divider">or</div>
+                                <div class="form-group">
+                                    <label for="authTokenInput"
+                                        >Access token</label
+                                    >
+                                    <input
+                                        id="authTokenInput"
+                                        type="password"
+                                        placeholder="Paste token"
+                                    />
+                                    <button
+                                        id="authTokenSaveBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Use token
+                                    </button>
+                                </div>
+                            </section>
+

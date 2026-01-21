@@ -1,3 +1,10 @@
-import { SidePanelUI } from './panel-ui.js';
+import './ui/panel-modules.js';
+import { loadPanelLayout } from './ui/layout-loader.js';
+import { SidePanelUI } from './ui/panel-ui.js';
 
-new SidePanelUI();
+const init = async () => {
+  await loadPanelLayout();
+  new SidePanelUI();
+};
+
+void init();

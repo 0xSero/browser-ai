@@ -1,0 +1,78 @@
+/* Parchi - Clean Dark Theme with Sidebar Layout */
+
+:root {
+  --background: hsl(30, 5%, 10.5%);
+  --foreground: #e8e4dd;
+  --muted: #9a9590;
+  --muted-dim: #6a6560;
+  --border: hsl(30, 5%, 20%);
+  --card: hsl(30, 5%, 12%);
+  --card-hover: hsl(30, 5%, 15%);
+  --success: hsl(142, 45%, 45%);
+  --warning: hsl(38, 85%, 55%);
+  --error: hsl(0, 60%, 55%);
+  --accent: hsl(270, 50%, 55%);
+
+  --sidebar-width: 280px;
+  --topbar-height: 44px;
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", Monaco, monospace;
+
+  --mascot-fill: var(--card);
+  --mascot-stroke: var(--muted);
+  --mascot-detail: var(--accent);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+button {
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-dim);
+}

@@ -1,0 +1,105 @@
+/* Jump to Latest */
+.jump-to-latest {
+  position: absolute;
+  right: 16px;
+  bottom: 80px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  color: var(--foreground);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.jump-to-latest:hover {
+  background: var(--card-hover);
+}
+
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: hsl(0, 40%, 12%);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin: 8px 16px;
+}
+
+.error-banner .error-icon {
+  flex-shrink: 0;
+  color: var(--error);
+}
+
+.error-banner .error-text {
+  flex: 1;
+}
+
+.error-banner .error-dismiss {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.error-banner .error-dismiss:hover {
+  opacity: 1;
+}
+
+/* Text utilities */
+.text-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Tab panels */
+.tab-panel.hidden {
+  display: none;
+}
+
+/* Hidden */
+.hidden {
+  display: none !important;
+}
+
+/* Streaming */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.streaming .status-dot {
+  animation: pulse 1.5s ease-in-out infinite;
+  background: var(--accent);
+}
+
+/* Focus */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Disabled */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+::selection {
+  background: hsl(270, 30%, 30%);
+  color: var(--foreground);
+}
