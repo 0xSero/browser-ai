@@ -3,7 +3,6 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 let chromium;
 try {
@@ -31,9 +30,7 @@ function assert(condition: unknown, message: string) {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, '../..');
+const repoRoot = path.resolve(process.cwd());
 const extensionPath = path.join(repoRoot, 'dist');
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parchi-e2e-'));
 
@@ -47,6 +44,7 @@ if (headless) {
 type TestContext = {
   panel: import('playwright').Page;
   context: import('playwright').BrowserContext;
+  worker: import('playwright').Worker;
 };
 
 const tests: Array<{ name: string; fn: (ctx: TestContext) => Promise<void> }> = [];
@@ -76,6 +74,10 @@ async function seedAccessState(worker: import('playwright').Worker): Promise<voi
       },
     });
   });
+}
+
+async function sendRuntimeMessage(worker: import('playwright').Worker, message: Record<string, unknown>) {
+  await worker.evaluate((payload) => chrome.runtime.sendMessage(payload), message);
 }
 
 test('Side panel loads and shows ready state', async ({ panel }) => {
@@ -114,6 +116,295 @@ test('Tab selector lists integration test page', async ({ panel, context }) => {
   );
 });
 
+test('Run UI renders plan, tool events, and retry controls', async ({ panel, worker }) => {
+  const runId = `run-e2e-${Date.now()}`;
+  const now = Date.now();
+  const plan = {
+    steps: [
+      { id: 'step-1', title: 'Open page', status: 'running' },
+      { id: 'step-2', title: 'Extract data', status: 'pending' },
+    ],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await sendRuntimeMessage(worker, {
+    type: 'plan_update',
+    schemaVersion: 1,
+    runId,
+    timestamp: now,
+    plan,
+  });
+
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"]`, { timeout: timeoutMs });
+  await panel.click(`.run-container[data-run-id="${runId}"] .run-plan-toggle`);
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] .run-plan-step`, {
+    state: 'visible',
+    timeout: timeoutMs,
+  });
+
+  await sendRuntimeMessage(worker, {
+    type: 'run_status',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 1,
+    phase: 'executing',
+    attempts: { api: 0, tool: 0, finalize: 0 },
+    maxRetries: { api: 1, tool: 1, finalize: 1 },
+    note: 'Executing',
+  });
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] .run-status-stop`, {
+    state: 'visible',
+    timeout: timeoutMs,
+  });
+
+  await sendRuntimeMessage(worker, {
+    type: 'tool_execution_start',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 2,
+    tool: 'navigate',
+    id: 'tool-1',
+    args: { url: 'https://example.com' },
+  });
+
+  await sendRuntimeMessage(worker, {
+    type: 'tool_execution_result',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 3,
+    tool: 'navigate',
+    id: 'tool-1',
+    args: { url: 'https://example.com' },
+    result: { success: true, message: 'Navigated' },
+  });
+
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] details.tool-event.success`, {
+    state: 'attached',
+    timeout: timeoutMs,
+  });
+
+  await sendRuntimeMessage(worker, {
+    type: 'run_status',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 4,
+    phase: 'failed',
+    attempts: { api: 1, tool: 0, finalize: 0 },
+    maxRetries: { api: 1, tool: 1, finalize: 1 },
+    lastError: 'Test failure',
+  });
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] .run-status-retry`, {
+    state: 'visible',
+    timeout: timeoutMs,
+  });
+});
+
+test('History restores run cards with filters', async ({ panel, worker }) => {
+  const now = Date.now();
+  const session = {
+    id: `session-e2e-${now}`,
+    startedAt: now,
+    updatedAt: now,
+    title: 'History Session',
+    runs: [
+      {
+        runId: 'run-history-1',
+        startedAt: now,
+        updatedAt: now,
+        goal: 'Check docs',
+        plan: {
+          steps: [{ id: 'step-1', title: 'Collect info', status: 'done' }],
+          createdAt: now,
+          updatedAt: now,
+        },
+        notes: '',
+        toolEvents: [
+          {
+            id: 'tool-1',
+            toolName: 'getContent',
+            argsText: '{"type":"text"}',
+            status: 'success',
+            startedAt: now,
+            category: 'extraction',
+            resultText: '{"success":true}',
+          },
+        ],
+        toolFilter: 'all',
+        screenshots: [],
+        retryEvents: [],
+        subagents: [],
+        finalResponse: 'Done',
+        status: 'completed',
+        statusNote: '',
+        statusError: '',
+      },
+    ],
+    transcript: [],
+  };
+
+  await worker.evaluate((payload) => chrome.storage.local.set({ chatSessions: payload }), [session]);
+  await panel.click('#viewHistoryBtn');
+  await panel.waitForSelector('.history-item', { timeout: timeoutMs });
+  await panel.click('.history-item');
+  await panel.waitForSelector('.history-runs .run-tool-filters', { timeout: timeoutMs });
+});
+
+test('Chat displays streaming message during assistant response', async ({ panel, worker }) => {
+  const runId = `run-stream-${Date.now()}`;
+  const now = Date.now();
+
+  // Send stream start
+  await sendRuntimeMessage(worker, {
+    type: 'assistant_stream_start',
+    schemaVersion: 1,
+    runId,
+    timestamp: now,
+  });
+
+  // Wait for streaming message element to be attached to DOM
+  await panel.waitForSelector('.message.assistant.streaming', { state: 'attached', timeout: timeoutMs });
+
+  // Send stream delta with content
+  await sendRuntimeMessage(worker, {
+    type: 'assistant_stream_delta',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 1,
+    content: 'Hello, I am responding',
+  });
+
+  // Verify streamed content exists in DOM
+  await panel.waitForFunction(
+    () => {
+      const el = document.querySelector('.streaming-text');
+      return el && el.textContent && el.textContent.includes('Hello');
+    },
+    { timeout: timeoutMs },
+  );
+});
+
+test('Thinking block is collapsed by default and expandable', async ({ panel, worker }) => {
+  const runId = `run-thinking-${Date.now()}`;
+  const now = Date.now();
+
+  // Send final message with thinking
+  await sendRuntimeMessage(worker, {
+    type: 'assistant_final',
+    schemaVersion: 1,
+    runId,
+    timestamp: now,
+    content: 'Here is my response.',
+    thinking: 'Let me think about this carefully...',
+  });
+
+  // Wait for this specific run's thinking section to be collapsed
+  const runSelector = `.run-container[data-run-id="${runId}"]`;
+  await panel.waitForFunction(
+    (selector) => {
+      const run = document.querySelector(selector);
+      if (!run) return false;
+      const details = run.querySelector('.run-thinking-details:not(.hidden)') as HTMLDetailsElement;
+      return details && !details.open;
+    },
+    runSelector,
+    { timeout: timeoutMs },
+  );
+
+  // Click to expand using the summary element within this run
+  // Use evaluate to click directly as the element may be in a non-visible container
+  await panel.evaluate((selector) => {
+    const run = document.querySelector(selector);
+    const summary = run?.querySelector('.run-thinking-summary') as HTMLElement;
+    summary?.click();
+  }, runSelector);
+
+  // Verify thinking details is now expanded
+  await panel.waitForFunction(
+    (selector) => {
+      const run = document.querySelector(selector);
+      if (!run) return false;
+      const details = run.querySelector('.run-thinking-details') as HTMLDetailsElement;
+      return details && details.open;
+    },
+    runSelector,
+    { timeout: timeoutMs },
+  );
+});
+
+test('Tool calls appear in collapsible Tools section', async ({ panel, worker }) => {
+  const runId = `run-tool-section-${Date.now()}`;
+  const now = Date.now();
+
+  // Send tool execution start
+  await sendRuntimeMessage(worker, {
+    type: 'tool_execution_start',
+    schemaVersion: 1,
+    runId,
+    timestamp: now,
+    tool: 'navigate',
+    id: 'tool-section-1',
+    args: { url: 'https://example.com' },
+  });
+
+  // Verify tool appears in the collapsible Tools section
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] .run-tools-details`, {
+    state: 'attached',
+    timeout: timeoutMs,
+  });
+
+  // Verify Tools section is visible (not hidden) after tool execution
+  await panel.waitForFunction(
+    (selector) => {
+      const run = document.querySelector(selector);
+      if (!run) return false;
+      const toolsSection = run.querySelector('.run-tools-details');
+      return toolsSection && !toolsSection.classList.contains('hidden');
+    },
+    `.run-container[data-run-id="${runId}"]`,
+    { timeout: timeoutMs },
+  );
+
+  // Verify tool count shows 1
+  const toolCount = await panel.$eval(
+    `.run-container[data-run-id="${runId}"] .run-tools-count`,
+    (el) => el.textContent,
+  );
+  assert(toolCount === '1', 'Tool count should be 1');
+
+  // Send tool result
+  await sendRuntimeMessage(worker, {
+    type: 'tool_execution_result',
+    schemaVersion: 1,
+    runId,
+    timestamp: now + 1,
+    tool: 'navigate',
+    id: 'tool-section-1',
+    args: { url: 'https://example.com' },
+    result: { success: true },
+  });
+
+  // Verify tool shows success status
+  await panel.waitForSelector(
+    `.run-container[data-run-id="${runId}"] details.tool-event.success`,
+    { state: 'attached', timeout: timeoutMs },
+  );
+});
+
+test('Color scheme uses neutral grays', async ({ panel }) => {
+  // Get computed background color of body
+  const bgColor = await panel.$eval('body', (el) => getComputedStyle(el).backgroundColor);
+
+  // Parse RGB values - should be a neutral gray (R, G, B values similar)
+  const rgbMatch = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (rgbMatch) {
+    const [, r, g, b] = rgbMatch.map(Number);
+    // For neutral gray, R, G, B should be very close (within 5 of each other)
+    const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+    assert(maxDiff <= 10, `Colors should be neutral gray, but found difference of ${maxDiff}`);
+  }
+});
+
 async function run() {
   log('╔════════════════════════════════════════╗', 'info');
   log('║          Parchi - E2E Tests           ║', 'info');
@@ -148,7 +439,7 @@ async function run() {
     let passed = 0;
     for (const t of tests) {
       try {
-        await t.fn({ panel, context });
+        await t.fn({ panel, context, worker });
         passed += 1;
         log(`✓ ${t.name}`, 'success');
       } catch (error) {

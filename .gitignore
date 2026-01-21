@@ -33,3 +33,7 @@ logs/
 tmp/
 temp/
 *.tmp
+
+
+.claude
+.osgrep

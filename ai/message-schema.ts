@@ -1,5 +1,5 @@
 // Message schema utilities for extension <-> provider payloads
-export type Role = 'system' | 'user' | 'assistant' | 'tool';
+export type Role = "system" | "user" | "assistant" | "tool";
 export type ContentPart =
   | string
   | {
@@ -39,6 +39,12 @@ export type OpenAIToolCall = {
   arguments?: string;
   index?: number;
 };
+export type MessageMeta = {
+  kind?: "summary" | "compaction" | "context" | "tool";
+  summaryOfCount?: number;
+  source?: string;
+};
+
 export type Message = {
   id?: string;
   createdAt?: string;
@@ -47,11 +53,13 @@ export type Message = {
   thinking?: string | null;
   toolCalls?: ToolCall[];
   toolCallId?: string;
+  toolName?: string;
   tool_calls?: OpenAIToolCall[];
   tool_call_id?: string;
   function_call?: OpenAIFunctionCall;
   name?: string;
   usage?: Usage;
+  meta?: MessageMeta;
 };
 export type ProviderMessage = {
   role: Role;
@@ -61,13 +69,17 @@ export type ProviderMessage = {
   name?: string;
 };
 
-const ROLE_SET = new Set<Role>(['system', 'user', 'assistant', 'tool']);
+const ROLE_SET = new Set<Role>(["system", "user", "assistant", "tool"]);
 
 export function createMessageId(): string {
   return `msg_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }
 
-export function createMessage({ role, content, ...meta }: Partial<Message> = {}): Message | null {
+export function createMessage({
+  role,
+  content,
+  ...meta
+}: Partial<Message> = {}): Message | null {
   const normalizedRole = normalizeRole(role);
   if (!normalizedRole) return null;
   const message: Message = {
@@ -77,24 +89,30 @@ export function createMessage({ role, content, ...meta }: Partial<Message> = {})
     content: normalizeContent(content),
   };
 
-  if (typeof meta.thinking === 'string' && meta.thinking.trim()) {
+  if (typeof meta.thinking === "string" && meta.thinking.trim()) {
     message.thinking = meta.thinking;
   }
   if (meta.toolCalls) message.toolCalls = normalizeToolCalls(meta.toolCalls);
   if (meta.toolCallId) message.toolCallId = String(meta.toolCallId);
+  if (meta.toolName) message.toolName = String(meta.toolName);
   if (meta.name) message.name = String(meta.name);
   if (meta.usage) message.usage = normalizeUsage(meta.usage);
+  if (meta.meta) message.meta = meta.meta;
   return message;
 }
 
 export function normalizeConversationHistory(
   history: Message[] = [],
-  options: { defaultRole?: Role; addIds?: boolean; addTimestamps?: boolean } = {},
+  options: {
+    defaultRole?: Role;
+    addIds?: boolean;
+    addTimestamps?: boolean;
+  } = {},
 ): Message[] {
   const messages = Array.isArray(history) ? history : [];
   const normalized: Message[] = [];
   for (const msg of messages) {
-    if (!msg || typeof msg !== 'object') continue;
+    if (!msg || typeof msg !== "object") continue;
     const role = normalizeRole(msg.role || options.defaultRole);
     if (!role) continue;
 
@@ -103,34 +121,41 @@ export function normalizeConversationHistory(
       content: normalizeContent(msg.content),
     };
 
-    const id = typeof msg.id === 'string' ? msg.id : options.addIds === false ? null : createMessageId();
+    const id =
+      typeof msg.id === "string"
+        ? msg.id
+        : options.addIds === false
+          ? null
+          : createMessageId();
     if (id) base.id = id;
 
     const createdAt =
-      typeof msg.createdAt === 'string'
+      typeof msg.createdAt === "string"
         ? msg.createdAt
         : options.addTimestamps === false
           ? null
           : new Date().toISOString();
     if (createdAt) base.createdAt = createdAt;
 
-    if (typeof msg.thinking === 'string' && msg.thinking.trim()) {
+    if (typeof msg.thinking === "string" && msg.thinking.trim()) {
       base.thinking = msg.thinking;
     }
-    if (role === 'assistant') {
+    if (role === "assistant") {
       const toolCalls = msg.toolCalls || msg.tool_calls;
       if (Array.isArray(toolCalls)) {
         base.toolCalls = normalizeToolCalls(toolCalls);
       }
     }
 
-    if (role === 'tool') {
+    if (role === "tool") {
       const toolCallId = msg.toolCallId || msg.tool_call_id;
       if (toolCallId) base.toolCallId = String(toolCallId);
       if (msg.name) base.name = String(msg.name);
+      if (msg.toolName) base.toolName = String(msg.toolName);
     }
 
     if (msg.usage) base.usage = normalizeUsage(msg.usage);
+    if (msg.meta) base.meta = msg.meta;
 
     normalized.push(base);
   }
@@ -138,12 +163,15 @@ export function normalizeConversationHistory(
 }
 
 export function toProviderMessages(history: Message[] = []): ProviderMessage[] {
-  const normalized = normalizeConversationHistory(history as Message[], { addIds: false, addTimestamps: false });
+  const normalized = normalizeConversationHistory(history as Message[], {
+    addIds: false,
+    addTimestamps: false,
+  });
   return normalized.map((msg) => {
-    if (msg.role === 'tool') {
-      const toolCallId = msg.toolCallId || (msg as any).tool_call_id || '';
+    if (msg.role === "tool") {
+      const toolCallId = msg.toolCallId || (msg as any).tool_call_id || "";
       return {
-        role: 'tool',
+        role: "tool",
         tool_call_id: toolCallId,
         content: normalizeToolContent(msg.content),
       };
@@ -154,12 +182,12 @@ export function toProviderMessages(history: Message[] = []): ProviderMessage[] {
       content: msg.content,
     };
 
-    if (msg.role === 'assistant' && Array.isArray(msg.toolCalls)) {
+    if (msg.role === "assistant" && Array.isArray(msg.toolCalls)) {
       payload.tool_calls = msg.toolCalls.map((call) => ({
         id: call.id || createMessageId(),
-        type: 'function',
+        type: "function",
         function: {
-          name: call.name || '',
+          name: call.name || "",
           arguments: JSON.stringify(call.args || {}),
         },
       }));
@@ -168,17 +196,21 @@ export function toProviderMessages(history: Message[] = []): ProviderMessage[] {
   });
 }
 
-export function normalizeToolCalls(toolCalls: Array<ToolCall | OpenAIToolCall> = []): ToolCall[] {
+export function normalizeToolCalls(
+  toolCalls: Array<ToolCall | OpenAIToolCall> = [],
+): ToolCall[] {
   return toolCalls.map((call) => ({
-    id: typeof call?.id === 'string' ? call.id : createMessageId(),
+    id: typeof call?.id === "string" ? call.id : createMessageId(),
     name:
-      typeof call?.name === 'string'
+      typeof call?.name === "string"
         ? call.name
-        : call && typeof (call as OpenAIToolCall).function?.name === 'string'
+        : call && typeof (call as OpenAIToolCall).function?.name === "string"
           ? String((call as OpenAIToolCall).function?.name)
-          : '',
+          : "",
     args: normalizeArgs(
-      (call as ToolCall)?.args ?? (call as OpenAIToolCall)?.arguments ?? (call as OpenAIToolCall)?.function?.arguments,
+      (call as ToolCall)?.args ??
+        (call as OpenAIToolCall)?.arguments ??
+        (call as OpenAIToolCall)?.function?.arguments,
     ),
   }));
 }
@@ -191,15 +223,17 @@ export function normalizeUsage(usage: Partial<Usage> = {}): Usage {
   };
 }
 
-function normalizeRole(role?: string): Role | '' {
-  if (typeof role !== 'string') return '';
+function normalizeRole(role?: string): Role | "" {
+  if (typeof role !== "string") return "";
   const lowered = role.toLowerCase();
-  return ROLE_SET.has(lowered as Role) ? (lowered as Role) : '';
+  return ROLE_SET.has(lowered as Role) ? (lowered as Role) : "";
 }
 
-function normalizeContent(content: MessageContent | null | undefined): MessageContent {
-  if (content === null || content === undefined) return '';
-  if (typeof content === 'string') return content;
+function normalizeContent(
+  content: MessageContent | null | undefined,
+): MessageContent {
+  if (content === null || content === undefined) return "";
+  if (typeof content === "string") return content;
   if (Array.isArray(content)) return content;
   try {
     return JSON.stringify(content);
@@ -209,9 +243,10 @@ function normalizeContent(content: MessageContent | null | undefined): MessageCo
 }
 
 function normalizeArgs(args: unknown): Record<string, unknown> {
-  if (args && typeof args === 'object' && !Array.isArray(args)) return args as Record<string, unknown>;
+  if (args && typeof args === "object" && !Array.isArray(args))
+    return args as Record<string, unknown>;
   if (Array.isArray(args)) return { value: args };
-  if (typeof args === 'string') {
+  if (typeof args === "string") {
     try {
       return JSON.parse(args);
     } catch {
@@ -222,10 +257,10 @@ function normalizeArgs(args: unknown): Record<string, unknown> {
 }
 
 function normalizeToolContent(content: MessageContent): string {
-  if (typeof content === 'string') return content;
+  if (typeof content === "string") return content;
   try {
     return JSON.stringify(content);
   } catch {
-    return String(content ?? '');
+    return String(content ?? "");
   }
 }

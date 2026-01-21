@@ -1,700 +1,1366 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Parchi</title>
-  <link rel="stylesheet" href="panel.css">
-</head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <header class="header">
-      <div class="title-stack">
-        <p class="eyebrow">Parchi Desk</p>
-        <div class="brand-row">
-          <span class="mascot" aria-hidden="true">
-            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
-              <path d="M12 18c0-6 4-10 10-10h20c6 0 10 4 10 10v22c0 9-7 16-16 16H24c-9 0-16-7-16-16V18z" style="fill: var(--mascot-fill); stroke: var(--mascot-stroke);" stroke-width="2"/>
-              <path d="M22 26h20" style="stroke: var(--mascot-stroke);" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="24" cy="34" r="3" style="fill: var(--mascot-detail);"/>
-              <circle cx="40" cy="34" r="3" style="fill: var(--mascot-detail);"/>
-              <path d="M26 42c3 3 9 3 12 0" style="stroke: var(--mascot-detail);" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <h1>Parchi</h1>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button id="accountBtn" class="pill subtle account-pill" title="Account">Signed out</button>
-        <button id="settingsBtn" class="icon-btn" title="Settings">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <div class="view-tabs">
-      <div class="pill-group">
-        <button id="viewChatBtn" class="pill active">Live</button>
-        <button id="viewHistoryBtn" class="pill">History</button>
-      </div>
-      <button id="startNewSessionBtn" class="pill subtle">New Session</button>
-    </div>
-
-    <div id="accessPanel" class="access-panel hidden">
-      <section id="authPanel" class="access-card">
-        <p class="eyebrow">Account</p>
-        <h2>Sign in to continue</h2>
-        <p id="authSubtitle" class="access-subtitle">Sign in with your email to unlock billing and sync.</p>
-
-        <div id="accessConfigPrompt" class="access-banner hidden">
-          <div>
-            <div class="banner-title">Account API base URL required</div>
-            <div class="banner-body">Add the base URL in Settings to sign in and manage billing.</div>
-          </div>
-          <button id="authOpenSettingsBtn" class="btn btn-secondary subtle">Open settings</button>
-        </div>
-
-        <form id="authForm" class="access-form">
-          <div class="form-group full">
-            <label for="authEmail">Email</label>
-            <input id="authEmail" type="email" placeholder="you@company.com" autocomplete="email" required>
-            <small>We will create your account if needed.</small>
-          </div>
-          <div class="access-actions">
-            <button id="authStartBtn" class="btn btn-primary" type="submit">Sign in</button>
-            <button id="authOpenBtn" class="btn btn-secondary" type="button">Open account page</button>
-          </div>
-        </form>
-      </section>
-
-      <section id="billingPanel" class="access-card hidden">
-        <p class="eyebrow">Subscription</p>
-        <h2>Unlock your plan</h2>
-        <p class="access-subtitle">Your account is signed in, but there is no active subscription on this device.</p>
-
-        <div class="plan-card">
-          <div>
-            <div class="plan-title">Parchi Pro</div>
-            <div id="planStatus" class="plan-meta">No active plan</div>
-          </div>
-          <span class="plan-pill">Monthly</span>
-        </div>
-
-        <div class="access-actions">
-          <button id="billingStartBtn" class="btn btn-primary">Start subscription</button>
-          <button id="billingManageBtn" class="btn btn-secondary">Manage billing</button>
-          <button id="authLogoutBtn" class="btn btn-secondary">Sign out</button>
-        </div>
-      </section>
-
-      <section id="accountPanel" class="access-card hidden account-panel">
-        <p class="eyebrow">Account</p>
-        <div class="account-header">
-          <div>
-            <h2 id="accountGreeting">Welcome back</h2>
-            <p id="accountSubtext" class="access-subtitle">Manage your subscription, billing, and workspace settings.</p>
-          </div>
-          <button id="accountRefreshBtn" class="btn btn-secondary subtle">Refresh</button>
-        </div>
-
-        <div class="account-grid">
-          <div class="account-card">
-            <div class="card-top">
-              <div>
-                <div class="card-title">Subscription</div>
-                <div id="accountPlanStatus" class="card-meta">No active plan</div>
-              </div>
-              <span id="accountPlanBadge" class="plan-pill">Plan</span>
-            </div>
-            <div id="accountPlanDetails" class="card-detail">Connect billing to activate a subscription.</div>
-            <div class="card-actions">
-              <button id="accountCheckoutBtn" class="btn btn-primary">Start subscription</button>
-              <button id="accountPortalBtn" class="btn btn-secondary">Billing portal</button>
-            </div>
-          </div>
-
-          <div class="account-card">
-            <div class="card-title">Billing</div>
-            <div id="accountBillingSummary" class="card-detail">No billing details yet.</div>
-            <div id="accountInvoices" class="account-list"></div>
-          </div>
-
-          <div class="account-card">
-            <div class="card-title">Settings</div>
-            <div id="accountSettingsSummary" class="card-detail">Review active profile and automation settings.</div>
-            <div class="card-actions">
-              <button id="accountOpenSettingsBtn" class="btn btn-secondary subtle">Open settings</button>
-            </div>
-          </div>
-
-          <div class="account-card">
-            <div class="card-title">Configurations</div>
-            <div id="accountConfigs" class="account-list"></div>
-            <div class="card-actions">
-              <button id="accountOpenProfilesBtn" class="btn btn-secondary subtle">Agent library</button>
-            </div>
-          </div>
-
-          <div class="account-card">
-            <div class="card-title">History</div>
-            <div id="accountHistory" class="account-list"></div>
-            <div class="card-actions">
-              <button id="accountOpenHistoryBtn" class="btn btn-secondary subtle">Open history</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="account-footer">
-          <button id="accountLogoutBtn" class="btn btn-secondary">Sign out</button>
-        </div>
-      </section>
-
-      <div id="accessStatus" class="access-status hidden"></div>
-    </div>
-
-    <!-- Settings Panel -->
-    <div id="settingsPanel" class="settings-panel hidden">
-      <div class="settings-header">
-        <div>
-          <p class="eyebrow">Settings</p>
-          <h2>Configuration</h2>
-          <p class="settings-subtitle">Edits apply to the selected profile. Save to persist.</p>
-        </div>
-      </div>
-      <div class="settings-tabs">
-        <button id="settingsTabGeneralBtn" class="settings-tab-button active" data-tab="general">General</button>
-        <button id="settingsTabProfilesBtn" class="settings-tab-button" data-tab="profiles">Agent Library</button>
-      </div>
-      <div class="settings-tab-panels">
-        <div id="settingsTabGeneral" class="tab-panel" data-tab="general">
-          <div class="settings-section">
-            <div class="settings-section-header">
-              <div>
-                <p class="eyebrow">Profile</p>
-                <h3 class="settings-section-title">Active profile</h3>
-              </div>
-              <button id="openProfilesBtn" class="btn btn-secondary subtle">Agent library</button>
-            </div>
-            <div class="form-group">
-              <label for="activeConfig">Profile</label>
-              <div class="config-row">
-                <select id="activeConfig">
-                  <option value="default">Default</option>
-                </select>
-                <button id="newConfigBtn" class="btn btn-secondary">New</button>
-                <button id="deleteConfigBtn" class="btn btn-secondary">Delete</button>
-              </div>
-              <small>Switch profiles. “New” duplicates the current profile.</small>
-            </div>
-          </div>
-
-          <details class="settings-section settings-collapsible" open>
-            <summary>
-              <span class="settings-collapsible-title">Provider & model</span>
-              <span class="settings-collapsible-hint">API key, model name, optional endpoint</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="provider">Provider</label>
-                <select id="provider">
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="custom">Custom (OpenAI Compatible)</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="apiKey">API Key</label>
-                <input type="password" id="apiKey" placeholder="sk-...">
-                <small>Stored locally in your browser.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="model">Model</label>
-                <input type="text" id="model" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
-                <small>Examples: `gpt-4o`, `claude-3-5-sonnet-20241022`.</small>
-              </div>
-
-              <div class="form-group" id="customEndpointGroup" style="display: none;">
-                <label for="customEndpoint">Custom provider URL</label>
-                <input type="text" id="customEndpoint" placeholder="https://your-api.com/v1/chat/completions">
-                <small>Full endpoint URL for OpenAI-compatible APIs (e.g., LM Studio, Groq, Ollama).</small>
-              </div>
-            </div>
-          </details>
-
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Model parameters</span>
-              <span class="settings-collapsible-hint">Temperature, tokens, context, timeout</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
-                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-                <small>0 = focused, 2 = more creative.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="maxTokens">Max response tokens</label>
-                <input type="number" id="maxTokens" min="1" max="16384" value="4096">
-              </div>
-
-              <div class="form-group">
-                <label for="contextLimit">Context window</label>
-                <input type="number" id="contextLimit" min="4000" max="1000000" value="200000">
-                <small>Used for context compaction. Examples: Claude 3 (200k), GPT-4o (128k).</small>
-              </div>
-
-              <div class="form-group">
-                <label for="timeout">Request timeout (ms)</label>
-                <input type="number" id="timeout" min="5000" step="1000" value="30000">
-              </div>
-            </div>
-          </details>
-
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Screenshots & vision</span>
-              <span class="settings-collapsible-hint">Off by default</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="enableScreenshots">Screenshot tools</label>
-                <select id="enableScreenshots">
-                  <option value="false">Disabled (default)</option>
-                  <option value="true">Enabled (vision only)</option>
-                </select>
-                <small>Enable only with a vision-capable model/profile.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="visionBridge">Vision relay</label>
-                <select id="visionBridge">
-                  <option value="true">Describe screenshots with vision profile</option>
-                  <option value="false">Do not relay to vision model</option>
-                </select>
-                <small>Use when your main model can’t see images.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="visionProfile">Vision profile</label>
-                <select id="visionProfile">
-                  <option value="">Use active profile</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="sendScreenshotsAsImages">Send screenshots</label>
-                <select id="sendScreenshotsAsImages">
-                  <option value="true">As images (vision models)</option>
-                  <option value="false">As text (describe only)</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="screenshotQuality">Screenshot quality</label>
-                <select id="screenshotQuality">
-                  <option value="high">High</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-            </div>
-          </details>
-
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Behavior</span>
-              <span class="settings-collapsible-hint">Streaming, history, confirmations</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="showThinking">Show thinking</label>
-                <select id="showThinking">
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="streamResponses">Stream responses</label>
-                <select id="streamResponses">
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-                <small>Shows partial output while generating.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="autoScroll">Auto-scroll</label>
-                <select id="autoScroll">
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="confirmActions">Confirm dangerous actions</label>
-                <select id="confirmActions">
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-                <small>Examples: deleting history, closing tabs.</small>
-              </div>
-
-              <div class="form-group">
-                <label for="saveHistory">Save chat history</label>
-                <select id="saveHistory">
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-                <small>Stored locally (max ~50 messages per session).</small>
-              </div>
-            </div>
-          </details>
-
-          <details id="accountSettingsSection" class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Account & billing</span>
-              <span class="settings-collapsible-hint">Sign-in service configuration</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div id="accountApiBaseGroup" class="form-group full">
-                <label for="accountApiBase">Account API base URL</label>
-                <input type="text" id="accountApiBase" placeholder="https://billing.example.com">
-                <small>Used for device sign-in, Stripe checkout, and billing status.</small>
-              </div>
-            </div>
-          </details>
-
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Backup & restore</span>
-              <span class="settings-collapsible-hint">Export or import settings</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group full">
-                <label>Settings backup</label>
-                <div class="settings-inline">
-                  <button id="exportSettingsBtn" class="btn btn-secondary">Export settings</button>
-                  <button id="importSettingsBtn" class="btn btn-secondary">Import settings</button>
-                  <input id="importSettingsInput" type="file" accept="application/json" class="hidden">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Parchi</title>
+        <link rel="stylesheet" href="panel.css" />
+    </head>
+    <body>
+        <div class="app-container">
+            <!-- Left Sidebar (settings, account, history) -->
+            <aside id="sidebar" class="sidebar">
+                <div class="sidebar-header">
+                    <div class="brand">
+                        <span class="mascot" aria-hidden="true">
+                            <svg viewBox="0 0 64 64" width="18" height="18">
+                                <path
+                                    d="M12 18c0-6 4-10 10-10h20c6 0 10 4 10 10v22c0 9-7 16-16 16H24c-9 0-16-7-16-16V18z"
+                                    fill="var(--mascot-fill)"
+                                    stroke="var(--mascot-stroke)"
+                                    stroke-width="2"
+                                />
+                                <path
+                                    d="M22 26h20"
+                                    stroke="var(--mascot-stroke)"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    fill="none"
+                                />
+                                <circle
+                                    cx="24"
+                                    cy="34"
+                                    r="3"
+                                    fill="var(--mascot-detail)"
+                                />
+                                <circle
+                                    cx="40"
+                                    cy="34"
+                                    r="3"
+                                    fill="var(--mascot-detail)"
+                                />
+                                <path
+                                    d="M26 42c3 3 9 3 12 0"
+                                    stroke="var(--mascot-detail)"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    fill="none"
+                                />
+                            </svg>
+                        </span>
+                        <span class="brand-name">Parchi</span>
+                    </div>
+                    <button id="closeSidebarBtn" class="icon-btn" title="Close">
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
                 </div>
-                <small>Exports include API keys. Store securely.</small>
-              </div>
-            </div>
-          </details>
 
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Permissions</span>
-              <span class="settings-collapsible-hint">Control which tools can run</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="permissionRead">Read page content</label>
-                <select id="permissionRead">
-                  <option value="true">Allow</option>
-                  <option value="false">Block</option>
-                </select>
-                <small>Applies to getContent and page inspection.</small>
-              </div>
-              <div class="form-group">
-                <label for="permissionInteract">Interact with pages</label>
-                <select id="permissionInteract">
-                  <option value="true">Allow</option>
-                  <option value="false">Block</option>
-                </select>
-                <small>Click, type, pressKey, scroll.</small>
-              </div>
-              <div class="form-group">
-                <label for="permissionNavigate">Navigate/open URLs</label>
-                <select id="permissionNavigate">
-                  <option value="true">Allow</option>
-                  <option value="false">Block</option>
-                </select>
-                <small>navigate and openTab.</small>
-              </div>
-              <div class="form-group">
-                <label for="permissionTabs">Manage tabs</label>
-                <select id="permissionTabs">
-                  <option value="true">Allow</option>
-                  <option value="false">Block</option>
-                </select>
-                <small>getTabs, switchTab, closeTab, groupTabs.</small>
-              </div>
-              <div class="form-group">
-                <label for="permissionScreenshots">Screenshots</label>
-                <select id="permissionScreenshots">
-                  <option value="false">Block</option>
-                  <option value="true">Allow</option>
-                </select>
-                <small>Requires screenshot tools enabled.</small>
-              </div>
-              <div class="form-group full">
-                <label for="allowedDomains">Allowed domains (optional)</label>
-                <textarea id="allowedDomains" rows="3" placeholder="example.com&#10;docs.example.com"></textarea>
-                <small>When set, tool actions only run on these domains.</small>
-              </div>
-            </div>
-          </details>
+                <div class="sidebar-content">
+                    <!-- Navigation -->
+                    <nav class="sidebar-nav">
+                        <button
+                            id="navChatBtn"
+                            class="nav-item active"
+                            data-view="chat"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                                />
+                            </svg>
+                            Chat
+                        </button>
+                        <button
+                            id="navHistoryBtn"
+                            class="nav-item"
+                            data-view="history"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            History
+                        </button>
+                        <button
+                            id="navSettingsBtn"
+                            class="nav-item"
+                            data-view="settings"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                                />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            Settings
+                        </button>
+                        <button
+                            id="navAccountBtn"
+                            class="nav-item"
+                            data-view="account"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                                />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <span id="accountNavLabel">Account</span>
+                        </button>
+                    </nav>
 
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">Orchestrator</span>
-              <span class="settings-collapsible-hint">Sub-agent workflows</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group">
-                <label for="orchestratorToggle">Orchestrator mode</label>
-                <select id="orchestratorToggle">
-                  <option value="false">Disabled (single agent)</option>
-                  <option value="true">Enabled (spawn sub-agents)</option>
-                </select>
-              </div>
+                    <!-- Sidebar Panels -->
+                    <div id="sidebarPanels" class="sidebar-panels">
+                        <!-- History Panel -->
+                        <div
+                            id="historyPanel"
+                            class="sidebar-panel hidden"
+                            data-panel="history"
+                        >
+                            <div class="panel-header">
+                                <span class="panel-title">History</span>
+                                <button
+                                    id="startNewSessionBtn"
+                                    class="btn btn-secondary"
+                                >
+                                    New
+                                </button>
+                            </div>
+                            <div id="historyItems" class="history-list"></div>
+                        </div>
 
-              <div class="form-group">
-                <label for="orchestratorProfile">Orchestrator profile</label>
-                <select id="orchestratorProfile">
-                  <option value="">Use active profile</option>
-                </select>
-              </div>
-            </div>
-          </details>
+                        <!-- Settings Panel -->
+                        <div
+                            id="settingsPanel"
+                            class="sidebar-panel hidden"
+                            data-panel="settings"
+                        >
+                            <div class="panel-header">
+                                <span class="panel-title">Settings</span>
+                            </div>
+                            <div class="settings-content">
+                                <div class="settings-tabs">
+                                    <button
+                                        id="settingsTabGeneralBtn"
+                                        class="settings-tab-button active"
+                                        data-tab="general"
+                                    >
+                                        General
+                                    </button>
+                                    <button
+                                        id="settingsTabProfilesBtn"
+                                        class="settings-tab-button"
+                                        data-tab="profiles"
+                                    >
+                                        Profiles
+                                    </button>
+                                </div>
 
-          <details class="settings-section settings-collapsible">
-            <summary>
-              <span class="settings-collapsible-title">System prompt</span>
-              <span class="settings-collapsible-hint">Behavior instructions</span>
-            </summary>
-            <div class="settings-collapsible-body">
-              <div class="form-group full">
-                <label for="systemPrompt">System prompt</label>
-                <textarea id="systemPrompt" rows="6" placeholder="You are a helpful browser automation assistant..."></textarea>
-                <small>Keep this short; long prompts consume context.</small>
-              </div>
-            </div>
-          </details>
+                                <!-- General Settings Tab -->
+                                <div
+                                    id="settingsTabGeneral"
+                                    class="tab-panel"
+                                    data-tab="general"
+                                >
+                                    <details class="settings-section" open>
+                                        <summary>Profile</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="activeConfig"
+                                                    >Active profile</label
+                                                >
+                                                <div class="config-row">
+                                                    <select id="activeConfig">
+                                                        <option value="default">
+                                                            Default
+                                                        </option>
+                                                    </select>
+                                                    <button
+                                                        id="newConfigBtn"
+                                                        class="btn btn-secondary"
+                                                    >
+                                                        New
+                                                    </button>
+                                                    <button
+                                                        id="deleteConfigBtn"
+                                                        class="btn btn-secondary"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </details>
 
-          <div class="settings-actions">
-            <div class="button-group">
-              <button id="saveSettingsBtn" class="btn btn-primary">Save</button>
-              <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+                                    <details class="settings-section">
+                                        <summary>Provider & Model</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="provider"
+                                                    >Provider</label
+                                                >
+                                                <select id="provider">
+                                                    <option value="openai">
+                                                        OpenAI
+                                                    </option>
+                                                    <option value="anthropic">
+                                                        Anthropic
+                                                    </option>
+                                                    <option value="custom">
+                                                        Custom
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="apiKey"
+                                                    >API Key</label
+                                                >
+                                                <input
+                                                    type="password"
+                                                    id="apiKey"
+                                                    placeholder="sk-..."
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="model">Model</label>
+                                                <input
+                                                    type="text"
+                                                    id="model"
+                                                    placeholder="gpt-4o"
+                                                />
+                                            </div>
+                                            <div
+                                                class="form-group"
+                                                id="customEndpointGroup"
+                                                style="display: none"
+                                            >
+                                                <label for="customEndpoint"
+                                                    >Custom URL</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    id="customEndpoint"
+                                                    placeholder="https://api.example.com/v1"
+                                                />
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Parameters</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="temperature"
+                                                    >Temperature:
+                                                    <span id="temperatureValue"
+                                                        >0.7</span
+                                                    ></label
+                                                >
+                                                <input
+                                                    type="range"
+                                                    id="temperature"
+                                                    min="0"
+                                                    max="2"
+                                                    step="0.1"
+                                                    value="0.7"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="maxTokens"
+                                                    >Max tokens</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="maxTokens"
+                                                    min="1"
+                                                    max="16384"
+                                                    value="4096"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="contextLimit"
+                                                    >Context window</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="contextLimit"
+                                                    min="4000"
+                                                    max="1000000"
+                                                    value="200000"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="timeout"
+                                                    >Timeout (ms)</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="timeout"
+                                                    min="5000"
+                                                    step="1000"
+                                                    value="30000"
+                                                />
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Vision</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="enableScreenshots"
+                                                    >Screenshots</label
+                                                >
+                                                <select id="enableScreenshots">
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="visionBridge"
+                                                    >Vision relay</label
+                                                >
+                                                <select id="visionBridge">
+                                                    <option value="true">
+                                                        Use vision profile
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="visionProfile"
+                                                    >Vision profile</label
+                                                >
+                                                <select id="visionProfile">
+                                                    <option value="">
+                                                        Active profile
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="sendScreenshotsAsImages"
+                                                    >Send as</label
+                                                >
+                                                <select
+                                                    id="sendScreenshotsAsImages"
+                                                >
+                                                    <option value="true">
+                                                        Images
+                                                    </option>
+                                                    <option value="false">
+                                                        Text
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="screenshotQuality"
+                                                    >Quality</label
+                                                >
+                                                <select id="screenshotQuality">
+                                                    <option value="high">
+                                                        High
+                                                    </option>
+                                                    <option value="low">
+                                                        Low
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Behavior</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="showThinking"
+                                                    >Show thinking</label
+                                                >
+                                                <select id="showThinking">
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="streamResponses"
+                                                    >Streaming</label
+                                                >
+                                                <select id="streamResponses">
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="autoScroll"
+                                                    >Auto-scroll</label
+                                                >
+                                                <select id="autoScroll">
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="confirmActions"
+                                                    >Confirmations</label
+                                                >
+                                                <select id="confirmActions">
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="saveHistory"
+                                                    >Save history</label
+                                                >
+                                                <select id="saveHistory">
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Permissions</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="permissionRead"
+                                                    >Read pages</label
+                                                >
+                                                <select id="permissionRead">
+                                                    <option value="true">
+                                                        Allow
+                                                    </option>
+                                                    <option value="false">
+                                                        Block
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="permissionInteract"
+                                                    >Interact</label
+                                                >
+                                                <select id="permissionInteract">
+                                                    <option value="true">
+                                                        Allow
+                                                    </option>
+                                                    <option value="false">
+                                                        Block
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="permissionNavigate"
+                                                    >Navigate</label
+                                                >
+                                                <select id="permissionNavigate">
+                                                    <option value="true">
+                                                        Allow
+                                                    </option>
+                                                    <option value="false">
+                                                        Block
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="permissionTabs"
+                                                    >Manage tabs</label
+                                                >
+                                                <select id="permissionTabs">
+                                                    <option value="true">
+                                                        Allow
+                                                    </option>
+                                                    <option value="false">
+                                                        Block
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="permissionScreenshots"
+                                                    >Screenshots</label
+                                                >
+                                                <select
+                                                    id="permissionScreenshots"
+                                                >
+                                                    <option value="false">
+                                                        Block
+                                                    </option>
+                                                    <option value="true">
+                                                        Allow
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="allowedDomains"
+                                                    >Allowed domains</label
+                                                >
+                                                <textarea
+                                                    id="allowedDomains"
+                                                    rows="2"
+                                                    placeholder="example.com"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Orchestrator</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <label for="orchestratorToggle"
+                                                    >Mode</label
+                                                >
+                                                <select id="orchestratorToggle">
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="orchestratorProfile"
+                                                    >Profile</label
+                                                >
+                                                <select
+                                                    id="orchestratorProfile"
+                                                >
+                                                    <option value="">
+                                                        Active profile
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>System prompt</summary>
+                                        <div class="settings-body">
+                                            <div class="form-group">
+                                                <textarea
+                                                    id="systemPrompt"
+                                                    rows="4"
+                                                    placeholder="You are a helpful assistant..."
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details
+                                        class="settings-section"
+                                        id="accountSettingsSection"
+                                    >
+                                        <summary>Account API</summary>
+                                        <div
+                                            class="settings-body"
+                                            id="accountApiBaseGroup"
+                                        >
+                                            <div class="form-group">
+                                                <label for="accountApiBase"
+                                                    >Base URL</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    id="accountApiBase"
+                                                    placeholder="https://billing.example.com"
+                                                />
+                                                <small
+                                                    >For sign-in and
+                                                    billing.</small
+                                                >
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <details class="settings-section">
+                                        <summary>Backup</summary>
+                                        <div class="settings-body">
+                                            <div class="settings-inline">
+                                                <button
+                                                    id="exportSettingsBtn"
+                                                    class="btn btn-secondary"
+                                                >
+                                                    Export
+                                                </button>
+                                                <button
+                                                    id="importSettingsBtn"
+                                                    class="btn btn-secondary"
+                                                >
+                                                    Import
+                                                </button>
+                                                <input
+                                                    id="importSettingsInput"
+                                                    type="file"
+                                                    accept="application/json"
+                                                    class="hidden"
+                                                />
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <div class="settings-actions">
+                                        <button
+                                            id="saveSettingsBtn"
+                                            class="btn btn-primary"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            id="cancelSettingsBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Profiles Tab -->
+                                <div
+                                    id="settingsTabProfiles"
+                                    class="tab-panel hidden"
+                                    data-tab="profiles"
+                                >
+                                    <div class="profile-actions-row">
+                                        <input
+                                            id="newProfileNameInput"
+                                            type="text"
+                                            placeholder="Profile name"
+                                        />
+                                        <button
+                                            id="createProfileBtn"
+                                            class="btn btn-primary"
+                                        >
+                                            Create
+                                        </button>
+                                        <button
+                                            id="openGeneralBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            General
+                                        </button>
+                                        <button
+                                            id="refreshProfilesBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+                                    <div
+                                        id="agentGrid"
+                                        class="agent-grid"
+                                    ></div>
+                                    <div
+                                        id="profileEditor"
+                                        class="profile-editor"
+                                    >
+                                        <div class="panel-header">
+                                            <span id="profileEditorTitle"
+                                                >Editing: default</span
+                                            >
+                                        </div>
+                                        <div class="profile-editor-grid">
+                                            <div class="form-group">
+                                                <label for="profileEditorName"
+                                                    >Name</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    id="profileEditorName"
+                                                    readonly
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorProvider"
+                                                    >Provider</label
+                                                >
+                                                <select
+                                                    id="profileEditorProvider"
+                                                >
+                                                    <option value="openai">
+                                                        OpenAI
+                                                    </option>
+                                                    <option value="anthropic">
+                                                        Anthropic
+                                                    </option>
+                                                    <option value="custom">
+                                                        Custom
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="profileEditorApiKey"
+                                                    >API Key</label
+                                                >
+                                                <input
+                                                    type="password"
+                                                    id="profileEditorApiKey"
+                                                    placeholder="sk-..."
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="profileEditorModel"
+                                                    >Model</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    id="profileEditorModel"
+                                                    placeholder="gpt-4o"
+                                                />
+                                            </div>
+                                            <div
+                                                class="form-group"
+                                                id="profileEditorEndpointGroup"
+                                                style="display: none"
+                                            >
+                                                <label
+                                                    for="profileEditorEndpoint"
+                                                    >Endpoint</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    id="profileEditorEndpoint"
+                                                    placeholder="https://..."
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorTemperature"
+                                                    >Temp:
+                                                    <span
+                                                        id="profileEditorTemperatureValue"
+                                                        >0.7</span
+                                                    ></label
+                                                >
+                                                <input
+                                                    type="range"
+                                                    id="profileEditorTemperature"
+                                                    min="0"
+                                                    max="2"
+                                                    step="0.1"
+                                                    value="0.7"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorMaxTokens"
+                                                    >Max tokens</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="profileEditorMaxTokens"
+                                                    min="1"
+                                                    max="4096"
+                                                    value="2048"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorTimeout"
+                                                    >Timeout</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="profileEditorTimeout"
+                                                    min="5000"
+                                                    step="1000"
+                                                    value="30000"
+                                                />
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorEnableScreenshots"
+                                                    >Screenshots</label
+                                                >
+                                                <select
+                                                    id="profileEditorEnableScreenshots"
+                                                >
+                                                    <option value="false">
+                                                        Disabled
+                                                    </option>
+                                                    <option value="true">
+                                                        Enabled
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorSendScreenshots"
+                                                    >Send as</label
+                                                >
+                                                <select
+                                                    id="profileEditorSendScreenshots"
+                                                >
+                                                    <option value="true">
+                                                        Images
+                                                    </option>
+                                                    <option value="false">
+                                                        Text
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label
+                                                    for="profileEditorScreenshotQuality"
+                                                    >Quality</label
+                                                >
+                                                <select
+                                                    id="profileEditorScreenshotQuality"
+                                                >
+                                                    <option value="high">
+                                                        High
+                                                    </option>
+                                                    <option value="low">
+                                                        Low
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group full-width">
+                                                <label for="profileEditorPrompt"
+                                                    >System prompt</label
+                                                >
+                                                <textarea
+                                                    id="profileEditorPrompt"
+                                                    rows="3"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <button
+                                            id="saveProfileBtn"
+                                            class="btn btn-primary"
+                                        >
+                                            Save Profile
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Panel -->
+                        <div
+                            id="accessPanel"
+                            class="sidebar-panel hidden"
+                            data-panel="account"
+                        >
+                            <section id="authPanel" class="access-card">
+                                <div class="panel-header">
+                                    <span class="panel-title">Sign in</span>
+                                </div>
+                                <p id="authSubtitle" class="text-muted">
+                                    Sign in with email to unlock billing.
+                                </p>
+                                <div
+                                    id="accessConfigPrompt"
+                                    class="access-banner hidden"
+                                >
+                                    <span
+                                        >Set Account API URL in Settings
+                                        first.</span
+                                    >
+                                    <button
+                                        id="authOpenSettingsBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Settings
+                                    </button>
+                                </div>
+                                <form id="authForm" class="access-form">
+                                    <div class="form-group">
+                                        <label for="authEmail">Email</label>
+                                        <input
+                                            id="authEmail"
+                                            type="email"
+                                            placeholder="you@example.com"
+                                            autocomplete="email"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="form-row">
+                                        <button
+                                            id="authStartBtn"
+                                            class="btn btn-primary"
+                                            type="submit"
+                                        >
+                                            Sign in
+                                        </button>
+                                        <button
+                                            id="authOpenBtn"
+                                            class="btn btn-secondary"
+                                            type="button"
+                                        >
+                                            Open account
+                                        </button>
+                                    </div>
+                                </form>
+                                <div class="divider">or</div>
+                                <div class="form-group">
+                                    <label for="authTokenInput"
+                                        >Access token</label
+                                    >
+                                    <input
+                                        id="authTokenInput"
+                                        type="password"
+                                        placeholder="Paste token"
+                                    />
+                                    <button
+                                        id="authTokenSaveBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Use token
+                                    </button>
+                                </div>
+                            </section>
+
+                            <section
+                                id="billingPanel"
+                                class="access-card hidden"
+                            >
+                                <div class="panel-header">
+                                    <span class="panel-title"
+                                        >Subscription</span
+                                    >
+                                </div>
+                                <div class="plan-card">
+                                    <div>
+                                        <div class="plan-title">Parchi Pro</div>
+                                        <div id="planStatus" class="text-muted">
+                                            No active plan
+                                        </div>
+                                    </div>
+                                    <span class="plan-pill">Monthly</span>
+                                </div>
+                                <div class="form-row">
+                                    <button
+                                        id="billingStartBtn"
+                                        class="btn btn-primary"
+                                    >
+                                        Subscribe
+                                    </button>
+                                    <button
+                                        id="billingManageBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Manage
+                                    </button>
+                                    <button
+                                        id="authLogoutBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Sign out
+                                    </button>
+                                </div>
+                            </section>
+
+                            <section
+                                id="accountPanel"
+                                class="access-card hidden"
+                            >
+                                <div class="panel-header">
+                                    <span id="accountGreeting">Welcome</span>
+                                    <button
+                                        id="accountRefreshBtn"
+                                        class="btn btn-secondary"
+                                    >
+                                        Refresh
+                                    </button>
+                                </div>
+                                <p id="accountSubtext" class="text-muted">
+                                    Manage subscription and billing.
+                                </p>
+                                <div class="account-grid">
+                                    <div class="account-card">
+                                        <div class="card-title">
+                                            Subscription
+                                        </div>
+                                        <div
+                                            id="accountPlanStatus"
+                                            class="text-muted"
+                                        >
+                                            No active plan
+                                        </div>
+                                        <span
+                                            id="accountPlanBadge"
+                                            class="plan-pill"
+                                            >Plan</span
+                                        >
+                                        <div
+                                            id="accountPlanDetails"
+                                            class="text-muted"
+                                        ></div>
+                                        <div class="form-row">
+                                            <button
+                                                id="accountCheckoutBtn"
+                                                class="btn btn-primary"
+                                            >
+                                                Subscribe
+                                            </button>
+                                            <button
+                                                id="accountPortalBtn"
+                                                class="btn btn-secondary"
+                                            >
+                                                Billing
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="account-card">
+                                        <div class="card-title">Billing</div>
+                                        <div
+                                            id="accountBillingSummary"
+                                            class="text-muted"
+                                        >
+                                            No billing details.
+                                        </div>
+                                        <div
+                                            id="accountInvoices"
+                                            class="account-list"
+                                        ></div>
+                                    </div>
+                                    <div class="account-card">
+                                        <div class="card-title">Settings</div>
+                                        <div
+                                            id="accountSettingsSummary"
+                                            class="text-muted"
+                                        >
+                                            Review profile and automation.
+                                        </div>
+                                        <button
+                                            id="accountOpenSettingsBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            Settings
+                                        </button>
+                                    </div>
+                                    <div class="account-card">
+                                        <div class="card-title">Configs</div>
+                                        <div
+                                            id="accountConfigs"
+                                            class="account-list"
+                                        ></div>
+                                        <button
+                                            id="accountOpenProfilesBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            Profiles
+                                        </button>
+                                    </div>
+                                    <div class="account-card">
+                                        <div class="card-title">History</div>
+                                        <div
+                                            id="accountHistory"
+                                            class="account-list"
+                                        ></div>
+                                        <button
+                                            id="accountOpenHistoryBtn"
+                                            class="btn btn-secondary"
+                                        >
+                                            View all
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    id="accountLogoutBtn"
+                                    class="btn btn-secondary"
+                                >
+                                    Sign out
+                                </button>
+                            </section>
+                            <div
+                                id="accessStatus"
+                                class="access-status hidden"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Chat Area -->
+            <main class="main-content">
+                <!-- Top bar -->
+                <header class="topbar">
+                    <div class="topbar-status">
+                        <span id="statusDot" class="status-dot"></span>
+                        <span id="statusText">Ready</span>
+                    </div>
+                    <span id="statusMeta" class="status-meta"></span>
+                    <button id="openSidebarBtn" class="icon-btn" title="Menu">
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                </header>
+
+                <!-- Chat Interface -->
+                <div id="chatInterface" class="chat-area">
+                    <!-- Agent Nav (when subagents active) -->
+                    <div id="agentNav" class="agent-nav hidden">
+                        <div
+                            class="agent-nav-item main-agent active"
+                            data-agent="main"
+                        >
+                            <span class="agent-status"></span>
+                            <span>Main</span>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div id="chatMessages" class="chat-messages"></div>
+
+                    <button
+                        id="scrollToLatestBtn"
+                        class="jump-to-latest hidden"
+                    >
+                        Jump to latest
+                    </button>
+
+                    <!-- Composer -->
+                    <div class="composer-wrapper">
+                        <div
+                            id="selectedTabsBar"
+                            class="selected-tabs hidden"
+                        ></div>
+                        <div id="composer" class="composer">
+                            <textarea
+                                id="userInput"
+                                placeholder="Message..."
+                                rows="1"
+                            ></textarea>
+                            <div class="composer-toolbar">
+                                <div class="composer-toolbar-left">
+                                    <div class="model-selector">
+                                        <select id="modelSelect">
+                                            <option value="">
+                                                Select model
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="composer-toolbar-right">
+                                    <button
+                                        id="fileBtn"
+                                        class="icon-btn"
+                                        title="Attach file"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M21.44 11.05 12.36 20.12a5 5 0 0 1-7.07-7.07l8.49-8.49a3 3 0 0 1 4.24 4.24L9.76 17.12a1 1 0 0 1-1.41-1.41l7.07-7.07"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        id="tabSelectorBtn"
+                                        class="icon-btn"
+                                        title="Select tabs"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <rect
+                                                x="3"
+                                                y="3"
+                                                width="18"
+                                                height="18"
+                                                rx="2"
+                                            />
+                                            <line
+                                                x1="3"
+                                                y1="9"
+                                                x2="21"
+                                                y2="9"
+                                            />
+                                            <line
+                                                x1="9"
+                                                y1="21"
+                                                x2="9"
+                                                y2="9"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <input
+                                        id="fileInput"
+                                        type="file"
+                                        multiple
+                                        accept=".md,.txt,.csv,.json,.log"
+                                        class="hidden"
+                                    />
+                                    <button
+                                        id="sendBtn"
+                                        class="send-btn"
+                                        title="Send"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2.5"
+                                        >
+                                            <line
+                                                x1="22"
+                                                y1="2"
+                                                x2="11"
+                                                y2="13"
+                                            />
+                                            <polygon
+                                                points="22 2 15 22 11 13 2 9 22 2"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Panel (right side) -->
+                <aside id="activityPanel" class="activity-panel">
+                    <div class="activity-header">
+                        <span>Activity</span>
+                        <button
+                            id="activityCloseBtn"
+                            class="icon-btn"
+                            title="Close"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="activity-body">
+                        <div class="activity-section">
+                            <div class="activity-section-title">Thinking</div>
+                            <div id="thinkingPanel" class="thinking-panel">
+                                No reasoning yet.
+                            </div>
+                        </div>
+                        <div class="activity-section">
+                            <div class="activity-section-title">Tools</div>
+                            <div id="toolLog" class="tool-log"></div>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+            <!-- Tab Selector Modal -->
+            <div id="tabSelector" class="modal hidden">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span>Select tabs</span>
+                        <button id="closeTabSelector" class="icon-btn">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="tabList" class="tab-list"></div>
+                </div>
             </div>
-          </div>
         </div>
-        <div id="settingsTabProfiles" class="tab-panel hidden" data-tab="profiles">
-          <div class="agent-management">
-            <div class="agent-management-header">
-              <div>
-                <p class="eyebrow">Agent Teams</p>
-                <h3>Portfolios & Roles</h3>
-              </div>
-              <button id="refreshProfilesBtn" class="btn btn-secondary subtle">Refresh</button>
-            </div>
-            <div class="agent-management-hint">
-              Tap Main / Vision / Orchestrator / Team pills to assign profiles to roles. Use the Config dropdown below to edit details.
-            </div>
-            <div id="agentGrid" class="agent-grid"></div>
-          </div>
-          <div class="form-group profile-actions-group">
-            <label>Agent Library</label>
-            <div class="profile-actions">
-              <div class="profile-new-inline">
-                <input id="newProfileNameInput" type="text" placeholder="Profile name">
-                <button id="createProfileBtn" class="btn btn-primary">Create</button>
-              </div>
-              <button id="openGeneralBtn" class="btn btn-secondary subtle">General settings</button>
-            </div>
-            <small>Profiles appear in the grid and can be assigned without leaving this tab.</small>
-          </div>
-          <div class="profile-editor">
-            <div class="profile-editor-header">
-              <div>
-                <p class="eyebrow">Profile Editor</p>
-                <h3 id="profileEditorTitle">Editing: default</h3>
-              </div>
-              <span class="profile-editor-hint">Select a card to edit. Saving updates the agent immediately.</span>
-            </div>
-            <div class="profile-editor-grid">
-              <div class="form-group">
-                <label for="profileEditorName">Profile name</label>
-                <input type="text" id="profileEditorName" readonly>
-                <small>Use create/delete buttons above to add or remove profiles.</small>
-              </div>
-              <div class="form-group">
-                <label for="profileEditorProvider">Provider</label>
-                <select id="profileEditorProvider">
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="custom">Custom (OpenAI compatible)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="profileEditorApiKey">API Key</label>
-                <input type="password" id="profileEditorApiKey" placeholder="sk-...">
-              </div>
-              <div class="form-group">
-                <label for="profileEditorModel">Model</label>
-                <input type="text" id="profileEditorModel" placeholder="gpt-4o, claude-3-5-sonnet-20241022">
-              </div>
-              <div class="form-group" id="profileEditorEndpointGroup" style="display:none;">
-                <label for="profileEditorEndpoint">Custom Endpoint</label>
-                <input type="text" id="profileEditorEndpoint" placeholder="https://api.example.com/v1">
-              </div>
-              <div class="form-group">
-                <label for="profileEditorTemperature">Temperature: <span id="profileEditorTemperatureValue">0.7</span></label>
-                <input type="range" id="profileEditorTemperature" min="0" max="2" step="0.1" value="0.7">
-              </div>
-              <div class="form-group">
-                <label for="profileEditorMaxTokens">Max Tokens</label>
-                <input type="number" id="profileEditorMaxTokens" min="1" max="4096" value="2048">
-              </div>
-              <div class="form-group">
-                <label for="profileEditorTimeout">Timeout (ms)</label>
-                <input type="number" id="profileEditorTimeout" min="5000" step="1000" value="30000">
-              </div>
-              <div class="form-group">
-                <label for="profileEditorEnableScreenshots">Screenshot tools</label>
-                <select id="profileEditorEnableScreenshots">
-                  <option value="false">Disabled</option>
-                  <option value="true">Enabled</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="profileEditorSendScreenshots">Send images</label>
-                <select id="profileEditorSendScreenshots">
-                  <option value="true">As images</option>
-                  <option value="false">As text</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="profileEditorScreenshotQuality">Screenshot quality</label>
-                <select id="profileEditorScreenshotQuality">
-                  <option value="high">High</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-              <div class="form-group profile-editor-wide">
-                <label for="profileEditorPrompt">System Prompt</label>
-                <textarea id="profileEditorPrompt" rows="4"></textarea>
-              </div>
-            </div>
-            <div class="button-group">
-              <button id="saveProfileBtn" class="btn btn-primary">Save Profile</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Chat Interface -->
-    <div id="chatInterface" class="chat-interface">
-      <div id="statusBar" class="status-bar">
-        <span id="statusDot" class="status-dot"></span>
-        <span id="statusText">Ready</span>
-        <span id="statusMeta" class="status-meta hidden"></span>
-        <button id="activityToggleBtn" class="tool-log-toggle" type="button">Activity</button>
-      </div>
-
-      <!-- Agent Navigation (shows when subagents are active) -->
-      <div id="agentNav" class="agent-nav hidden">
-        <div class="agent-nav-item main-agent active" data-agent="main">
-          <span class="agent-status"></span>
-          <span>Main Agent</span>
-        </div>
-      </div>
-
-      <div id="activityPanel" class="activity-panel" aria-hidden="true">
-        <div class="activity-header">
-          <span>Activity</span>
-          <button id="activityCloseBtn" class="icon-btn" title="Close activity">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="activity-body">
-          <div class="activity-section">
-            <div class="activity-section-title">Thinking</div>
-            <div id="thinkingPanel" class="thinking-panel empty">No reasoning captured yet.</div>
-          </div>
-          <div class="activity-section">
-            <div class="activity-section-title">Tools</div>
-            <div id="toolLog" class="tool-log"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="chatMessages" class="chat-messages"></div>
-      <button id="scrollToLatestBtn" class="jump-to-latest hidden">Jump to latest</button>
-
-      <!-- Tab Selector -->
-      <div id="tabSelector" class="tab-selector hidden">
-        <div class="tab-selector-header">
-          <span>Select tabs to include</span>
-          <button id="closeTabSelector" class="icon-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div id="tabList" class="tab-list"></div>
-      </div>
-
-      <div class="input-area">
-        <div id="composer" class="composer">
-          <div class="composer-input">
-            <textarea id="userInput" placeholder="Message..." rows="2"></textarea>
-          </div>
-          <div id="selectedTabsBar" class="selected-tabs-bar hidden"></div>
-          <div class="composer-toolbar">
-            <div class="composer-tools">
-              <button id="fileBtn" class="icon-btn file-btn" title="Attach files">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.44 11.05 12.36 20.12a5 5 0 0 1-7.07-7.07l8.49-8.49a3 3 0 0 1 4.24 4.24L9.76 17.12a1 1 0 0 1-1.41-1.41l7.07-7.07"></path>
-                </svg>
-              </button>
-              <button id="tabSelectorBtn" class="icon-btn tab-selector-btn" title="Select tabs to include">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="9" y1="21" x2="9" y2="9"></line>
-                </svg>
-              </button>
-              <input id="fileInput" class="file-input-hidden" type="file" multiple accept=".md,.markdown,.txt,.csv,.json,.log">
-            </div>
-            <button id="sendBtn" class="send-btn" title="Send message">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="historyPanel" class="history-panel hidden">
-      <div class="history-header">
-        <div>
-          <p class="eyebrow">Past chats</p>
-          <h2>Session Library</h2>
-        </div>
-        <div class="history-actions">
-          <button class="btn btn-secondary" disabled>History synced</button>
-        </div>
-      </div>
-      <div id="historyItems" class="history-items"></div>
-    </div>
-  </div>
-
-  <script src="panel.js" type="module"></script>
-</body>
+        <script src="panel.js" type="module"></script>
+    </body>
 </html>

@@ -26,10 +26,18 @@
   ],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.17",
+    "@ai-sdk/openai": "^3.0.13",
+    "@ai-sdk/openai-compatible": "^2.0.16",
+    "ai": "^6.0.42"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/chrome": "^0.0.268",
     "@types/node": "^22.10.5",
+    "esbuild": "^0.27.2",
+    "marked": "^17.0.1",
     "playwright": "^1.49.1",
     "typescript": "^5.6.3"
   }

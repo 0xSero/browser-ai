@@ -1,5 +1,3 @@
-// Browser Tools - All browser automation capabilities
-type ToolHandler = (args: any) => Promise<any>;
 type ToolDefinition = {
   name: string;
   description: string;
@@ -10,37 +8,45 @@ type ToolDefinition = {
   };
 };
 
+type SessionTabSummary = {
+  id: number;
+  title?: string;
+  url?: string;
+};
+
+type GroupOptions = {
+  title?: string;
+  color?: chrome.tabGroups.ColorEnum;
+};
+
+// Maximum number of tabs allowed per session to prevent runaway tab creation
+const MAX_SESSION_TABS = 5;
+
 export class BrowserTools {
-  tools: Record<string, ToolHandler>;
-  sessionTabs: chrome.tabs.Tab[];
-  sessionTabGroups: Array<{ groupId: number | string; tabIds: number[] }>;
-  currentTabId: number | null;
-  glowTabs: Set<number>;
+  tools: Record<string, true>;
+  private sessionTabs: Map<number, SessionTabSummary>;
+  private currentSessionTabId: number | null;
+  private sessionTabGroupId: number | null;
 
   constructor() {
-    this.tools = this.initializeTools();
-    this.sessionTabs = [];
-    this.sessionTabGroups = [];
-    this.currentTabId = null;
-    this.glowTabs = new Set();
-  }
-
-  initializeTools(): Record<string, ToolHandler> {
-    return {
-      navigate: this.navigate.bind(this),
-      click: this.click.bind(this),
-      type: this.type.bind(this),
-      pressKey: this.pressKey.bind(this),
-      scroll: this.scroll.bind(this),
-      screenshot: this.screenshot.bind(this),
-      getContent: this.getContent.bind(this),
-      openTab: this.openTab.bind(this),
-      closeTab: this.closeTab.bind(this),
-      switchTab: this.switchTab.bind(this),
-      getTabs: this.getTabs.bind(this),
-      groupTabs: this.groupTabs.bind(this),
-      focusTab: this.focusTab.bind(this),
-      describeSessionTabs: this.describeSessionTabs.bind(this),
+    this.sessionTabs = new Map();
+    this.currentSessionTabId = null;
+    this.sessionTabGroupId = null;
+    this.tools = {
+      navigate: true,
+      openTab: true,
+      click: true,
+      type: true,
+      pressKey: true,
+      scroll: true,
+      getContent: true,
+      screenshot: true,
+      getTabs: true,
+      closeTab: true,
+      switchTab: true,
+      focusTab: true,
+      groupTabs: true,
+      describeSessionTabs: true,
     };
   }
 
@@ -48,893 +54,438 @@ export class BrowserTools {
     return [
       {
         name: 'navigate',
-        description: 'Go to URL',
-        input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
-      },
-      {
-        name: 'click',
-        description: 'Click element',
+        description: 'Navigate the current tab to a URL.',
         input_schema: {
           type: 'object',
           properties: {
-            selector: { type: 'string' },
-            text: { type: 'string' },
-            timeoutMs: { type: 'number', minimum: 250 },
+            url: { type: 'string', description: 'Absolute URL to visit.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
           },
-          required: [],
+          required: ['url'],
+        },
+      },
+      {
+        name: 'openTab',
+        description: `Open a new tab with a URL. Limited to ${MAX_SESSION_TABS} tabs per session - prefer navigating existing tabs over opening new ones.`,
+        input_schema: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', description: 'Absolute URL to open.' },
+          },
+          required: ['url'],
+        },
+      },
+      {
+        name: 'click',
+        description: 'Click an element by CSS selector.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            selector: { type: 'string', description: 'CSS selector to click.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
+          },
+          required: ['selector'],
         },
       },
       {
         name: 'type',
-        description: 'Type text into element',
+        description: 'Type text into an input or textarea.',
         input_schema: {
           type: 'object',
-          properties: { selector: { type: 'string' }, text: { type: 'string' } },
+          properties: {
+            selector: { type: 'string', description: 'CSS selector for the input.' },
+            text: { type: 'string', description: 'Text to enter.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
+          },
           required: ['selector', 'text'],
         },
       },
       {
         name: 'pressKey',
-        description: 'Press keyboard key',
-        input_schema: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] },
+        description: 'Press a key in the page.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', description: 'Keyboard key (e.g., Enter, ArrowDown).' },
+            selector: { type: 'string', description: 'Optional selector to target.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
+          },
+          required: ['key'],
+        },
       },
       {
         name: 'scroll',
-        description: 'Scroll page',
+        description: 'Scroll the page.',
         input_schema: {
           type: 'object',
-          properties: { direction: { type: 'string', enum: ['up', 'down', 'top', 'bottom'] } },
-          required: ['direction'],
+          properties: {
+            direction: { type: 'string', description: 'up, down, top, or bottom.' },
+            amount: { type: 'number', description: 'Scroll amount in pixels.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
+          },
+        },
+      },
+      {
+        name: 'getContent',
+        description: 'Extract page content.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', description: 'text, html, title, url, or links.' },
+            selector: { type: 'string', description: 'Optional selector to scope content.' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
+          },
         },
       },
       {
         name: 'screenshot',
-        description: 'Capture page',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-      {
-        name: 'getContent',
-        description: 'Get page content',
-        input_schema: {
-          type: 'object',
-          properties: { type: { type: 'string', enum: ['text', 'html', 'title', 'url', 'links'] } },
-          required: ['type'],
-        },
-      },
-      {
-        name: 'openTab',
-        description: 'Open tab',
-        input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
-      },
-      {
-        name: 'closeTab',
-        description: 'Close tab',
-        input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: [] },
-      },
-      {
-        name: 'switchTab',
-        description: 'Switch tab',
-        input_schema: { type: 'object', properties: { tabId: { type: 'number' } }, required: ['tabId'] },
-      },
-      { name: 'getTabs', description: 'List tabs', input_schema: { type: 'object', properties: {}, required: [] } },
-      {
-        name: 'groupTabs',
-        description: 'Group/ungroup tabs',
+        description: 'Capture a screenshot of the current tab.',
         input_schema: {
           type: 'object',
           properties: {
-            tabIds: { type: 'array', items: { type: 'number' } },
-            title: { type: 'string' },
-            color: { type: 'string' },
-            ungroup: { type: 'boolean' },
+            tabId: { type: 'number', description: 'Optional tab id.' },
           },
-          required: ['tabIds'],
+        },
+      },
+      {
+        name: 'getTabs',
+        description: 'List tabs in the current window.',
+        input_schema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'closeTab',
+        description: 'Close a tab by id.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tabId: { type: 'number', description: 'Tab id to close.' },
+          },
+          required: ['tabId'],
+        },
+      },
+      {
+        name: 'switchTab',
+        description: 'Activate a tab by id.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tabId: { type: 'number', description: 'Tab id to activate.' },
+          },
+          required: ['tabId'],
         },
       },
       {
         name: 'focusTab',
-        description: 'Set which tab future actions target',
+        description: 'Focus a tab by id.',
         input_schema: {
           type: 'object',
           properties: {
-            tabId: { type: 'number' },
-            titleContains: { type: 'string' },
-            urlContains: { type: 'string' },
-            direction: { type: 'string', enum: ['next', 'previous'] },
+            tabId: { type: 'number', description: 'Tab id to focus.' },
           },
-          required: [],
+          required: ['tabId'],
+        },
+      },
+      {
+        name: 'groupTabs',
+        description: 'Group tabs together with an optional name and color.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tabIds: { type: 'array', items: { type: 'number' }, description: 'Tabs to group.' },
+            title: { type: 'string', description: 'Group title.' },
+            color: { type: 'string', description: 'Group color name.' },
+          },
         },
       },
       {
         name: 'describeSessionTabs',
-        description: 'List the tabs selected for this automation session',
-        input_schema: { type: 'object', properties: {}, required: [] },
+        description: 'List tabs captured for this session.',
+        input_schema: {
+          type: 'object',
+          properties: {},
+        },
       },
     ];
   }
 
-  async executeTool(toolName: string, args: any): Promise<any> {
-    const tool = this.tools[toolName];
-    if (!tool) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-    return await tool(args);
+  getSessionTabSummaries(): SessionTabSummary[] {
+    return Array.from(this.sessionTabs.values());
   }
 
-  async getActiveTabId(providedTabId?: number | null): Promise<number | null> {
-    if (providedTabId) {
-      this.currentTabId = providedTabId;
-      return providedTabId;
-    }
+  getCurrentSessionTabId(): number | null {
+    return this.currentSessionTabId;
+  }
 
-    if (this.currentTabId) {
-      try {
-        const tab = await chrome.tabs.get(this.currentTabId);
-        return tab?.id ?? null;
-      } catch (error) {
-        this.currentTabId = null;
+  async configureSessionTabs(tabs: chrome.tabs.Tab[], options: GroupOptions = {}) {
+    this.sessionTabs.clear();
+    this.sessionTabGroupId = null;
+    tabs.forEach((tab) => {
+      if (typeof tab.id !== 'number') return;
+      this.sessionTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url });
+      if (!this.currentSessionTabId) {
+        this.currentSessionTabId = tab.id;
       }
-    }
-
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    this.currentTabId = tab?.id || null;
-    return this.currentTabId;
-  }
-
-  async configureSessionTabs(
-    tabs: chrome.tabs.Tab[] = [],
-    options: { title?: string; color?: chrome.tabGroups.ColorEnum } = {},
-  ) {
-    this.sessionTabs = Array.isArray(tabs) ? tabs.filter((tab) => typeof tab.id === 'number') : [];
-    this.currentTabId = this.sessionTabs[0]?.id || null;
-
-    // Don't disrupt existing user-created groups; only group ungrouped tabs we own
-    if (!this.sessionTabs.length) return;
-
-    const tabsByWindow = new Map<number | 'unknown', chrome.tabs.Tab[]>();
-    this.sessionTabs.forEach((tab) => {
-      const key = tab.windowId ?? 'unknown';
-      if (!tabsByWindow.has(key)) tabsByWindow.set(key, []);
-      const bucket = tabsByWindow.get(key);
-      if (bucket) bucket.push(tab);
     });
-
-    for (const [windowKey, entries] of tabsByWindow.entries()) {
-      if (windowKey === 'unknown' || !entries.length) continue;
-      const alreadyGrouped = entries
-        .filter((t) => typeof t.groupId === 'number' && typeof t.id === 'number')
-        .map((t) => t.id as number);
-      const toGroup = entries.filter((t) => !t.groupId && typeof t.id === 'number').map((t) => t.id as number);
-
-      if (toGroup.length) {
-        try {
-          const groupId = await chrome.tabs.group({ tabIds: toGroup });
-          await chrome.tabGroups.update(groupId, {
-            title: options.title || 'Browser AI',
-            color: options.color || 'blue',
-          });
-          this.sessionTabGroups.push({ groupId, tabIds: [...toGroup] });
-        } catch (error) {
-          console.warn('Failed to group tabs for session:', error);
-        }
-      }
-
-      if (alreadyGrouped.length) {
-        this.sessionTabGroups.push({ groupId: 'existing', tabIds: [...alreadyGrouped] });
-      }
+    if (tabs.length > 0) {
+      // Create session tab group with "Parchi" title and blue color
+      await this.ensureSessionTabGroup({ title: options.title || 'Parchi', color: options.color || 'blue' });
     }
   }
 
-  async clearSessionTabGroups() {
-    if (!this.sessionTabGroups.length) return;
-    for (const group of this.sessionTabGroups) {
-      try {
-        if (group.tabIds?.length) {
-          await chrome.tabs.ungroup(group.tabIds);
-        }
-      } catch (error) {
-        console.warn('Failed to ungroup tabs:', error);
-      }
-    }
-    this.sessionTabGroups = [];
-  }
-
-  getSessionTabSummaries() {
-    return this.sessionTabs.map((tab) => ({
-      id: tab.id,
-      title: tab.title,
-      url: tab.url,
-      windowId: tab.windowId,
-      groupId: tab.groupId,
-    }));
-  }
-
-  getCurrentSessionTabId() {
-    return this.currentTabId;
-  }
-
-  // Tool implementations
-
-  async navigate({ url, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', url };
-    }
-    const validation = this.validateUrl(url);
-    if (!validation.ok) {
-      return { success: false, error: validation.message, url };
-    }
-    await this.applyPageGlow(targetTabId);
-    await chrome.tabs.update(targetTabId, { url });
-    return { success: true, url, tabId: targetTabId };
-  }
-
-  async click({ selector, text, tabId, timeoutMs = 2500 }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', selector, text };
-    }
-
-    if ((!selector || typeof selector !== 'string') && (!text || typeof text !== 'string')) {
-      return {
-        success: false,
-        error: 'Either selector or text must be provided as a non-empty string',
-        selector,
-        text,
-      };
-    }
+  async ensureSessionTabGroup(options: GroupOptions = { title: 'Parchi', color: 'blue' }) {
+    const sessionTabIds = Array.from(this.sessionTabs.keys());
+    if (sessionTabIds.length === 0) return;
 
     try {
-      await this.applyPageGlow(targetTabId);
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: async (sel, txt, waitMs) => {
-          const timeout = typeof waitMs === 'number' ? waitMs : 2500;
-          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-          const searchableSelectors = [
-            'button',
-            'a',
-            'input[type="button"]',
-            'input[type="submit"]',
-            '[role="button"]',
-            '[role="menuitem"]',
-            '[role="tab"]',
-            '[onclick]',
-            '[tabindex="0"]',
-            'summary',
-          ];
-
-          const findByText = () => {
-            const clickableElements = document.querySelectorAll(searchableSelectors.join(','));
-
-            const normalized = txt.toLowerCase();
-
-            const attemptMatch = (elements, exact = false) => {
-              for (const el of elements) {
-                const elementText = el.textContent?.trim() || el.value || el.getAttribute('aria-label') || '';
-                if (!elementText) continue;
-                const candidate = exact
-                  ? elementText.toLowerCase() === normalized
-                  : elementText.toLowerCase().includes(normalized);
-                if (candidate) return el;
-              }
-              return null;
-            };
-
-            const exactMatch = attemptMatch(clickableElements, true);
-            if (exactMatch) return exactMatch;
-
-            const partialMatch = attemptMatch(clickableElements, false);
-            if (partialMatch) return partialMatch;
-
-            // Final fallback: tree walker to find elements with matching visible text
-            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-              acceptNode(node) {
-                if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP;
-                const content = node.textContent?.trim();
-                if (!content) return NodeFilter.FILTER_SKIP;
-                if (!content.toLowerCase().includes(normalized)) return NodeFilter.FILTER_SKIP;
-                const style = window.getComputedStyle(node);
-                if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-                  return NodeFilter.FILTER_SKIP;
-                }
-                return NodeFilter.FILTER_ACCEPT;
-              },
-            });
-            while (walker.nextNode()) {
-              if (walker.currentNode instanceof HTMLElement) {
-                return walker.currentNode;
-              }
-            }
-            return null;
-          };
-
-          const findBySelector = () => {
-            if (!sel) return null;
-            return document.querySelector(sel);
-          };
-
-          const locateElement = async () => {
-            const end = Date.now() + timeout;
-            while (Date.now() < end) {
-              const el = txt ? findByText() : findBySelector();
-              if (el) return el;
-              await sleep(120);
-            }
-            return null;
-          };
-
-          const element = await locateElement();
-
-          if (!element) {
-            const sample = Array.from(document.querySelectorAll(searchableSelectors.join(',')))
-              .slice(0, 10)
-              .map((el) => {
-                const inputValue = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value : '';
-                return {
-                  tagName: el.tagName,
-                  text: (el.textContent?.trim() || inputValue || el.getAttribute('aria-label') || '').substring(0, 50),
-                  id: el.id || '',
-                  className: el.className || '',
-                };
-              });
-            return {
-              success: false,
-              error: txt ? `No clickable element found with text: "${txt}"` : 'Element not found',
-              selector: sel,
-              text: txt,
-              found: false,
-              suggestions: sample,
-            };
-          }
-
-          try {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          } catch {}
-
-          const rect = element.getBoundingClientRect();
-          const style = window.getComputedStyle(element);
-          const isDisplayed = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-          const hasSize = rect.width > 0 && rect.height > 0;
-          const inViewport =
-            rect.bottom > 0 &&
-            rect.right > 0 &&
-            rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.left < (window.innerWidth || document.documentElement.clientWidth);
-          const isClickable = isDisplayed && hasSize && element.offsetParent !== null;
-
-          if (!isClickable) {
-            return {
-              success: false,
-              error: 'Element exists but is not visible or clickable',
-              selector: sel,
-              text: txt,
-              found: true,
-              element: {
-                tagName: element.tagName,
-                text: element.textContent?.substring(0, 50) || '',
-                id: element.id || '',
-                className: element.className || '',
-              },
-            };
-          }
-
-          const highlight = document.createElement('div');
-          highlight.style.cssText = `
-            position: fixed;
-            top: ${rect.top - 4}px;
-            left: ${rect.left - 4}px;
-            width: ${rect.width + 8}px;
-            height: ${rect.height + 8}px;
-            border: 3px solid #f97316;
-            border-radius: 6px;
-            background: rgba(249, 115, 22, 0.1);
-            pointer-events: none;
-            z-index: 999999;
-            animation: ai-pulse 0.6s ease-out;
-          `;
-          const pulseStyle = document.createElement('style');
-          pulseStyle.textContent = `
-            @keyframes ai-pulse {
-              0% { transform: scale(1); opacity: 1; }
-              100% { transform: scale(1.05); opacity: 0; }
-            }
-          `;
-          document.head.appendChild(pulseStyle);
-          document.body.appendChild(highlight);
-          setTimeout(() => {
-            highlight.remove();
-            pulseStyle.remove();
-          }, 600);
-
-          element.focus({ preventScroll: true });
-
-          let clickedVia = 'element.click';
-          try {
-            element.click();
-          } catch (e) {
-            clickedVia = 'pointer-events';
-            const cx = Math.max(1, Math.floor(rect.left + rect.width / 2));
-            const cy = Math.max(1, Math.floor(rect.top + rect.height / 2));
-            const opts = { view: window, bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 };
-            try {
-              element.dispatchEvent(new PointerEvent('pointerdown', opts));
-            } catch {}
-            try {
-              element.dispatchEvent(new MouseEvent('mousedown', opts));
-            } catch {}
-            try {
-              element.dispatchEvent(new PointerEvent('pointerup', opts));
-            } catch {}
-            try {
-              element.dispatchEvent(new MouseEvent('mouseup', opts));
-            } catch {}
-            try {
-              element.dispatchEvent(new MouseEvent('click', opts));
-            } catch {}
-          }
-
-          return {
-            success: true,
-            selector: sel,
-            text: txt,
-            found: true,
-            clickedVia,
-            inViewport,
-            element: {
-              tagName: element.tagName,
-              text: element.textContent?.substring(0, 50) || '',
-              id: element.id || '',
-              className: element.className || '',
-            },
-          };
-        },
-        args: [selector ?? null, text ?? null, timeoutMs ?? 2500],
-      });
-
-      const scriptResult = result?.[0]?.result;
-      if (scriptResult) {
-        return scriptResult;
-      }
-      return {
-        success: false,
-        error: 'Script execution failed or returned no result',
-        selector,
-        text,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: `Execution failed: ${error.message}`,
-        selector,
-        text,
-      };
-    }
-  }
-
-  async type({ selector, text, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', selector };
-    }
-
-    if (!selector || typeof selector !== 'string') {
-      return { success: false, error: 'Invalid selector' };
-    }
-
-    try {
-      await this.applyPageGlow(targetTabId);
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: (sel, txt) => {
-          const element = document.querySelector(sel);
-          if (!element) return { success: false, error: 'Element not found' };
-
-          // Visual highlight
-          const rect = element.getBoundingClientRect();
-          const highlight = document.createElement('div');
-          highlight.style.cssText = `
-            position: fixed;
-            top: ${rect.top - 4}px;
-            left: ${rect.left - 4}px;
-            width: ${rect.width + 8}px;
-            height: ${rect.height + 8}px;
-            border: 3px solid #f97316;
-            border-radius: 6px;
-            background: rgba(249, 115, 22, 0.1);
-            pointer-events: none;
-            z-index: 999999;
-            transition: opacity 0.3s;
-          `;
-          document.body.appendChild(highlight);
-
-          element.focus();
-          element.value = '';
-          element.value = txt;
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-
-          setTimeout(() => {
-            highlight.style.opacity = '0';
-          }, 400);
-          setTimeout(() => highlight.remove(), 700);
-
-          return { success: true };
-        },
-        args: [selector, text ?? ''],
-      });
-      return result?.[0]?.result || { success: false, error: 'Script failed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async pressKey({ key, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', key };
-    }
-
-    if (!key || typeof key !== 'string') {
-      return { success: false, error: 'Invalid key' };
-    }
-
-    try {
-      await this.applyPageGlow(targetTabId);
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: (k) => {
-          const target = document.activeElement || document.body;
-
-          // Map common key names
-          const keyMap = {
-            Enter: { key: 'Enter', code: 'Enter', keyCode: 13 },
-            Tab: { key: 'Tab', code: 'Tab', keyCode: 9 },
-            Escape: { key: 'Escape', code: 'Escape', keyCode: 27 },
-            ArrowDown: { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
-            ArrowUp: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
-            Backspace: { key: 'Backspace', code: 'Backspace', keyCode: 8 },
-          };
-
-          const keyInfo = keyMap[k] || { key: k, code: k, keyCode: 0 };
-          const opts = {
-            key: keyInfo.key,
-            code: keyInfo.code,
-            keyCode: keyInfo.keyCode,
-            which: keyInfo.keyCode,
-            bubbles: true,
-            cancelable: true,
-          };
-
-          // Dispatch keyboard events
-          target.dispatchEvent(new KeyboardEvent('keydown', opts));
-          target.dispatchEvent(new KeyboardEvent('keypress', opts));
-          target.dispatchEvent(new KeyboardEvent('keyup', opts));
-
-          // Special handling for Enter - try to submit form
-          if (k === 'Enter') {
-            const form = target.closest('form');
-            if (form) {
-              // Try submitting the form
-              const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]') as
-                | HTMLButtonElement
-                | HTMLInputElement
-                | null;
-              if (submitBtn) {
-                submitBtn.click();
-              } else {
-                form.requestSubmit ? form.requestSubmit() : form.submit();
-              }
-              return { success: true, key: k, action: 'form_submitted' };
-            }
-          }
-
-          return { success: true, key: k };
-        },
-        args: [key],
-      });
-      return result?.[0]?.result || { success: false, error: 'Script failed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async scroll({ direction, amount = 500, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', direction };
-    }
-
-    // Validate parameters
-    const validDirections = ['up', 'down', 'top', 'bottom'];
-    if (!direction || !validDirections.includes(direction)) {
-      return {
-        success: false,
-        error: `Invalid direction: must be one of ${validDirections.join(', ')}`,
-        direction: direction,
-      };
-    }
-
-    if (typeof amount !== 'number' || amount <= 0) {
-      return {
-        success: false,
-        error: 'Invalid amount: must be a positive number',
-        amount: amount,
-      };
-    }
-
-    try {
-      await this.applyPageGlow(targetTabId);
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: (dir, amt) => {
-          try {
-            const scrollOptions: ScrollToOptions = { behavior: 'smooth' };
-            switch (dir) {
-              case 'up':
-                window.scrollBy({ top: -amt, ...scrollOptions });
-                break;
-              case 'down':
-                window.scrollBy({ top: amt, ...scrollOptions });
-                break;
-              case 'top':
-                window.scrollTo({ top: 0, ...scrollOptions });
-                break;
-              case 'bottom':
-                window.scrollTo({ top: document.body.scrollHeight, ...scrollOptions });
-                break;
-            }
-            return { success: true, direction: dir, scrollY: window.scrollY };
-          } catch (error) {
-            return { success: false, error: error.message, direction: dir };
-          }
-        },
-        args: [direction ?? null, amount ?? null],
-      });
-
-      // Safely access result
-      if (result && result[0] && result[0].result) {
-        return result[0].result;
+      if (this.sessionTabGroupId !== null) {
+        // Add tabs to existing group
+        await chrome.tabs.group({ groupId: this.sessionTabGroupId, tabIds: sessionTabIds });
       } else {
-        return {
-          success: false,
-          error: 'Script execution failed or returned no result',
-          direction: direction,
-        };
+        // Create new group
+        const groupId = await chrome.tabs.group({ tabIds: sessionTabIds });
+        await chrome.tabGroups.update(groupId, {
+          title: options.title || 'Parchi',
+          color: options.color || 'blue',
+          collapsed: false,
+        });
+        this.sessionTabGroupId = groupId;
       }
     } catch (error) {
+      // Tab grouping may fail in some Chrome configurations, fail silently
+      console.warn('Failed to group tabs:', error);
+    }
+  }
+
+  async executeTool(toolName: string, args: Record<string, any> = {}) {
+    switch (toolName) {
+      case 'navigate':
+        return await this.navigate(args);
+      case 'openTab':
+        return await this.openTab(args);
+      case 'click':
+        return await this.click(args);
+      case 'type':
+        return await this.type(args);
+      case 'pressKey':
+        return await this.pressKey(args);
+      case 'scroll':
+        return await this.scroll(args);
+      case 'getContent':
+        return await this.getContent(args);
+      case 'screenshot':
+        return await this.screenshot(args);
+      case 'getTabs':
+        return await this.getTabs();
+      case 'closeTab':
+        return await this.closeTab(args);
+      case 'switchTab':
+        return await this.focusTab(args);
+      case 'focusTab':
+        return await this.focusTab(args);
+      case 'groupTabs':
+        return await this.groupTabs(args);
+      case 'describeSessionTabs':
+        return {
+          success: true,
+          tabs: this.getSessionTabSummaries(),
+          tabCount: this.sessionTabs.size,
+          maxTabs: MAX_SESSION_TABS,
+          canOpenMore: this.sessionTabs.size < MAX_SESSION_TABS,
+        };
+      default:
+        return { success: false, error: `Unknown tool: ${toolName}` };
+    }
+  }
+
+  private async resolveTabId(args: Record<string, any> = {}) {
+    if (typeof args.tabId === 'number') return args.tabId;
+    if (this.currentSessionTabId) return this.currentSessionTabId;
+    const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return active?.id ?? null;
+  }
+
+  private async runInTab(
+    tabId: number,
+    func: (...args: any[]) => unknown,
+    args: any[] = [],
+  ): Promise<any> {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func,
+      args,
+    });
+    return results?.[0]?.result ?? null;
+  }
+
+  private async navigate(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    await chrome.tabs.update(tabId, { url: args.url });
+    this.currentSessionTabId = tabId;
+    return { success: true, tabId, url: args.url };
+  }
+
+  private async openTab(args: Record<string, any>) {
+    // Enforce tab limit to prevent runaway tab creation
+    if (this.sessionTabs.size >= MAX_SESSION_TABS) {
       return {
         success: false,
-        error: `Execution failed: ${error.message}`,
-        direction: direction,
+        error: `Tab limit reached (max ${MAX_SESSION_TABS} tabs per session). Close existing tabs or reuse current ones.`,
       };
     }
+    const tab = await chrome.tabs.create({ url: args.url, active: true });
+    if (tab.id) {
+      this.sessionTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url });
+      this.currentSessionTabId = tab.id;
+      // Add new tab to session group
+      await this.ensureSessionTabGroup();
+    }
+    return { success: true, tabId: tab.id, url: args.url };
   }
 
-  async screenshot({ tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available' };
-    }
-    await this.applyPageGlow(targetTabId);
-    const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
-    return { success: true, dataUrl, tabId: targetTabId };
-  }
-
-  async getContent({ type, selector, tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available', type };
-    }
-
-    try {
-      await this.applyPageGlow(targetTabId);
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: targetTabId },
-        func: (contentType, sel) => {
-          switch (contentType) {
-            case 'text':
-              return { success: true, content: sel ? document.querySelector(sel)?.innerText : document.body.innerText };
-            case 'html':
-              return {
-                success: true,
-                content: sel ? document.querySelector(sel)?.innerHTML : document.documentElement.outerHTML,
-              };
-            case 'title':
-              return { success: true, content: document.title };
-            case 'url':
-              return { success: true, content: window.location.href };
-            case 'links':
-              return {
-                success: true,
-                content: Array.from(document.querySelectorAll('a')).map((a) => ({ text: a.innerText, href: a.href })),
-              };
-            default:
-              return { success: false, error: 'Invalid type' };
-          }
-        },
-        args: [type, selector ?? null],
-      });
-      return result?.[0]?.result || { success: false, error: 'Script failed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async openTab({ url, active = true }) {
-    const validation = this.validateUrl(url);
-    if (!validation.ok) {
-      return { success: false, error: validation.message, url };
-    }
-    const tab = await chrome.tabs.create({ url, active });
-    if (active) {
-      this.currentTabId = tab.id ?? null;
-    }
-    return { success: true, tabId: tab.id, url: tab.url };
-  }
-
-  async closeTab({ tabId }) {
-    const targetTabId = await this.getActiveTabId(tabId);
-    if (targetTabId === null) {
-      return { success: false, error: 'No active tab available' };
-    }
-    await chrome.tabs.remove(targetTabId);
-    return { success: true, tabId: targetTabId };
-  }
-
-  async switchTab({ tabId }) {
+  private async focusTab(args: Record<string, any>) {
+    const tabId = typeof args.tabId === 'number' ? args.tabId : null;
+    if (!tabId) return { success: false, error: 'Missing tabId.' };
     await chrome.tabs.update(tabId, { active: true });
-    this.currentTabId = tabId;
+    this.currentSessionTabId = tabId;
     return { success: true, tabId };
   }
 
-  async focusTab({ tabId, titleContains, urlContains, direction }) {
-    let targetId = tabId;
-
-    if (!targetId && (titleContains || urlContains)) {
-      const entries = this.sessionTabs;
-      const term = (titleContains || urlContains || '').toLowerCase();
-      const prop = titleContains ? 'title' : 'url';
-      const candidate = entries.find((tab) => (tab[prop] || '').toLowerCase().includes(term));
-      if (candidate) targetId = candidate.id;
+  private async closeTab(args: Record<string, any>) {
+    const tabId = typeof args.tabId === 'number' ? args.tabId : null;
+    if (!tabId) return { success: false, error: 'Missing tabId.' };
+    await chrome.tabs.remove(tabId);
+    this.sessionTabs.delete(tabId);
+    if (this.currentSessionTabId === tabId) {
+      this.currentSessionTabId = null;
     }
-
-    if (!targetId && direction && this.sessionTabs.length > 0) {
-      const currentIndex = this.sessionTabs.findIndex((tab) => tab.id === this.currentTabId);
-      if (currentIndex !== -1) {
-        if (direction === 'next') {
-          targetId = this.sessionTabs[(currentIndex + 1) % this.sessionTabs.length].id;
-        } else if (direction === 'previous') {
-          targetId = this.sessionTabs[(currentIndex - 1 + this.sessionTabs.length) % this.sessionTabs.length].id;
-        }
-      }
-    }
-
-    if (!targetId) {
-      return { success: false, error: 'No matching tab found. Provide a tabId or a title/url fragment.' };
-    }
-
-    try {
-      const tab = await chrome.tabs.get(targetId);
-      await chrome.tabs.update(targetId, { active: true });
-      this.currentTabId = targetId;
-      return { success: true, tabId: targetId, title: tab.title, url: tab.url };
-    } catch (error) {
-      return { success: false, error: error.message, tabId: targetId };
-    }
+    return { success: true, tabId };
   }
 
-  async getTabs() {
-    const tabs = await chrome.tabs.query({});
+  private async click(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const selector = String(args.selector || '');
+    const result = await this.runInTab(tabId, (sel) => {
+      const el = document.querySelector<HTMLElement>(sel);
+      if (!el) return { success: false, error: 'Element not found.' };
+      el.click();
+      return { success: true };
+    }, [selector]);
+    return result || { success: false, error: 'Script execution failed.' };
+  }
+
+  private async type(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const selector = String(args.selector || '');
+    const text = String(args.text ?? '');
+    const result = await this.runInTab(tabId, (sel, value) => {
+      const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(sel);
+      if (!el) return { success: false, error: 'Element not found.' };
+      el.focus();
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return { success: true };
+    }, [selector, text]);
+    return result || { success: false, error: 'Script execution failed.' };
+  }
+
+  private async pressKey(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const key = String(args.key || '');
+    const selector = args.selector ? String(args.selector) : '';
+    const result = await this.runInTab(tabId, (k, sel) => {
+      const target = sel ? document.querySelector<HTMLElement>(sel) : document.body;
+      if (!target) return { success: false, error: 'Target not found.' };
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+      target.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true }));
+      return { success: true };
+    }, [key, selector]);
+    return result || { success: false, error: 'Script execution failed.' };
+  }
+
+  private async scroll(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const direction = String(args.direction || 'down');
+    const amount = typeof args.amount === 'number' ? args.amount : 600;
+    const result = await this.runInTab(tabId, (dir, amt) => {
+      if (dir === 'top') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      } else if (dir === 'bottom') {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+      } else if (dir === 'up') {
+        window.scrollBy({ top: -amt, behavior: 'instant' });
+      } else {
+        window.scrollBy({ top: amt, behavior: 'instant' });
+      }
+      return { success: true };
+    }, [direction, amount]);
+    return result || { success: false, error: 'Script execution failed.' };
+  }
+
+  private async getContent(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const type = String(args.type || 'text');
+    const selector = args.selector ? String(args.selector) : '';
+    const result = await this.runInTab(tabId, (t, sel) => {
+      const base = sel ? document.querySelector<HTMLElement>(sel) : document.body;
+      if (!base) return { success: false, error: 'Target not found.' };
+      if (t === 'html') return { success: true, content: base.innerHTML };
+      if (t === 'title') return { success: true, content: document.title };
+      if (t === 'url') return { success: true, content: window.location.href };
+      if (t === 'links') {
+        const links = Array.from(base.querySelectorAll('a')).map((link) => ({
+          text: link.textContent || '',
+          href: link.href,
+        }));
+        return { success: true, content: JSON.stringify(links) };
+      }
+      return { success: true, content: base.innerText };
+    }, [type, selector]);
+    return result || { success: false, error: 'Script execution failed.' };
+  }
+
+  private async screenshot(args: Record<string, any>) {
+    const tabId = await this.resolveTabId(args);
+    if (!tabId) return { success: false, error: 'No active tab.' };
+    const tab = await chrome.tabs.get(tabId);
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    return { success: true, dataUrl };
+  }
+
+  private async getTabs() {
+    const tabs = await chrome.tabs.query({ currentWindow: true });
     return {
       success: true,
-      tabs: tabs.map((tab) => ({
-        id: tab.id,
-        title: tab.title,
-        url: tab.url,
-        active: tab.active,
-        groupId: tab.groupId,
-      })),
+      tabs: tabs.map((tab) => ({ id: tab.id, title: tab.title, url: tab.url })),
     };
   }
 
-  async describeSessionTabs() {
-    return { success: true, tabs: this.getSessionTabSummaries() };
+  private async groupTabs(args: Record<string, any>) {
+    const tabIds = Array.isArray(args.tabIds) ? args.tabIds.filter((id) => typeof id === 'number') : [];
+    if (!tabIds.length) {
+      return { success: false, error: 'No tab ids provided.' };
+    }
+    await this.groupTabsInternal(tabIds, { title: args.title, color: args.color });
+    return { success: true, tabIds };
   }
 
-  async groupTabs({
-    tabIds,
-    title,
-    color = 'grey',
-    ungroup = false,
-  }: {
-    tabIds: number[];
-    title?: string;
-    color?: chrome.tabGroups.ColorEnum | string;
-    ungroup?: boolean;
-  }) {
-    if (ungroup) {
-      await chrome.tabs.ungroup(tabIds);
-      return { success: true, ungrouped: tabIds };
-    }
+  private async groupTabsInternal(tabIds: number[], options: GroupOptions) {
+    if (!tabIds.length) return;
     const groupId = await chrome.tabs.group({ tabIds });
-    if (title || color) {
-      const allowedColors: chrome.tabGroups.ColorEnum[] = [
-        'grey',
-        'blue',
-        'red',
-        'yellow',
-        'green',
-        'pink',
-        'purple',
-        'cyan',
-        'orange',
-      ];
-      const resolvedColor = allowedColors.includes(color as chrome.tabGroups.ColorEnum)
-        ? (color as chrome.tabGroups.ColorEnum)
-        : 'grey';
-      await chrome.tabGroups.update(groupId, { title: title || '', color: resolvedColor });
-    }
-    return { success: true, groupId, tabIds };
-  }
-
-  async applyPageGlow(tabId) {
-    if (!tabId || this.glowTabs.has(tabId)) return;
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          if (document.body.dataset.browserAiGlow === 'on') return;
-          document.body.dataset.browserAiGlow = 'on';
-          const existing = document.getElementById('__browser_ai_glow');
-          if (existing) existing.remove();
-          const glow = document.createElement('div');
-          glow.id = '__browser_ai_glow';
-          glow.style.cssText = `
-            position: fixed;
-            inset: 10px;
-            border-radius: 16px;
-            pointer-events: none;
-            box-shadow:
-              0 0 0 2px rgba(135, 92, 55, 0.18),
-              0 18px 60px rgba(135, 92, 55, 0.16),
-              0 0 80px rgba(255, 219, 178, 0.08);
-            mix-blend-mode: screen;
-            z-index: 2147483646;
-            animation: __browser_ai_pulse 2.4s ease-in-out infinite;
-          `;
-          const style = document.createElement('style');
-          style.id = '__browser_ai_glow_style';
-          style.textContent = `
-            @keyframes __browser_ai_pulse {
-              0%, 100% { opacity: 0.55; transform: scale(1); }
-              50% { opacity: 0.9; transform: scale(1.01); }
-            }
-          `;
-          document.head.appendChild(style);
-          document.body.appendChild(glow);
-        },
+    if (options.title || options.color) {
+      await chrome.tabGroups.update(groupId, {
+        title: options.title,
+        color: options.color,
       });
-      this.glowTabs.add(tabId);
-    } catch (error) {
-      console.warn('Unable to apply page glow', error);
     }
-  }
-
-  validateUrl(url) {
-    if (!url || typeof url !== 'string') {
-      return { ok: false, message: 'URL is required' };
-    }
-    const trimmed = url.trim();
-    const lowered = trimmed.toLowerCase();
-    const blockedSchemes = ['javascript:', 'data:', 'file:', 'chrome:', 'about:'];
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return { ok: false, message: 'Only http/https URLs are allowed for safety. Please provide a full URL.' };
-    }
-    if (blockedSchemes.some((s) => lowered.startsWith(s))) {
-      return { ok: false, message: 'Navigation blocked for security (disallowed scheme).' };
-    }
-    return { ok: true };
   }
 }

@@ -1,22 +1,35 @@
-import { normalizeConversationHistory, toProviderMessages } from './ai/message-schema.js';
-import type { Message, ProviderMessage, ToolCall } from './ai/message-schema.js';
-import { AIProvider } from './ai/provider.js';
-import { isValidFinalResponse } from './ai/retry-engine.js';
-// Background Service Worker
-import { BrowserTools } from './tools/browser-tools.js';
+import { generateText, stepCountIs, streamText } from "ai";
+import {
+  applyCompaction,
+  buildCompactionSummaryMessage,
+  shouldCompact,
+} from "./ai/compaction.js";
+import { normalizeConversationHistory } from "./ai/message-schema.js";
+import type { Message } from "./ai/message-schema.js";
+import { toModelMessages } from "./ai/model-convert.js";
+import {
+  buildToolSet,
+  describeImageWithModel,
+  resolveLanguageModel,
+} from "./ai/sdk-client.js";
+import { isValidFinalResponse } from "./ai/retry-engine.js";
+import { BrowserTools } from "./tools/browser-tools.js";
+import { RUNTIME_MESSAGE_SCHEMA_VERSION } from "./types/runtime-messages.js";
+
+type RunMeta = {
+  runId: string;
+  turnId: string;
+  sessionId: string;
+};
 
 class BackgroundService {
   browserTools: BrowserTools;
-  aiProvider: AIProvider | null;
-  visionProvider: AIProvider | null;
   currentSettings: Record<string, any> | null;
   subAgentCount: number;
   subAgentProfileCursor: number;
 
   constructor() {
     this.browserTools = new BrowserTools();
-    this.aiProvider = null;
-    this.visionProvider = null;
     this.currentSettings = null;
     this.subAgentCount = 0;
     this.subAgentProfileCursor = 0;
@@ -24,78 +37,92 @@ class BackgroundService {
   }
 
   init() {
-    // Set up side panel behavior
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+    chrome.sidePanel
+      .setPanelBehavior({ openPanelOnActionClick: true })
+      .catch((error) => console.error(error));
 
-    // Listen for messages from side panel
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       this.handleMessage(message, sender, sendResponse);
-      return true; // Keep channel open for async response
-    });
-
-    // Listen for tab updates
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (changeInfo.status === 'complete') {
-        // Notify side panel if needed
-      }
+      return true;
     });
   }
 
   async handleMessage(message, sender, sendResponse) {
     try {
       switch (message.type) {
-        case 'user_message':
-          await this.processUserMessage(message.message, message.conversationHistory, message.selectedTabs || []);
+        case "user_message":
+          await this.processUserMessage(
+            message.message,
+            message.conversationHistory,
+            message.selectedTabs || [],
+            message.sessionId || `session-${Date.now()}`,
+          );
           break;
 
-        case 'execute_tool':
-          const result = await this.browserTools.executeTool(message.tool, message.args);
+        case "execute_tool": {
+          const result = await this.browserTools.executeTool(
+            message.tool,
+            message.args,
+          );
           sendResponse({ success: true, result });
           break;
+        }
 
         default:
-          console.warn('Unknown message type:', message.type);
+          console.warn("Unknown message type:", message.type);
       }
     } catch (error) {
-      console.error('Error handling message:', error);
+      console.error("Error handling message:", error);
       this.sendToSidePanel({
-        type: 'error',
+        type: "error",
         message: error.message,
       });
       sendResponse({ success: false, error: error.message });
     }
   }
 
-  async processUserMessage(userMessage: string, conversationHistory: Message[], selectedTabs: chrome.tabs.Tab[] = []) {
+  async processUserMessage(
+    userMessage: string,
+    conversationHistory: Message[],
+    selectedTabs: chrome.tabs.Tab[] = [],
+    sessionId: string,
+  ) {
+    const runMeta: RunMeta = {
+      runId: `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      turnId: `turn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      sessionId,
+    };
+
     try {
-      // Get settings
       const settings = await chrome.storage.local.get([
-        'provider',
-        'apiKey',
-        'model',
-        'customEndpoint',
-        'systemPrompt',
-        'sendScreenshotsAsImages',
-        'screenshotQuality',
-        'showThinking',
-        'streamResponses',
-        'configs',
-        'activeConfig',
-        'useOrchestrator',
-        'orchestratorProfile',
-        'visionProfile',
-        'visionBridge',
-        'enableScreenshots',
-        'temperature',
-        'maxTokens',
-        'timeout',
-        'toolPermissions',
-        'allowedDomains',
-        'auxAgentProfiles',
+        "provider",
+        "apiKey",
+        "model",
+        "customEndpoint",
+        "systemPrompt",
+        "sendScreenshotsAsImages",
+        "screenshotQuality",
+        "showThinking",
+        "streamResponses",
+        "configs",
+        "activeConfig",
+        "useOrchestrator",
+        "orchestratorProfile",
+        "visionProfile",
+        "visionBridge",
+        "enableScreenshots",
+        "temperature",
+        "maxTokens",
+        "timeout",
+        "toolPermissions",
+        "allowedDomains",
+        "auxAgentProfiles",
       ]);
 
-      if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
-      if (settings.sendScreenshotsAsImages === undefined) settings.sendScreenshotsAsImages = false;
+      if (settings.enableScreenshots === undefined)
+        settings.enableScreenshots = false;
+      if (settings.sendScreenshotsAsImages === undefined)
+        settings.sendScreenshotsAsImages = false;
       if (settings.visionBridge === undefined) settings.visionBridge = true;
       if (!settings.toolPermissions) {
         settings.toolPermissions = {
@@ -106,13 +133,14 @@ class BackgroundService {
           screenshots: false,
         };
       }
-      if (settings.allowedDomains === undefined) settings.allowedDomains = '';
-      if (!Array.isArray(settings.auxAgentProfiles)) settings.auxAgentProfiles = [];
+      if (settings.allowedDomains === undefined) settings.allowedDomains = "";
+      if (!Array.isArray(settings.auxAgentProfiles))
+        settings.auxAgentProfiles = [];
 
       if (!settings.apiKey) {
-        this.sendToSidePanel({
-          type: 'error',
-          message: 'Please configure your API key in settings',
+        this.sendRuntime(runMeta, {
+          type: "run_error",
+          message: "Please configure your API key in settings",
         });
         return;
       }
@@ -123,16 +151,16 @@ class BackgroundService {
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
-          title: 'Browser AI',
-          color: 'blue',
+          title: "Browser AI",
+          color: "blue",
         });
       } catch (error) {
-        console.warn('Failed to configure session tabs:', error);
+        console.warn("Failed to configure session tabs:", error);
       }
 
-      // Resolve profiles
-      const activeProfileName = settings.activeConfig || 'default';
-      const orchestratorProfileName = settings.orchestratorProfile || activeProfileName;
+      const activeProfileName = settings.activeConfig || "default";
+      const orchestratorProfileName =
+        settings.orchestratorProfile || activeProfileName;
       const visionProfileName = settings.visionProfile || null;
       const orchestratorEnabled = settings.useOrchestrator === true;
       const teamProfiles = this.resolveTeamProfiles(settings);
@@ -142,399 +170,347 @@ class BackgroundService {
         ? this.resolveProfile(settings, orchestratorProfileName)
         : activeProfile;
       const visionProfile =
-        settings.visionBridge !== false ? this.resolveProfile(settings, visionProfileName || activeProfileName) : null;
-
-      // Initialize AI providers
-      const aiProvider = new AIProvider({
-        ...orchestratorProfile,
-        sendScreenshotsAsImages: Boolean(settings.enableScreenshots && settings.sendScreenshotsAsImages),
-      });
-      this.aiProvider = aiProvider;
-
-      const visionProvider =
-        visionProfile && visionProfile.apiKey
-          ? new AIProvider({
-              ...visionProfile,
-              sendScreenshotsAsImages: true,
-            })
+        settings.visionBridge !== false
+          ? this.resolveProfile(
+              settings,
+              visionProfileName || activeProfileName,
+            )
           : null;
-      this.visionProvider = visionProvider;
 
-      // Get available tools
-      const tools = this.getToolsForSession(settings, orchestratorEnabled, teamProfiles);
+      const tools = this.getToolsForSession(
+        settings,
+        orchestratorEnabled,
+        teamProfiles,
+      );
 
-      // Get current tab info for context
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       const sessionTabs = this.browserTools.getSessionTabSummaries();
       const sessionTabContext = sessionTabs
-        .filter((tab) => typeof tab.id === 'number')
-        .map((tab) => ({ id: tab.id as number, title: tab.title, url: tab.url }));
-      const workingTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
+        .filter((tab) => typeof tab.id === "number")
+        .map((tab) => ({
+          id: tab.id as number,
+          title: tab.title,
+          url: tab.url,
+        }));
+      const workingTabId: number | null =
+        this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
       const workingTab = sessionTabs.find((tab) => tab.id === workingTabId);
       const context = {
-        currentUrl: workingTab?.url || activeTab?.url || 'unknown',
-        currentTitle: workingTab?.title || activeTab?.title || 'unknown',
+        currentUrl: workingTab?.url || activeTab?.url || "unknown",
+        currentTitle: workingTab?.title || activeTab?.title || "unknown",
         tabId: workingTabId,
         availableTabs: sessionTabContext,
         orchestratorEnabled,
         teamProfiles,
       };
 
-      const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
-      const providerHistory: ProviderMessage[] = toProviderMessages(normalizedHistory);
-      const compactedHistory = this.compactConversationHistory(providerHistory);
+      const normalizedHistory = normalizeConversationHistory(
+        conversationHistory || [],
+      );
+      const modelMessages = toModelMessages(normalizedHistory);
+      const model = resolveLanguageModel(orchestratorProfile);
 
-      // Call AI with tools
-      const supportsStreaming =
-        typeof aiProvider.supportsStreaming === 'function'
-          ? aiProvider.supportsStreaming()
-          : settings.provider !== 'anthropic';
-      const streamEnabled = supportsStreaming && settings.streamResponses !== false;
-      const response = await aiProvider.chat(compactedHistory, tools, context, {
-        stream: streamEnabled,
-        streamCallbacks: streamEnabled
-          ? {
-              onStart: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'start' }),
-              onDelta: (payload) =>
-                this.sendToSidePanel({ type: 'assistant_stream', status: 'delta', content: payload?.content || '' }),
-              onComplete: () => this.sendToSidePanel({ type: 'assistant_stream', status: 'stop' }),
-            }
-          : null,
-      });
+      const toolSet = buildToolSet(tools, async (toolName, args, options) =>
+        this.executeToolByName(
+          toolName,
+          args,
+          {
+            runMeta,
+            settings,
+            visionProfile,
+          },
+          options.toolCallId,
+        ),
+      );
 
-      // Process response and handle tool execution loop
-      let currentResponse = response;
-      let toolIterations = 0;
-      const maxIterations = 1000; // Safety limit to prevent infinite loops
-      let followupAttempts = 0;
-      const maxFollowups = 2;
-      let apiRetryCount = 0;
-      const maxApiRetries = 3;
-
-      const hasUsableContent = (resp) =>
-        resp &&
-        typeof resp.content === 'string' &&
-        resp.content.trim().length > 0 &&
-        isValidFinalResponse(resp.content);
-
-      while (true) {
-        // Execute tools until none remain
-        while (currentResponse.toolCalls && currentResponse.toolCalls.length > 0) {
-          toolIterations++;
-
-          if (toolIterations > maxIterations) {
-            console.warn('Reached maximum tool execution iterations');
-            this.sendToSidePanel({
-              type: 'warning',
-              message: 'Reached maximum tool execution limit. Task may be incomplete.',
-            });
-            currentResponse.toolCalls = [];
-            break;
-          }
-
-          // Execute all tool calls (errors are caught and returned to AI, not thrown)
-          const toolResults: Array<{ id: string; success: boolean; result?: any; error?: any }> = [];
-          for (const toolCall of currentResponse.toolCalls) {
-            try {
-              const result = await this.executeToolCall(toolCall, aiProvider, { silent: false, settings });
-              toolResults.push({ id: toolCall.id, success: !result?.error, result });
-            } catch (err) {
-              console.error('Tool execution error (continuing):', err);
-              // Still add the error result so the AI knows what happened
-              aiProvider.addToolResult(toolCall.id, {
-                success: false,
-                error: err.message || 'Tool execution failed',
-              });
-              toolResults.push({ id: toolCall.id, success: false, error: err.message });
-            }
-          }
-
-          // Continue the conversation (AI will see tool results and decide next action)
-          try {
-            currentResponse = await aiProvider.continueConversation();
-            apiRetryCount = 0; // Reset on success
-          } catch (continueErr) {
-            console.error('Error continuing conversation:', continueErr);
-            apiRetryCount++;
-
-            const isToolOrderingError =
-              continueErr.message?.includes('tool call result') || continueErr.message?.includes('tool_call_id');
-
-            if (apiRetryCount < maxApiRetries) {
-              // Silent retry with exponential backoff
-              console.log(`API error, retry attempt ${apiRetryCount}/${maxApiRetries}`);
-              await new Promise((r) => setTimeout(r, 500 * apiRetryCount));
-
-              // If tool ordering error persists, try to fix by force-clearing tool history
-              if (isToolOrderingError && apiRetryCount >= 2) {
-                console.warn('Force-clearing tool history due to persistent errors');
-                aiProvider.clearToolHistory();
-              }
-
-              currentResponse = { content: '', toolCalls: [] };
-              // Don't break - let the loop continue and try again
-            } else {
-              // All retries exhausted - show error but still don't terminate
-              this.sendToSidePanel({
-                type: 'error',
-                message: 'API error after retries: ' + continueErr.message,
-              });
-
-              // Force-clear tool history and try to get a final response
-              if (isToolOrderingError) {
-                console.warn('Final recovery: clearing all tool history');
-                aiProvider.clearToolHistory();
-              }
-
-              currentResponse = { content: '', toolCalls: [] };
-              // Don't break - try to get final response
-            }
-          }
-        }
-
-        if (hasUsableContent(currentResponse) || followupAttempts >= maxFollowups) {
-          if (!hasUsableContent(currentResponse)) {
-            currentResponse.content =
-              'I completed the requested actions but could not produce a final summary. Please try again.';
-          }
-          break;
-        }
-
-        // Ask the model to finish the task with a final summary before exiting
-        aiProvider.requestFinalResponse(
-          'The user is still waiting for the final answer summarizing the completed task list. Provide the findings now.',
-        );
-        followupAttempts++;
-        currentResponse = await aiProvider.continueConversation();
+      const streamEnabled = settings.streamResponses !== false;
+      if (streamEnabled) {
+        this.sendRuntime(runMeta, { type: "assistant_stream_start" });
       }
 
-      // Send final response when no more tool calls
-      this.sendToSidePanel({
-        type: 'assistant_response',
-        content: currentResponse.content,
-        thinking: currentResponse.thinking,
-        usage: currentResponse.usage,
+      const result = streamText({
+        model,
+        system: this.enhanceSystemPrompt(
+          orchestratorProfile.systemPrompt || "",
+          context,
+        ),
+        messages: modelMessages,
+        tools: toolSet,
+        temperature: orchestratorProfile.temperature ?? 0.7,
+        maxOutputTokens: orchestratorProfile.maxTokens ?? 2048,
+        stopWhen: stepCountIs(8),
+        onChunk: ({ chunk }) => {
+          if (chunk.type === "reasoning-delta") {
+            this.sendRuntime(runMeta, {
+              type: "assistant_stream_delta",
+              content: chunk.text || "",
+              channel: "reasoning",
+            });
+          }
+        },
       });
+
+      if (streamEnabled) {
+        try {
+          for await (const textPart of result.textStream) {
+            this.sendRuntime(runMeta, {
+              type: "assistant_stream_delta",
+              content: textPart || "",
+              channel: "text",
+            });
+          }
+        } finally {
+          this.sendRuntime(runMeta, { type: "assistant_stream_stop" });
+        }
+      } else {
+        await result.text;
+      }
+
+      const [text, reasoningText, totalUsage, steps] = await Promise.all([
+        result.text,
+        result.reasoningText,
+        result.totalUsage,
+        result.steps,
+      ]);
+
+      const finalText = isValidFinalResponse(text)
+        ? text
+        : "I completed the requested actions but could not produce a final summary. Please try again.";
+
+      const toolResults = steps.flatMap((step) => step.toolResults || []);
+      const responseMessages: Message[] = [
+        {
+          role: "assistant",
+          content: finalText,
+          thinking: reasoningText || null,
+        },
+      ];
+      if (toolResults.length > 0) {
+        responseMessages.push({
+          role: "tool",
+          content: toolResults.map((resultItem) => ({
+            type: "tool-result",
+            toolCallId: resultItem.toolCallId,
+            toolName: resultItem.toolName,
+            output:
+              resultItem.output && typeof resultItem.output === "object"
+                ? { type: "json", value: resultItem.output }
+                : { type: "text", value: String(resultItem.output ?? "") },
+          })),
+        });
+      }
+
+      this.sendRuntime(runMeta, {
+        type: "assistant_final",
+        content: finalText,
+        thinking: reasoningText || null,
+        usage: {
+          inputTokens: totalUsage.inputTokens || 0,
+          outputTokens: totalUsage.outputTokens || 0,
+          totalTokens: totalUsage.totalTokens || 0,
+        },
+        responseMessages,
+      });
+
+      const nextHistory = normalizeConversationHistory([
+        ...normalizedHistory,
+        ...responseMessages,
+      ]);
+      const contextLimit =
+        orchestratorProfile.contextLimit || settings.contextLimit || 200000;
+      const compactionCheck = shouldCompact({
+        messages: nextHistory,
+        contextLimit,
+      });
+
+      if (compactionCheck.shouldCompact) {
+        const preservedCount = Math.min(10, Math.floor(nextHistory.length / 2));
+        const preserved = nextHistory.slice(-preservedCount);
+        const trimmedCount = nextHistory.length - preservedCount;
+
+        const summaryPrompt =
+          "Summarize the conversation so far for the next model run. Include: user goals, key context, decisions, tool outputs, open tasks, and constraints. Use bullet points. Keep it between 1,000 and 2,000 tokens.";
+        const summaryResult = await generateText({
+          model,
+          system: summaryPrompt,
+          messages: toModelMessages(nextHistory),
+          temperature: 0.2,
+          maxOutputTokens: 1600,
+        });
+
+        const summaryMessage = buildCompactionSummaryMessage(
+          summaryResult.text,
+          trimmedCount,
+        );
+        const compaction = applyCompaction({
+          summaryMessage,
+          preserved,
+          trimmedCount,
+        });
+        const newSessionId = `session-${Date.now()}`;
+
+        this.sendRuntime(runMeta, {
+          type: "context_compacted",
+          summary: summaryResult.text,
+          trimmedCount,
+          preservedCount: compaction.preservedCount,
+          newSessionId,
+          contextMessages: compaction.compacted,
+          contextUsage: {
+            approxTokens: compactionCheck.approxTokens,
+            contextLimit,
+            percent: Math.round(compactionCheck.percent * 100),
+          },
+        });
+      }
     } catch (error) {
-      console.error('Error processing user message:', error);
-      this.sendToSidePanel({
-        type: 'error',
-        message: 'Error: ' + error.message,
+      console.error("Error processing user message:", error);
+      this.sendRuntime(runMeta, {
+        type: "run_error",
+        message: error.message || "Unknown error",
       });
     }
   }
 
-  async executeToolCall(
-    toolCall: ToolCall,
-    provider: AIProvider | null = this.aiProvider,
-    options: { silent?: boolean; settings?: Record<string, any> } = {},
+  async executeToolByName(
+    toolName: string,
+    args: Record<string, any>,
+    options: {
+      runMeta: RunMeta;
+      settings: Record<string, any>;
+      visionProfile?: Record<string, any> | null;
+    },
+    toolCallId?: string,
   ) {
-    // Declare in outer scope so catch can reference them safely
-    let rawName = '';
-    let toolName = '';
-    let args: Record<string, any> = {};
-    try {
-      // Normalize tool name and attempt a best-effort inference when missing
-      rawName = toolCall && typeof toolCall.name === 'string' ? toolCall.name.trim() : '';
-      toolName = rawName;
-      args = toolCall?.args || {};
+    const callId =
+      toolCallId ||
+      `tool_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const sendStart = () =>
+      this.sendRuntime(options.runMeta, {
+        type: "tool_execution_start",
+        tool: toolName,
+        id: callId,
+        args,
+      });
+    const sendResult = (result: unknown) =>
+      this.sendRuntime(options.runMeta, {
+        type: "tool_execution_result",
+        tool: toolName,
+        id: callId,
+        args,
+        result,
+      });
 
-      const available = this.browserTools?.tools ? Object.keys(this.browserTools.tools) : [];
-      const known = new Set(available);
-      if (!toolName || !known.has(toolName)) {
-        // Heuristic inference for common shapes to keep UX flowing
-        if (args && typeof args === 'object') {
-          if (
-            'type' in args &&
-            (args.type === 'text' ||
-              args.type === 'html' ||
-              args.type === 'title' ||
-              args.type === 'url' ||
-              args.type === 'links')
-          ) {
-            toolName = 'getPageContent';
-          } else if ('direction' in args) {
-            toolName = 'scroll';
-          } else if ('selector' in args && 'text' in args === false && 'fields' in args === false) {
-            toolName = 'click';
-          } else if ('url' in args && Object.keys(args).length === 1) {
-            // Likely intent: retrieve current URL; run getPageContent with type 'url'
-            toolName = 'getPageContent';
-            args = { type: 'url' };
-          }
-        }
-      }
+    sendStart();
 
-      if (toolName === 'getPageContent') {
-        toolName = 'getContent';
-      }
+    if (toolName === "spawn_subagent") {
+      const result = await this.handleSpawnSubagent(options.runMeta, args);
+      sendResult(result);
+      return result;
+    }
 
-      console.info('[Browser AI] Executing tool:', toolName || rawName, args);
-      if (!options.silent) {
-        this.sendToSidePanel({
-          type: 'tool_execution',
-          tool: toolName || rawName,
-          id: toolCall.id,
-          args,
-          result: null,
-        });
-      }
+    if (toolName === "subagent_complete") {
+      const result = { success: true, ack: true, details: args || {} };
+      sendResult(result);
+      return result;
+    }
 
-      if (toolName === 'spawn_subagent') {
-        const result = await this.handleSpawnSubagent(toolCall);
-        if (provider) provider.addToolResult(toolCall.id, result);
-        if (!options.silent) {
-          this.sendToSidePanel({
-            type: 'tool_execution',
-            tool: toolName,
-            id: toolCall.id,
-            args,
-            result,
-          });
-        }
-        return result;
-      }
-
-      if (toolName === 'subagent_complete') {
-        const result = { success: true, ack: true, details: args || {} };
-        if (provider) provider.addToolResult(toolCall.id, result);
-        if (!options.silent) {
-          this.sendToSidePanel({
-            type: 'tool_execution',
-            tool: toolName,
-            id: toolCall.id,
-            args,
-            result,
-          });
-        }
-        return result;
-      }
-
-      if (!toolName || !available.includes(toolName)) {
-        throw new Error(`Unknown tool: ${toolName || ''}`);
-      }
-
-      const permissionCheck = await this.checkToolPermission(toolName, args);
-      if (!permissionCheck.allowed) {
-        const blocked = { success: false, error: permissionCheck.reason || 'Tool blocked by permissions.' };
-        if (provider) provider.addToolResult(toolCall.id, blocked);
-        if (!options.silent) {
-          this.sendToSidePanel({
-            type: 'tool_execution',
-            tool: toolName || rawName,
-            id: toolCall.id,
-            args,
-            result: blocked,
-          });
-        }
-        return blocked;
-      }
-
-      if (toolName === 'screenshot' && this.currentSettings && this.currentSettings.enableScreenshots === false) {
-        const blocked = { success: false, error: 'Screenshots are disabled in settings.' };
-        if (provider) provider.addToolResult(toolCall.id, blocked);
-        if (!options.silent) {
-          this.sendToSidePanel({
-            type: 'tool_execution',
-            tool: toolName,
-            id: toolCall.id,
-            args,
-            result: blocked,
-          });
-        }
-        return blocked;
-      }
-
-      const result = await this.browserTools.executeTool(toolName, args);
-
-      if (
-        toolName === 'screenshot' &&
-        result?.success &&
-        result.dataUrl &&
-        this.currentSettings?.visionBridge &&
-        this.visionProvider
-      ) {
-        try {
-          const description = await this.visionProvider.describeImage(
-            result.dataUrl,
-            'Provide a concise description of this screenshot so a non-vision model can reason about it.',
-          );
-          result.visionDescription = description;
-          result.message = 'Screenshot captured and described by vision model.';
-          // Trim dataUrl when relaying as text to reduce payload
-          if (!this.aiProvider?.sendScreenshotsAsImages) {
-            delete result.dataUrl;
-          }
-        } catch (visionError) {
-          result.visionError = visionError.message;
-        }
-      }
-
-      // Ensure result is not null
-      const finalResult = result || { error: 'No result returned' };
-
-      // Send result back to AI provider
-      if (provider) {
-        provider.addToolResult(toolCall.id, finalResult);
-      }
-
-      // Also send result to side panel for display
-      if (!options.silent) {
-        this.sendToSidePanel({
-          type: 'tool_execution',
-          tool: toolName || rawName,
-          id: toolCall.id,
-          args,
-          result: finalResult,
-        });
-      }
-      console.info('[Browser AI] Tool result:', toolName || rawName, finalResult);
-
-      return finalResult;
-    } catch (error) {
-      console.error('Error executing tool:', error);
+    const available = this.browserTools?.tools
+      ? Object.keys(this.browserTools.tools)
+      : [];
+    if (!available.includes(toolName)) {
       const errorResult = {
         success: false,
-        error: error.message,
-        details: 'Tool execution failed. The AI will be informed of this error.',
+        error: `Unknown tool: ${toolName}`,
       };
-      if (this.aiProvider) {
-        this.aiProvider.addToolResult(toolCall.id, errorResult);
-      }
-      this.sendToSidePanel({
-        type: 'tool_execution',
-        tool: toolName || rawName,
-        id: toolCall.id,
-        args,
-        result: errorResult,
-      });
-      console.warn('[Browser AI] Tool error:', toolName || rawName, errorResult);
-      // Don't throw - let the AI handle the error and potentially retry
+      sendResult(errorResult);
       return errorResult;
     }
+
+    const permissionCheck = await this.checkToolPermission(toolName, args);
+    if (!permissionCheck.allowed) {
+      const blocked = {
+        success: false,
+        error: permissionCheck.reason || "Tool blocked by permissions.",
+        policy: permissionCheck.policy,
+      };
+      sendResult(blocked);
+      return blocked;
+    }
+
+    if (
+      toolName === "screenshot" &&
+      this.currentSettings?.enableScreenshots === false
+    ) {
+      const blocked = {
+        success: false,
+        error: "Screenshots are disabled in settings.",
+      };
+      sendResult(blocked);
+      return blocked;
+    }
+
+    const result = await this.browserTools.executeTool(toolName, args);
+    const finalResult = result || { error: "No result returned" };
+
+    if (
+      toolName === "screenshot" &&
+      finalResult?.success &&
+      finalResult.dataUrl &&
+      this.currentSettings?.visionBridge &&
+      options.visionProfile?.apiKey
+    ) {
+      try {
+        const description = await describeImageWithModel({
+          settings: {
+            provider: options.visionProfile.provider,
+            apiKey: options.visionProfile.apiKey,
+            model: options.visionProfile.model,
+            customEndpoint: options.visionProfile.customEndpoint,
+          },
+          dataUrl: finalResult.dataUrl,
+          prompt:
+            "Provide a concise description of this screenshot for a non-vision model.",
+        });
+        finalResult.visionDescription = description;
+        finalResult.message =
+          "Screenshot captured and described by vision model.";
+        if (!this.currentSettings?.sendScreenshotsAsImages) {
+          delete finalResult.dataUrl;
+        }
+      } catch (visionError) {
+        finalResult.visionError = visionError.message;
+      }
+    }
+
+    sendResult(finalResult);
+    return finalResult;
   }
 
   getToolPermissionCategory(toolName) {
     const mapping = {
-      navigate: 'navigate',
-      openTab: 'navigate',
-      click: 'interact',
-      type: 'interact',
-      pressKey: 'interact',
-      scroll: 'interact',
-      getContent: 'read',
-      screenshot: 'screenshots',
-      getTabs: 'tabs',
-      closeTab: 'tabs',
-      switchTab: 'tabs',
-      groupTabs: 'tabs',
-      focusTab: 'tabs',
-      describeSessionTabs: 'tabs',
+      navigate: "navigate",
+      openTab: "navigate",
+      click: "interact",
+      type: "interact",
+      pressKey: "interact",
+      scroll: "interact",
+      getContent: "read",
+      screenshot: "screenshots",
+      getTabs: "tabs",
+      closeTab: "tabs",
+      switchTab: "tabs",
+      groupTabs: "tabs",
+      focusTab: "tabs",
+      describeSessionTabs: "tabs",
     };
     return mapping[toolName] || null;
   }
 
-  parseAllowedDomains(value = '') {
+  parseAllowedDomains(value = "") {
     return String(value)
       .split(/[\n,]/)
       .map((entry) => entry.trim().toLowerCase())
@@ -545,7 +521,9 @@ class BackgroundService {
     if (!allowlist.length) return true;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
-      return allowlist.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+      return allowlist.some(
+        (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+      );
     } catch (error) {
       return false;
     }
@@ -557,13 +535,16 @@ class BackgroundService {
     try {
       if (tabId) {
         const tab = await chrome.tabs.get(tabId);
-        return tab?.url || '';
+        return tab?.url || "";
       }
     } catch (error) {
-      console.warn('Failed to resolve tab URL for permissions:', error);
+      console.warn("Failed to resolve tab URL for permissions:", error);
     }
-    const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return active?.url || '';
+    const [active] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    return active?.url || "";
   }
 
   async checkToolPermission(toolName, args) {
@@ -571,30 +552,110 @@ class BackgroundService {
     const permissions = this.currentSettings.toolPermissions || {};
     const category = this.getToolPermissionCategory(toolName);
     if (category && permissions[category] === false) {
-      return { allowed: false, reason: `Permission blocked: ${category}` };
+      return {
+        allowed: false,
+        reason: `Permission blocked: ${category}`,
+        policy: {
+          type: "permission",
+          category,
+          reason: `Permission blocked: ${category}`,
+        },
+      };
     }
 
-    if (category === 'tabs') return { allowed: true };
+    if (category === "tabs") return { allowed: true };
 
-    const allowlist = this.parseAllowedDomains(this.currentSettings.allowedDomains || '');
+    const allowlist = this.parseAllowedDomains(
+      this.currentSettings.allowedDomains || "",
+    );
     if (!allowlist.length) return { allowed: true };
 
     const targetUrl = await this.resolveToolUrl(toolName, args);
     if (!this.isUrlAllowed(targetUrl, allowlist)) {
-      return { allowed: false, reason: 'Blocked by allowed domains list.' };
+      return {
+        allowed: false,
+        reason: "Blocked by allowed domains list.",
+        policy: {
+          type: "allowlist",
+          domain: targetUrl,
+          reason: "Blocked by allowed domains list.",
+        },
+      };
     }
 
     return { allowed: true };
   }
 
-  sendToSidePanel(message) {
-    // Send message to all side panels
-    chrome.runtime.sendMessage(message).catch((err) => {
-      console.log('Side panel not open:', err);
+  sendRuntime(runMeta: RunMeta, payload: Record<string, unknown>) {
+    this.sendToSidePanel({
+      schemaVersion: RUNTIME_MESSAGE_SCHEMA_VERSION,
+      runId: runMeta.runId,
+      turnId: runMeta.turnId,
+      sessionId: runMeta.sessionId,
+      timestamp: Date.now(),
+      ...payload,
     });
   }
 
-  resolveProfile(settings: Record<string, any>, name = 'default') {
+  sendToSidePanel(message) {
+    chrome.runtime.sendMessage(message).catch((err) => {
+      console.log("Side panel not open:", err);
+    });
+  }
+
+  enhanceSystemPrompt(basePrompt: string, context) {
+    const tabsSection =
+      Array.isArray(context.availableTabs) && context.availableTabs.length
+        ? `Tabs selected (${context.availableTabs.length}). Use focusTab or switchTab before acting:\n${context.availableTabs
+            .map(
+              (tab) =>
+                `  - [${tab.id}] ${tab.title || "Untitled"} - ${tab.url}`,
+            )
+            .join("\n")}`
+        : "No additional tabs selected; actions target the current tab.";
+    const teamProfiles = Array.isArray(context.teamProfiles)
+      ? context.teamProfiles
+      : [];
+    const teamSection = teamProfiles.length
+      ? `Team profiles available for sub-agents:\n${teamProfiles
+          .map(
+            (profile) =>
+              `  - ${profile.name}: ${profile.provider || "provider"} · ${profile.model || "model"}`,
+          )
+          .join(
+            "\n",
+          )}\nUse spawn_subagent with a profile name to delegate parallel browser work.`
+      : "";
+    const orchestratorSection = context.orchestratorEnabled
+      ? "Orchestrator mode is enabled."
+      : "";
+
+    return `${basePrompt}
+
+Context:
+- URL: ${context.currentUrl}
+- Title: ${context.currentTitle}
+- Tab ID: ${context.tabId}
+${tabsSection ? `- ${tabsSection}` : ""}
+${orchestratorSection ? `\n${orchestratorSection}` : ""}
+${teamSection ? `\n${teamSection}` : ""}
+
+Tool discipline:
+1. Never invent or summarize page content you did not fetch with getContent.
+2. After every scroll, navigation, or tab switch, run getContent for the new region before replying.
+3. Chain tools until you have concrete evidence you can cite.
+4. With multiple tabs, announce the active tab via focusTab/switchTab and use describeSessionTabs to recall IDs.
+
+Safety:
+- Do not install software, extensions, or change browser/system settings.
+- Avoid destructive actions (deleting history, logging out, posting messages) unless the user explicitly asked.
+- Stay within the provided tabs; do not open unknown or suspicious URLs.
+- Prefer gentle edits: use type/focus tools instead of wholesale replacements when editing text areas.
+
+Base every answer strictly on real tool output.`;
+  }
+
+  resolveProfile(settings: Record<string, any>, name = "default") {
     const base = {
       provider: settings.provider,
       apiKey: settings.apiKey,
@@ -608,22 +669,28 @@ class BackgroundService {
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
       timeout: settings.timeout,
+      contextLimit: settings.contextLimit,
+      enableScreenshots: settings.enableScreenshots,
     };
-    const profile = settings.configs && settings.configs[name] ? settings.configs[name] : {};
+    const profile =
+      settings.configs && settings.configs[name] ? settings.configs[name] : {};
     return { ...base, ...profile };
   }
 
   resolveTeamProfiles(settings: Record<string, any>) {
-    const names = Array.isArray(settings.auxAgentProfiles) ? settings.auxAgentProfiles : [];
+    const names = Array.isArray(settings.auxAgentProfiles)
+      ? settings.auxAgentProfiles
+      : [];
     const unique = Array.from(new Set(names)).filter(
-      (name): name is string => typeof name === 'string' && name.trim().length > 0,
+      (name): name is string =>
+        typeof name === "string" && name.trim().length > 0,
     );
     return unique.map((name) => {
       const profile = this.resolveProfile(settings, name);
       return {
         name,
-        provider: profile.provider || '',
-        model: profile.model || '',
+        provider: profile.provider || "",
+        model: profile.model || "",
       };
     });
   }
@@ -635,43 +702,61 @@ class BackgroundService {
   ) {
     let tools = this.browserTools.getToolDefinitions();
     if (settings && settings.enableScreenshots === false) {
-      tools = tools.filter((tool) => tool.name !== 'screenshot');
+      tools = tools.filter((tool) => tool.name !== "screenshot");
     }
     if (includeOrchestrator) {
-      const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map((profile) => profile.name).filter(Boolean) : [];
-      const profileSchema: { type: string; description: string; enum?: string[] } = {
-        type: 'string',
+      const teamNames = Array.isArray(teamProfiles)
+        ? teamProfiles.map((profile) => profile.name).filter(Boolean)
+        : [];
+      const profileSchema: {
+        type: string;
+        description: string;
+        enum?: string[];
+      } = {
+        type: "string",
         description: teamNames.length
-          ? `Name of saved profile to use. Available: ${teamNames.join(', ')}`
-          : 'Name of saved profile to use.',
+          ? `Name of saved profile to use. Available: ${teamNames.join(", ")}`
+          : "Name of saved profile to use.",
       };
       if (teamNames.length) {
         profileSchema.enum = teamNames;
       }
       tools = tools.concat([
         {
-          name: 'spawn_subagent',
-          description: 'Start a focused sub-agent with its own goal, prompt, and optional profile override.',
+          name: "spawn_subagent",
+          description:
+            "Start a focused sub-agent with its own goal, prompt, and optional profile override.",
           input_schema: {
-            type: 'object',
+            type: "object",
             properties: {
               profile: profileSchema,
-              prompt: { type: 'string', description: 'System prompt for the sub-agent' },
-              tasks: { type: 'array', items: { type: 'string' }, description: 'Task list for the sub-agent' },
-              goal: { type: 'string', description: 'Single goal string if tasks not provided' },
+              prompt: {
+                type: "string",
+                description: "System prompt for the sub-agent",
+              },
+              tasks: {
+                type: "array",
+                items: { type: "string" },
+                description: "Task list for the sub-agent",
+              },
+              goal: {
+                type: "string",
+                description: "Single goal string if tasks not provided",
+              },
             },
           },
         },
         {
-          name: 'subagent_complete',
-          description: 'Sub-agent calls this when finished to return a summary payload.',
+          name: "subagent_complete",
+          description:
+            "Sub-agent calls this when finished to return a summary payload.",
           input_schema: {
-            type: 'object',
+            type: "object",
             properties: {
-              summary: { type: 'string' },
-              data: { type: 'object' },
+              summary: { type: "string" },
+              data: { type: "object" },
             },
-            required: ['summary'],
+            required: ["summary"],
           },
         },
       ]);
@@ -679,153 +764,94 @@ class BackgroundService {
     return tools;
   }
 
-  compactConversationHistory(history: Message[] = []): Message[] {
-    const maxMessages = 12;
-    const maxChars = 6000;
-    const safeHistory: Message[] = Array.isArray(history) ? [...history] : [];
-
-    // Calculate total characters
-    const totalChars = safeHistory.reduce((acc, msg) => {
-      const content = msg?.content;
-      if (typeof content === 'string') return acc + content.length;
-      if (Array.isArray(content)) {
-        return (
-          acc +
-          content.reduce((sum, part) => {
-            if (typeof part === 'string') return sum + part.length;
-            if (part?.text) return sum + part.text.length;
-            if (part?.content) return sum + JSON.stringify(part.content).length;
-            return sum;
-          }, 0)
-        );
-      }
-      return acc;
-    }, 0);
-
-    // If under limits, return as-is
-    if (safeHistory.length <= maxMessages && totalChars <= maxChars) {
-      return safeHistory;
-    }
-
-    // Keep the most recent messages
-    const preserveCount = Math.min(8, Math.floor(safeHistory.length / 2));
-    const preserved = safeHistory.slice(-preserveCount);
-    const trimmed = safeHistory.slice(0, safeHistory.length - preserveCount);
-
-    // Create compact summary of trimmed messages
-    const summaryPieces: string[] = [];
-    for (let i = 0; i < Math.min(trimmed.length, 8); i++) {
-      const msg = trimmed[trimmed.length - 1 - i]; // Start from most recent trimmed
-      const role = msg?.role || 'unknown';
-      let preview = '';
-      if (typeof msg?.content === 'string') {
-        preview = msg.content.slice(0, 100);
-      } else if (Array.isArray(msg?.content)) {
-        const textPart = msg.content.find((p) => typeof p === 'string' || (p && typeof p === 'object' && 'text' in p));
-        if (typeof textPart === 'string') {
-          preview = textPart.slice(0, 100);
-        } else if (textPart && typeof textPart === 'object' && 'text' in textPart) {
-          preview = String((textPart as { text?: string }).text || '').slice(0, 100);
-        }
-      }
-      if (preview) {
-        summaryPieces.unshift(`${role}: ${preview}${preview.length >= 100 ? '...' : ''}`);
-      }
-    }
-
-    const compactNote: Message = {
-      role: 'user',
-      content: `[Context compacted: ${trimmed.length} earlier messages]\nRecent context:\n${summaryPieces.join('\n')}`,
-    };
-
-    return [compactNote, ...preserved];
-  }
-
-  async handleSpawnSubagent(toolCall) {
+  async handleSpawnSubagent(runMeta: RunMeta, args) {
     if (this.subAgentCount >= 10) {
-      return { success: false, error: 'Sub-agent limit reached for this session (max 10).' };
+      return {
+        success: false,
+        error: "Sub-agent limit reached for this session (max 10).",
+      };
     }
     this.subAgentCount += 1;
     const subagentId = `subagent-${Date.now()}-${this.subAgentCount}`;
-    const args = toolCall?.args || {};
     let profileName = args.profile || args.config;
     if (!profileName) {
       const teamProfiles = Array.isArray(this.currentSettings?.auxAgentProfiles)
         ? this.currentSettings.auxAgentProfiles
         : [];
       if (teamProfiles.length) {
-        profileName = teamProfiles[this.subAgentProfileCursor % teamProfiles.length];
+        profileName =
+          teamProfiles[this.subAgentProfileCursor % teamProfiles.length];
         this.subAgentProfileCursor += 1;
       }
     }
     if (!profileName) {
-      profileName = this.currentSettings?.activeConfig || 'default';
+      profileName = this.currentSettings?.activeConfig || "default";
     }
-    const profileSettings = this.resolveProfile(this.currentSettings || {}, profileName);
+    const profileSettings = this.resolveProfile(
+      this.currentSettings || {},
+      profileName,
+    );
 
-    // Notify UI about new subagent
     const subagentName = args.name || `Sub-Agent ${this.subAgentCount}`;
-    this.sendToSidePanel({
-      type: 'subagent_start',
+    this.sendRuntime(runMeta, {
+      type: "subagent_start",
       id: subagentId,
       name: subagentName,
-      tasks: args.tasks || [args.goal || args.task || 'Task'],
+      tasks: args.tasks || [args.goal || args.task || "Task"],
     });
 
-    // Create custom system prompt for sub-agent
-    const subAgentSystemPrompt = `${args.prompt || 'You are a focused sub-agent working under an orchestrator. Be concise and tool-driven.'}
+    const subAgentSystemPrompt = `${args.prompt || "You are a focused sub-agent working under an orchestrator. Be concise and tool-driven."}
 Always cite evidence from tools. Finish by calling subagent_complete with a short summary and any structured findings.`;
 
-    const subProvider = new AIProvider({
-      ...profileSettings,
-      systemPrompt: subAgentSystemPrompt,
-      sendScreenshotsAsImages: Boolean(
-        this.currentSettings?.enableScreenshots && profileSettings.sendScreenshotsAsImages,
-      ),
-    });
     const tools = this.getToolsForSession(this.currentSettings || {}, false);
+    const toolSet = buildToolSet(tools, async (toolName, toolArgs, options) =>
+      this.executeToolByName(
+        toolName,
+        toolArgs,
+        {
+          runMeta,
+          settings: this.currentSettings || {},
+          visionProfile: null,
+        },
+        options.toolCallId,
+      ),
+    );
+
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
     const sessionTabs = this.browserTools.getSessionTabSummaries();
     const sessionTabContext = sessionTabs
-      .filter((tab) => typeof tab.id === 'number')
+      .filter((tab) => typeof tab.id === "number")
       .map((tab) => ({ id: tab.id as number, title: tab.title, url: tab.url }));
     const taskLines = Array.isArray(args.tasks)
-      ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join('\n')
-      : args.goal || args.task || args.prompt || '';
+      ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join("\n")
+      : args.goal || args.task || args.prompt || "";
 
-    // Don't include system message in history - it's passed via provider settings
     const subHistory: Message[] = [
       {
-        role: 'user',
-        content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`,
+        role: "user",
+        content: `Task group:\n${taskLines || "Follow the provided prompt and complete the goal."}`,
       },
     ];
 
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const subTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
-    const context = {
-      currentUrl: activeTab?.url || 'unknown',
-      currentTitle: activeTab?.title || 'unknown',
-      tabId: subTabId,
-      availableTabs: sessionTabContext,
-    };
+    const subModel = resolveLanguageModel(profileSettings);
+    const result = streamText({
+      model: subModel,
+      system: subAgentSystemPrompt,
+      messages: toModelMessages(subHistory),
+      tools: toolSet,
+      temperature: profileSettings.temperature ?? 0.4,
+      maxOutputTokens: profileSettings.maxTokens ?? 1024,
+      stopWhen: stepCountIs(6),
+    });
 
-    let response = await subProvider.chat(subHistory, tools, context, { stream: false });
-    let iterations = 0;
-    const maxIterations = 6;
+    const summary =
+      (await result.text) || "Sub-agent finished without a final summary.";
 
-    while (response.toolCalls && response.toolCalls.length > 0 && iterations < maxIterations) {
-      for (const call of response.toolCalls) {
-        await this.executeToolCall(call, subProvider, { silent: true, settings: this.currentSettings || undefined });
-      }
-      iterations += 1;
-      response = await subProvider.continueConversation();
-    }
-
-    const summary = response.content || response.thinking || 'Sub-agent finished without a final summary.';
-
-    // Notify UI about subagent completion
-    this.sendToSidePanel({
-      type: 'subagent_complete',
+    this.sendRuntime(runMeta, {
+      type: "subagent_complete",
       id: subagentId,
       success: true,
       summary,
@@ -833,16 +859,13 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
 
     return {
       success: true,
-      source: 'subagent',
+      source: "subagent",
       id: subagentId,
       name: subagentName,
       summary,
       tasks: taskLines,
-      iterations,
-      transcriptLength: subProvider.messages.length,
     };
   }
 }
 
-// Initialize background service
 const backgroundService = new BackgroundService();
