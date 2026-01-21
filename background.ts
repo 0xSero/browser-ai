@@ -1,22 +1,14 @@
-import { generateText, stepCountIs, streamText } from "ai";
-import {
-  applyCompaction,
-  buildCompactionSummaryMessage,
-  shouldCompact,
-} from "./ai/compaction.js";
-import { normalizeConversationHistory } from "./ai/message-schema.js";
-import type { Message } from "./ai/message-schema.js";
-import { toModelMessages } from "./ai/model-convert.js";
-import {
-  buildToolSet,
-  describeImageWithModel,
-  resolveLanguageModel,
-} from "./ai/sdk-client.js";
-import { isValidFinalResponse } from "./ai/retry-engine.js";
-import { BrowserTools } from "./tools/browser-tools.js";
-import { buildRunPlan } from "./types/plan.js";
-import type { RunPlan } from "./types/plan.js";
-import { RUNTIME_MESSAGE_SCHEMA_VERSION } from "./types/runtime-messages.js";
+import { generateText, stepCountIs, streamText } from 'ai';
+import { applyCompaction, buildCompactionSummaryMessage, shouldCompact } from './ai/compaction.js';
+import { normalizeConversationHistory } from './ai/message-schema.js';
+import type { Message } from './ai/message-schema.js';
+import { toModelMessages } from './ai/model-convert.js';
+import { isValidFinalResponse } from './ai/retry-engine.js';
+import { buildToolSet, describeImageWithModel, resolveLanguageModel } from './ai/sdk-client.js';
+import { BrowserTools } from './tools/browser-tools.js';
+import { buildRunPlan } from './types/plan.js';
+import type { RunPlan } from './types/plan.js';
+import { RUNTIME_MESSAGE_SCHEMA_VERSION } from './types/runtime-messages.js';
 
 type RunMeta = {
   runId: string;
@@ -41,9 +33,7 @@ class BackgroundService {
   }
 
   init() {
-    chrome.sidePanel
-      .setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error) => console.error(error));
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       this.handleMessage(message, sender, sendResponse);
@@ -54,7 +44,7 @@ class BackgroundService {
   async handleMessage(message, sender, sendResponse) {
     try {
       switch (message.type) {
-        case "user_message":
+        case 'user_message':
           await this.processUserMessage(
             message.message,
             message.conversationHistory,
@@ -63,22 +53,19 @@ class BackgroundService {
           );
           break;
 
-        case "execute_tool": {
-          const result = await this.browserTools.executeTool(
-            message.tool,
-            message.args,
-          );
+        case 'execute_tool': {
+          const result = await this.browserTools.executeTool(message.tool, message.args);
           sendResponse({ success: true, result });
           break;
         }
 
         default:
-          console.warn("Unknown message type:", message.type);
+          console.warn('Unknown message type:', message.type);
       }
     } catch (error) {
-      console.error("Error handling message:", error);
+      console.error('Error handling message:', error);
       this.sendToSidePanel({
-        type: "error",
+        type: 'error',
         message: error.message,
       });
       sendResponse({ success: false, error: error.message });
@@ -88,7 +75,7 @@ class BackgroundService {
   async processUserMessage(
     userMessage: string,
     conversationHistory: Message[],
-    selectedTabs: chrome.tabs.Tab[] = [],
+    selectedTabs: chrome.tabs.Tab[],
     sessionId: string,
   ) {
     const runMeta: RunMeta = {
@@ -99,34 +86,32 @@ class BackgroundService {
 
     try {
       const settings = await chrome.storage.local.get([
-        "provider",
-        "apiKey",
-        "model",
-        "customEndpoint",
-        "systemPrompt",
-        "sendScreenshotsAsImages",
-        "screenshotQuality",
-        "showThinking",
-        "streamResponses",
-        "configs",
-        "activeConfig",
-        "useOrchestrator",
-        "orchestratorProfile",
-        "visionProfile",
-        "visionBridge",
-        "enableScreenshots",
-        "temperature",
-        "maxTokens",
-        "timeout",
-        "toolPermissions",
-        "allowedDomains",
-        "auxAgentProfiles",
+        'provider',
+        'apiKey',
+        'model',
+        'customEndpoint',
+        'systemPrompt',
+        'sendScreenshotsAsImages',
+        'screenshotQuality',
+        'showThinking',
+        'streamResponses',
+        'configs',
+        'activeConfig',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'visionProfile',
+        'visionBridge',
+        'enableScreenshots',
+        'temperature',
+        'maxTokens',
+        'timeout',
+        'toolPermissions',
+        'allowedDomains',
+        'auxAgentProfiles',
       ]);
 
-      if (settings.enableScreenshots === undefined)
-        settings.enableScreenshots = false;
-      if (settings.sendScreenshotsAsImages === undefined)
-        settings.sendScreenshotsAsImages = false;
+      if (settings.enableScreenshots === undefined) settings.enableScreenshots = false;
+      if (settings.sendScreenshotsAsImages === undefined) settings.sendScreenshotsAsImages = false;
       if (settings.visionBridge === undefined) settings.visionBridge = true;
       if (!settings.toolPermissions) {
         settings.toolPermissions = {
@@ -137,14 +122,13 @@ class BackgroundService {
           screenshots: false,
         };
       }
-      if (settings.allowedDomains === undefined) settings.allowedDomains = "";
-      if (!Array.isArray(settings.auxAgentProfiles))
-        settings.auxAgentProfiles = [];
+      if (settings.allowedDomains === undefined) settings.allowedDomains = '';
+      if (!Array.isArray(settings.auxAgentProfiles)) settings.auxAgentProfiles = [];
 
       if (!settings.apiKey) {
         this.sendRuntime(runMeta, {
-          type: "run_error",
-          message: "Please configure your API key in settings",
+          type: 'run_error',
+          message: 'Please configure your API key in settings',
         });
         return;
       }
@@ -156,16 +140,15 @@ class BackgroundService {
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
-          title: "Browser AI",
-          color: "blue",
+          title: 'Browser AI',
+          color: 'blue',
         });
       } catch (error) {
-        console.warn("Failed to configure session tabs:", error);
+        console.warn('Failed to configure session tabs:', error);
       }
 
-      const activeProfileName = settings.activeConfig || "default";
-      const orchestratorProfileName =
-        settings.orchestratorProfile || activeProfileName;
+      const activeProfileName = settings.activeConfig || 'default';
+      const orchestratorProfileName = settings.orchestratorProfile || activeProfileName;
       const visionProfileName = settings.visionProfile || null;
       const orchestratorEnabled = settings.useOrchestrator === true;
       const teamProfiles = this.resolveTeamProfiles(settings);
@@ -175,18 +158,9 @@ class BackgroundService {
         ? this.resolveProfile(settings, orchestratorProfileName)
         : activeProfile;
       const visionProfile =
-        settings.visionBridge !== false
-          ? this.resolveProfile(
-              settings,
-              visionProfileName || activeProfileName,
-            )
-          : null;
+        settings.visionBridge !== false ? this.resolveProfile(settings, visionProfileName || activeProfileName) : null;
 
-      const tools = this.getToolsForSession(
-        settings,
-        orchestratorEnabled,
-        teamProfiles,
-      );
+      const tools = this.getToolsForSession(settings, orchestratorEnabled, teamProfiles);
 
       const [activeTab] = await chrome.tabs.query({
         active: true,
@@ -194,27 +168,24 @@ class BackgroundService {
       });
       const sessionTabs = this.browserTools.getSessionTabSummaries();
       const sessionTabContext = sessionTabs
-        .filter((tab) => typeof tab.id === "number")
+        .filter((tab) => typeof tab.id === 'number')
         .map((tab) => ({
           id: tab.id as number,
           title: tab.title,
           url: tab.url,
         }));
-      const workingTabId: number | null =
-        this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
+      const workingTabId: number | null = this.browserTools.getCurrentSessionTabId() ?? activeTab?.id ?? null;
       const workingTab = sessionTabs.find((tab) => tab.id === workingTabId);
       const context = {
-        currentUrl: workingTab?.url || activeTab?.url || "unknown",
-        currentTitle: workingTab?.title || activeTab?.title || "unknown",
+        currentUrl: workingTab?.url || activeTab?.url || 'unknown',
+        currentTitle: workingTab?.title || activeTab?.title || 'unknown',
         tabId: workingTabId,
         availableTabs: sessionTabContext,
         orchestratorEnabled,
         teamProfiles,
       };
 
-      const normalizedHistory = normalizeConversationHistory(
-        conversationHistory || [],
-      );
+      const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
       const modelMessages = toModelMessages(normalizedHistory);
       const model = resolveLanguageModel(orchestratorProfile);
 
@@ -233,26 +204,23 @@ class BackgroundService {
 
       const streamEnabled = settings.streamResponses !== false;
       if (streamEnabled) {
-        this.sendRuntime(runMeta, { type: "assistant_stream_start" });
+        this.sendRuntime(runMeta, { type: 'assistant_stream_start' });
       }
 
       const result = streamText({
         model,
-        system: this.enhanceSystemPrompt(
-          orchestratorProfile.systemPrompt || "",
-          context,
-        ),
+        system: this.enhanceSystemPrompt(orchestratorProfile.systemPrompt || '', context),
         messages: modelMessages,
         tools: toolSet,
         temperature: orchestratorProfile.temperature ?? 0.7,
         maxOutputTokens: orchestratorProfile.maxTokens ?? 2048,
         stopWhen: stepCountIs(48),
         onChunk: ({ chunk }) => {
-          if (chunk.type === "reasoning-delta") {
+          if (chunk.type === 'reasoning-delta') {
             this.sendRuntime(runMeta, {
-              type: "assistant_stream_delta",
-              content: chunk.text || "",
-              channel: "reasoning",
+              type: 'assistant_stream_delta',
+              content: chunk.text || '',
+              channel: 'reasoning',
             });
           }
         },
@@ -262,13 +230,13 @@ class BackgroundService {
         try {
           for await (const textPart of result.textStream) {
             this.sendRuntime(runMeta, {
-              type: "assistant_stream_delta",
-              content: textPart || "",
-              channel: "text",
+              type: 'assistant_stream_delta',
+              content: textPart || '',
+              channel: 'text',
             });
           }
         } finally {
-          this.sendRuntime(runMeta, { type: "assistant_stream_stop" });
+          this.sendRuntime(runMeta, { type: 'assistant_stream_stop' });
         }
       } else {
         await result.text;
@@ -283,42 +251,40 @@ class BackgroundService {
 
       const toolResults = steps.flatMap((step) => step.toolResults || []);
       const hadToolCalls = toolResults.length > 0;
-      
+
       // Allow empty text if tools were called (model communicated through actions)
       // But encourage actual summaries via system prompt
-      const fallbackText = hadToolCalls
-        ? "Task completed. See tool results above for details."
-        : "Done.";
+      const fallbackText = hadToolCalls ? 'Task completed. See tool results above for details.' : 'Done.';
       const finalText = isValidFinalResponse(text, { allowEmpty: false })
-        ? (text || fallbackText)
-        : "I completed the requested actions but could not produce a final summary. Please try again.";
+        ? text || fallbackText
+        : 'I completed the requested actions but could not produce a final summary. Please try again.';
       const responseMessages: Message[] = [
         {
-          role: "assistant",
+          role: 'assistant',
           content: finalText,
           thinking: reasoningText || null,
         },
       ];
       if (toolResults.length > 0) {
         responseMessages.push({
-          role: "tool",
+          role: 'tool',
           content: toolResults.map((resultItem) => ({
-            type: "tool-result",
+            type: 'tool-result',
             toolCallId: resultItem.toolCallId,
             toolName: resultItem.toolName,
             output:
-              resultItem.output && typeof resultItem.output === "object"
-                ? { type: "json", value: resultItem.output }
-                : { type: "text", value: String(resultItem.output ?? "") },
+              resultItem.output && typeof resultItem.output === 'object'
+                ? { type: 'json', value: resultItem.output }
+                : { type: 'text', value: String(resultItem.output ?? '') },
           })),
         });
       }
 
       this.sendRuntime(runMeta, {
-        type: "assistant_final",
+        type: 'assistant_final',
         content: finalText,
         thinking: reasoningText || null,
-        model: orchestratorProfile.model || settings.model || "",
+        model: orchestratorProfile.model || settings.model || '',
         usage: {
           inputTokens: totalUsage.inputTokens || 0,
           outputTokens: totalUsage.outputTokens || 0,
@@ -327,12 +293,8 @@ class BackgroundService {
         responseMessages,
       });
 
-      const nextHistory = normalizeConversationHistory([
-        ...normalizedHistory,
-        ...responseMessages,
-      ]);
-      const contextLimit =
-        orchestratorProfile.contextLimit || settings.contextLimit || 200000;
+      const nextHistory = normalizeConversationHistory([...normalizedHistory, ...responseMessages]);
+      const contextLimit = orchestratorProfile.contextLimit || settings.contextLimit || 200000;
       const compactionCheck = shouldCompact({
         messages: nextHistory,
         contextLimit,
@@ -344,7 +306,7 @@ class BackgroundService {
         const trimmedCount = nextHistory.length - preservedCount;
 
         const summaryPrompt =
-          "Summarize the conversation so far for the next model run. Include: user goals, key context, decisions, tool outputs, open tasks, and constraints. Use bullet points. Keep it between 1,000 and 2,000 tokens.";
+          'Summarize the conversation so far for the next model run. Include: user goals, key context, decisions, tool outputs, open tasks, and constraints. Use bullet points. Keep it between 1,000 and 2,000 tokens.';
         const summaryResult = await generateText({
           model,
           system: summaryPrompt,
@@ -353,10 +315,7 @@ class BackgroundService {
           maxOutputTokens: 1600,
         });
 
-        const summaryMessage = buildCompactionSummaryMessage(
-          summaryResult.text,
-          trimmedCount,
-        );
+        const summaryMessage = buildCompactionSummaryMessage(summaryResult.text, trimmedCount);
         const compaction = applyCompaction({
           summaryMessage,
           preserved,
@@ -365,7 +324,7 @@ class BackgroundService {
         const newSessionId = `session-${Date.now()}`;
 
         this.sendRuntime(runMeta, {
-          type: "context_compacted",
+          type: 'context_compacted',
           summary: summaryResult.text,
           trimmedCount,
           preservedCount: compaction.preservedCount,
@@ -379,10 +338,10 @@ class BackgroundService {
         });
       }
     } catch (error) {
-      console.error("Error processing user message:", error);
+      console.error('Error processing user message:', error);
       this.sendRuntime(runMeta, {
-        type: "run_error",
-        message: error.message || "Unknown error",
+        type: 'run_error',
+        message: error.message || 'Unknown error',
       });
     }
   }
@@ -397,19 +356,17 @@ class BackgroundService {
     },
     toolCallId?: string,
   ) {
-    const callId =
-      toolCallId ||
-      `tool_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const callId = toolCallId || `tool_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const sendStart = () =>
       this.sendRuntime(options.runMeta, {
-        type: "tool_execution_start",
+        type: 'tool_execution_start',
         tool: toolName,
         id: callId,
         args,
       });
     const sendResult = (result: unknown) =>
       this.sendRuntime(options.runMeta, {
-        type: "tool_execution_result",
+        type: 'tool_execution_result',
         tool: toolName,
         id: callId,
         args,
@@ -418,38 +375,36 @@ class BackgroundService {
 
     sendStart();
 
-    if (toolName === "set_plan") {
+    if (toolName === 'set_plan') {
       const plan = this.buildPlanFromArgs(args);
       if (!plan) {
         const errorResult = {
           success: false,
-          error: "Plan must include steps or a plan string.",
+          error: 'Plan must include steps or a plan string.',
         };
         sendResult(errorResult);
         return errorResult;
       }
       this.currentPlan = plan;
-      this.sendRuntime(options.runMeta, { type: "plan_update", plan });
+      this.sendRuntime(options.runMeta, { type: 'plan_update', plan });
       const result = { success: true, plan };
       sendResult(result);
       return result;
     }
 
-    if (toolName === "spawn_subagent") {
+    if (toolName === 'spawn_subagent') {
       const result = await this.handleSpawnSubagent(options.runMeta, args);
       sendResult(result);
       return result;
     }
 
-    if (toolName === "subagent_complete") {
+    if (toolName === 'subagent_complete') {
       const result = { success: true, ack: true, details: args || {} };
       sendResult(result);
       return result;
     }
 
-    const available = this.browserTools?.tools
-      ? Object.keys(this.browserTools.tools)
-      : [];
+    const available = this.browserTools?.tools ? Object.keys(this.browserTools.tools) : [];
     if (!available.includes(toolName)) {
       const errorResult = {
         success: false,
@@ -463,20 +418,17 @@ class BackgroundService {
     if (!permissionCheck.allowed) {
       const blocked = {
         success: false,
-        error: permissionCheck.reason || "Tool blocked by permissions.",
+        error: permissionCheck.reason || 'Tool blocked by permissions.',
         policy: permissionCheck.policy,
       };
       sendResult(blocked);
       return blocked;
     }
 
-    if (
-      toolName === "screenshot" &&
-      this.currentSettings?.enableScreenshots === false
-    ) {
+    if (toolName === 'screenshot' && this.currentSettings?.enableScreenshots === false) {
       const blocked = {
         success: false,
-        error: "Screenshots are disabled in settings.",
+        error: 'Screenshots are disabled in settings.',
       };
       sendResult(blocked);
       return blocked;
@@ -488,16 +440,16 @@ class BackgroundService {
     } catch (error) {
       const errorResult = {
         success: false,
-        error: error?.message || String(error) || "Tool execution failed",
+        error: error?.message || String(error) || 'Tool execution failed',
       };
       sendResult(errorResult);
       return errorResult;
     }
 
-    const finalResult = result || { error: "No result returned" };
+    const finalResult = result || { error: 'No result returned' };
 
     if (
-      toolName === "screenshot" &&
+      toolName === 'screenshot' &&
       finalResult?.success &&
       finalResult.dataUrl &&
       this.currentSettings?.visionBridge &&
@@ -512,12 +464,10 @@ class BackgroundService {
             customEndpoint: options.visionProfile.customEndpoint,
           },
           dataUrl: finalResult.dataUrl,
-          prompt:
-            "Provide a concise description of this screenshot for a non-vision model.",
+          prompt: 'Provide a concise description of this screenshot for a non-vision model.',
         });
         finalResult.visionDescription = description;
-        finalResult.message =
-          "Screenshot captured and described by vision model.";
+        finalResult.message = 'Screenshot captured and described by vision model.';
         if (!this.currentSettings?.sendScreenshotsAsImages) {
           delete finalResult.dataUrl;
         }
@@ -532,8 +482,8 @@ class BackgroundService {
   }
 
   attachPlanToResult(result: unknown, toolName: string) {
-    if (!this.currentPlan || toolName === "set_plan") return result;
-    if (result && typeof result === "object" && !Array.isArray(result)) {
+    if (!this.currentPlan || toolName === 'set_plan') return result;
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
       return { ...(result as Record<string, unknown>), plan: this.currentPlan };
     }
     return { result, plan: this.currentPlan };
@@ -542,11 +492,11 @@ class BackgroundService {
   parsePlanSteps(text: string) {
     if (!text) return [];
     return text
-      .split("\n")
+      .split('\n')
       .map((line) =>
         line
-          .replace(/^\s*[-*]\s*/, "")
-          .replace(/^\s*\d+[.)]\s*/, "")
+          .replace(/^\s*[-*]\s*/, '')
+          .replace(/^\s*\d+[.)]\s*/, '')
           .trim(),
       )
       .filter(Boolean);
@@ -554,7 +504,7 @@ class BackgroundService {
 
   buildPlanFromArgs(args: Record<string, any>) {
     const stepInput = Array.isArray(args?.steps) ? args.steps : null;
-    const planText = typeof args?.plan === "string" ? args.plan : "";
+    const planText = typeof args?.plan === 'string' ? args.plan : '';
     const parsedSteps = planText ? this.parsePlanSteps(planText) : [];
     const combined = stepInput && stepInput.length ? stepInput : parsedSteps;
     if (!combined || combined.length === 0) return null;
@@ -566,25 +516,25 @@ class BackgroundService {
 
   getToolPermissionCategory(toolName) {
     const mapping = {
-      navigate: "navigate",
-      openTab: "navigate",
-      click: "interact",
-      type: "interact",
-      pressKey: "interact",
-      scroll: "interact",
-      getContent: "read",
-      screenshot: "screenshots",
-      getTabs: "tabs",
-      closeTab: "tabs",
-      switchTab: "tabs",
-      groupTabs: "tabs",
-      focusTab: "tabs",
-      describeSessionTabs: "tabs",
+      navigate: 'navigate',
+      openTab: 'navigate',
+      click: 'interact',
+      type: 'interact',
+      pressKey: 'interact',
+      scroll: 'interact',
+      getContent: 'read',
+      screenshot: 'screenshots',
+      getTabs: 'tabs',
+      closeTab: 'tabs',
+      switchTab: 'tabs',
+      groupTabs: 'tabs',
+      focusTab: 'tabs',
+      describeSessionTabs: 'tabs',
     };
     return mapping[toolName] || null;
   }
 
-  parseAllowedDomains(value = "") {
+  parseAllowedDomains(value = '') {
     return String(value)
       .split(/[\n,]/)
       .map((entry) => entry.trim().toLowerCase())
@@ -595,9 +545,7 @@ class BackgroundService {
     if (!allowlist.length) return true;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
-      return allowlist.some(
-        (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
-      );
+      return allowlist.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
     } catch (error) {
       return false;
     }
@@ -609,16 +557,16 @@ class BackgroundService {
     try {
       if (tabId) {
         const tab = await chrome.tabs.get(tabId);
-        return tab?.url || "";
+        return tab?.url || '';
       }
     } catch (error) {
-      console.warn("Failed to resolve tab URL for permissions:", error);
+      console.warn('Failed to resolve tab URL for permissions:', error);
     }
     const [active] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
-    return active?.url || "";
+    return active?.url || '';
   }
 
   async checkToolPermission(toolName, args) {
@@ -630,29 +578,27 @@ class BackgroundService {
         allowed: false,
         reason: `Permission blocked: ${category}`,
         policy: {
-          type: "permission",
+          type: 'permission',
           category,
           reason: `Permission blocked: ${category}`,
         },
       };
     }
 
-    if (category === "tabs") return { allowed: true };
+    if (category === 'tabs') return { allowed: true };
 
-    const allowlist = this.parseAllowedDomains(
-      this.currentSettings.allowedDomains || "",
-    );
+    const allowlist = this.parseAllowedDomains(this.currentSettings.allowedDomains || '');
     if (!allowlist.length) return { allowed: true };
 
     const targetUrl = await this.resolveToolUrl(toolName, args);
     if (!this.isUrlAllowed(targetUrl, allowlist)) {
       return {
         allowed: false,
-        reason: "Blocked by allowed domains list.",
+        reason: 'Blocked by allowed domains list.',
         policy: {
-          type: "allowlist",
+          type: 'allowlist',
           domain: targetUrl,
-          reason: "Blocked by allowed domains list.",
+          reason: 'Blocked by allowed domains list.',
         },
       };
     }
@@ -673,7 +619,7 @@ class BackgroundService {
 
   sendToSidePanel(message) {
     chrome.runtime.sendMessage(message).catch((err) => {
-      console.log("Side panel not open:", err);
+      console.log('Side panel not open:', err);
     });
   }
 
@@ -681,28 +627,16 @@ class BackgroundService {
     const tabsSection =
       Array.isArray(context.availableTabs) && context.availableTabs.length
         ? `Tabs selected (${context.availableTabs.length}). Use focusTab or switchTab before acting:\n${context.availableTabs
-            .map(
-              (tab) =>
-                `  - [${tab.id}] ${tab.title || "Untitled"} - ${tab.url}`,
-            )
-            .join("\n")}`
-        : "No additional tabs selected; actions target the current tab.";
-    const teamProfiles = Array.isArray(context.teamProfiles)
-      ? context.teamProfiles
-      : [];
+            .map((tab) => `  - [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`)
+            .join('\n')}`
+        : 'No additional tabs selected; actions target the current tab.';
+    const teamProfiles = Array.isArray(context.teamProfiles) ? context.teamProfiles : [];
     const teamSection = teamProfiles.length
       ? `Team profiles available for sub-agents:\n${teamProfiles
-          .map(
-            (profile) =>
-              `  - ${profile.name}: ${profile.provider || "provider"} · ${profile.model || "model"}`,
-          )
-          .join(
-            "\n",
-          )}\nUse spawn_subagent with a profile name to delegate parallel browser work.`
-      : "";
-    const orchestratorSection = context.orchestratorEnabled
-      ? "Orchestrator mode is enabled."
-      : "";
+          .map((profile) => `  - ${profile.name}: ${profile.provider || 'provider'} · ${profile.model || 'model'}`)
+          .join('\n')}\nUse spawn_subagent with a profile name to delegate parallel browser work.`
+      : '';
+    const orchestratorSection = context.orchestratorEnabled ? 'Orchestrator mode is enabled.' : '';
 
     return `${basePrompt}
 
@@ -710,9 +644,9 @@ Context:
 - URL: ${context.currentUrl}
 - Title: ${context.currentTitle}
 - Tab ID: ${context.tabId}
-${tabsSection ? `- ${tabsSection}` : ""}
-${orchestratorSection ? `\n${orchestratorSection}` : ""}
-${teamSection ? `\n${teamSection}` : ""}
+${tabsSection ? `- ${tabsSection}` : ''}
+${orchestratorSection ? `\n${orchestratorSection}` : ''}
+${teamSection ? `\n${teamSection}` : ''}
 
 Tool discipline:
 1. Never invent or summarize page content you did not fetch with getContent.
@@ -737,7 +671,7 @@ Keep it concise but informative. Never respond with just "Done." - the user need
 Base every answer strictly on real tool output.`;
   }
 
-  resolveProfile(settings: Record<string, any>, name = "default") {
+  resolveProfile(settings: Record<string, any>, name = 'default') {
     const base = {
       provider: settings.provider,
       apiKey: settings.apiKey,
@@ -754,25 +688,21 @@ Base every answer strictly on real tool output.`;
       contextLimit: settings.contextLimit,
       enableScreenshots: settings.enableScreenshots,
     };
-    const profile =
-      settings.configs && settings.configs[name] ? settings.configs[name] : {};
+    const profile = settings.configs && settings.configs[name] ? settings.configs[name] : {};
     return { ...base, ...profile };
   }
 
   resolveTeamProfiles(settings: Record<string, any>) {
-    const names = Array.isArray(settings.auxAgentProfiles)
-      ? settings.auxAgentProfiles
-      : [];
+    const names = Array.isArray(settings.auxAgentProfiles) ? settings.auxAgentProfiles : [];
     const unique = Array.from(new Set(names)).filter(
-      (name): name is string =>
-        typeof name === "string" && name.trim().length > 0,
+      (name): name is string => typeof name === 'string' && name.trim().length > 0,
     );
     return unique.map((name) => {
       const profile = this.resolveProfile(settings, name);
       return {
         name,
-        provider: profile.provider || "",
-        model: profile.model || "",
+        provider: profile.provider || '',
+        model: profile.model || '',
       };
     });
   }
@@ -784,24 +714,23 @@ Base every answer strictly on real tool output.`;
   ) {
     let tools = this.browserTools.getToolDefinitions();
     if (settings && settings.enableScreenshots === false) {
-      tools = tools.filter((tool) => tool.name !== "screenshot");
+      tools = tools.filter((tool) => tool.name !== 'screenshot');
     }
     tools = tools.concat([
       {
-        name: "set_plan",
-        description:
-          "Define or update a short ordered plan before executing tools.",
+        name: 'set_plan',
+        description: 'Define or update a short ordered plan before executing tools.',
         input_schema: {
-          type: "object",
+          type: 'object',
           properties: {
             plan: {
-              type: "string",
-              description: "Plan text as a bullet list or numbered list",
+              type: 'string',
+              description: 'Plan text as a bullet list or numbered list',
             },
             steps: {
-              type: "array",
-              items: { type: "string" },
-              description: "Ordered list of plan steps",
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Ordered list of plan steps',
             },
           },
         },
@@ -809,58 +738,54 @@ Base every answer strictly on real tool output.`;
     ]);
 
     if (includeOrchestrator) {
-      const teamNames = Array.isArray(teamProfiles)
-        ? teamProfiles.map((profile) => profile.name).filter(Boolean)
-        : [];
+      const teamNames = Array.isArray(teamProfiles) ? teamProfiles.map((profile) => profile.name).filter(Boolean) : [];
       const profileSchema: {
         type: string;
         description: string;
         enum?: string[];
       } = {
-        type: "string",
+        type: 'string',
         description: teamNames.length
-          ? `Name of saved profile to use. Available: ${teamNames.join(", ")}`
-          : "Name of saved profile to use.",
+          ? `Name of saved profile to use. Available: ${teamNames.join(', ')}`
+          : 'Name of saved profile to use.',
       };
       if (teamNames.length) {
         profileSchema.enum = teamNames;
       }
       tools = tools.concat([
         {
-          name: "spawn_subagent",
-          description:
-            "Start a focused sub-agent with its own goal, prompt, and optional profile override.",
+          name: 'spawn_subagent',
+          description: 'Start a focused sub-agent with its own goal, prompt, and optional profile override.',
           input_schema: {
-            type: "object",
+            type: 'object',
             properties: {
               profile: profileSchema,
               prompt: {
-                type: "string",
-                description: "System prompt for the sub-agent",
+                type: 'string',
+                description: 'System prompt for the sub-agent',
               },
               tasks: {
-                type: "array",
-                items: { type: "string" },
-                description: "Task list for the sub-agent",
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Task list for the sub-agent',
               },
               goal: {
-                type: "string",
-                description: "Single goal string if tasks not provided",
+                type: 'string',
+                description: 'Single goal string if tasks not provided',
               },
             },
           },
         },
         {
-          name: "subagent_complete",
-          description:
-            "Sub-agent calls this when finished to return a summary payload.",
+          name: 'subagent_complete',
+          description: 'Sub-agent calls this when finished to return a summary payload.',
           input_schema: {
-            type: "object",
+            type: 'object',
             properties: {
-              summary: { type: "string" },
-              data: { type: "object" },
+              summary: { type: 'string' },
+              data: { type: 'object' },
             },
-            required: ["summary"],
+            required: ['summary'],
           },
         },
       ]);
@@ -872,7 +797,7 @@ Base every answer strictly on real tool output.`;
     if (this.subAgentCount >= 10) {
       return {
         success: false,
-        error: "Sub-agent limit reached for this session (max 10).",
+        error: 'Sub-agent limit reached for this session (max 10).',
       };
     }
     this.subAgentCount += 1;
@@ -883,28 +808,24 @@ Base every answer strictly on real tool output.`;
         ? this.currentSettings.auxAgentProfiles
         : [];
       if (teamProfiles.length) {
-        profileName =
-          teamProfiles[this.subAgentProfileCursor % teamProfiles.length];
+        profileName = teamProfiles[this.subAgentProfileCursor % teamProfiles.length];
         this.subAgentProfileCursor += 1;
       }
     }
     if (!profileName) {
-      profileName = this.currentSettings?.activeConfig || "default";
+      profileName = this.currentSettings?.activeConfig || 'default';
     }
-    const profileSettings = this.resolveProfile(
-      this.currentSettings || {},
-      profileName,
-    );
+    const profileSettings = this.resolveProfile(this.currentSettings || {}, profileName);
 
     const subagentName = args.name || `Sub-Agent ${this.subAgentCount}`;
     this.sendRuntime(runMeta, {
-      type: "subagent_start",
+      type: 'subagent_start',
       id: subagentId,
       name: subagentName,
-      tasks: args.tasks || [args.goal || args.task || "Task"],
+      tasks: args.tasks || [args.goal || args.task || 'Task'],
     });
 
-    const subAgentSystemPrompt = `${args.prompt || "You are a focused sub-agent working under an orchestrator. Be concise and tool-driven."}
+    const subAgentSystemPrompt = `${args.prompt || 'You are a focused sub-agent working under an orchestrator. Be concise and tool-driven.'}
 Always cite evidence from tools. Finish by calling subagent_complete with a short summary and any structured findings.`;
 
     const tools = this.getToolsForSession(this.currentSettings || {}, false);
@@ -927,16 +848,16 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
     });
     const sessionTabs = this.browserTools.getSessionTabSummaries();
     const sessionTabContext = sessionTabs
-      .filter((tab) => typeof tab.id === "number")
+      .filter((tab) => typeof tab.id === 'number')
       .map((tab) => ({ id: tab.id as number, title: tab.title, url: tab.url }));
     const taskLines = Array.isArray(args.tasks)
-      ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join("\n")
-      : args.goal || args.task || args.prompt || "";
+      ? args.tasks.map((t, idx) => `${idx + 1}. ${t}`).join('\n')
+      : args.goal || args.task || args.prompt || '';
 
     const subHistory: Message[] = [
       {
-        role: "user",
-        content: `Task group:\n${taskLines || "Follow the provided prompt and complete the goal."}`,
+        role: 'user',
+        content: `Task group:\n${taskLines || 'Follow the provided prompt and complete the goal.'}`,
       },
     ];
 
@@ -951,11 +872,10 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
       stopWhen: stepCountIs(24),
     });
 
-    const summary =
-      (await result.text) || "Sub-agent finished without a final summary.";
+    const summary = (await result.text) || 'Sub-agent finished without a final summary.';
 
     this.sendRuntime(runMeta, {
-      type: "subagent_complete",
+      type: 'subagent_complete',
       id: subagentId,
       success: true,
       summary,
@@ -963,7 +883,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
 
     return {
       success: true,
-      source: "subagent",
+      source: 'subagent',
       id: subagentId,
       name: subagentName,
       summary,

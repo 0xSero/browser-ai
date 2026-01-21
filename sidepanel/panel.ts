@@ -1,15 +1,12 @@
-import {
-  createMessage,
-  normalizeConversationHistory,
-} from "../ai/message-schema.js";
-import type { Message } from "../ai/message-schema.js";
-import { dedupeThinking, extractThinking } from "../ai/message-utils.js";
-import type { RunPlan } from "../types/plan.js";
-import { isRuntimeMessage } from "../types/runtime-messages.js";
-import { AccountClient } from "./account-client.js";
+import { createMessage, normalizeConversationHistory } from '../ai/message-schema.js';
+import type { Message } from '../ai/message-schema.js';
+import { dedupeThinking, extractThinking } from '../ai/message-utils.js';
+import type { RunPlan } from '../types/plan.js';
+import { isRuntimeMessage } from '../types/runtime-messages.js';
+import { AccountClient } from './account-client.js';
 
 type AuthState = {
-  status: "signed_out" | "device_code" | "signed_in";
+  status: 'signed_out' | 'device_code' | 'signed_in';
   code?: string;
   deviceCode?: string;
   verificationUrl?: string;
@@ -76,7 +73,7 @@ class SidePanelUI {
   streamingState: {
     container: HTMLElement;
     eventsEl: HTMLElement | null;
-    lastEventType?: "text" | "reasoning" | "tool" | "plan";
+    lastEventType?: 'text' | 'reasoning' | 'tool' | 'plan';
     textEventEl?: HTMLElement | null;
     reasoningEventEl?: HTMLElement | null;
     textBuffer?: string;
@@ -97,8 +94,8 @@ class SidePanelUI {
   lastUsage: UsageStats | null;
   sessionTokenTotals: UsageStats;
   auxAgentProfiles: string[];
-  currentView: "chat" | "history";
-  currentSettingsTab: "general" | "profiles";
+  currentView: 'chat' | 'history';
+  currentSettingsTab: 'general' | 'profiles';
   profileEditorTarget: string;
   authState: AuthState;
   entitlement: Entitlement;
@@ -106,10 +103,7 @@ class SidePanelUI {
   accessPanelVisible: boolean;
   settingsOpen: boolean;
   accountClient: AccountClient;
-  subagents: Map<
-    string,
-    { name: string; status: string; messages: any[]; tasks?: string[] }
-  >;
+  subagents: Map<string, { name: string; status: string; messages: any[]; tasks?: string[] }>;
   activeAgent: string;
   activityPanelOpen: boolean;
   latestThinking: string | null;
@@ -120,190 +114,176 @@ class SidePanelUI {
   constructor() {
     this.elements = {
       // Sidebar elements
-      sidebar: document.getElementById("sidebar"),
-      openSidebarBtn: document.getElementById("openSidebarBtn"),
-      closeSidebarBtn: document.getElementById("closeSidebarBtn"),
-      navChatBtn: document.getElementById("navChatBtn"),
-      navHistoryBtn: document.getElementById("navHistoryBtn"),
-      navSettingsBtn: document.getElementById("navSettingsBtn"),
-      navAccountBtn: document.getElementById("navAccountBtn"),
-      accountNavLabel: document.getElementById("accountNavLabel"),
-      sidebarPanels: document.getElementById("sidebarPanels"),
+      sidebar: document.getElementById('sidebar'),
+      openSidebarBtn: document.getElementById('openSidebarBtn'),
+      closeSidebarBtn: document.getElementById('closeSidebarBtn'),
+      navChatBtn: document.getElementById('navChatBtn'),
+      navHistoryBtn: document.getElementById('navHistoryBtn'),
+      navSettingsBtn: document.getElementById('navSettingsBtn'),
+      navAccountBtn: document.getElementById('navAccountBtn'),
+      accountNavLabel: document.getElementById('accountNavLabel'),
+      sidebarPanels: document.getElementById('sidebarPanels'),
       // Legacy references (kept for compatibility)
-      settingsBtn: document.getElementById("settingsBtn"),
-      accountBtn: document.getElementById("accountBtn"),
-      settingsPanel: document.getElementById("settingsPanel"),
-      chatInterface: document.getElementById("chatInterface"),
-      accessPanel: document.getElementById("accessPanel"),
-      authPanel: document.getElementById("authPanel"),
-      billingPanel: document.getElementById("billingPanel"),
-      accountPanel: document.getElementById("accountPanel"),
-      authSubtitle: document.getElementById("authSubtitle"),
-      accessConfigPrompt: document.getElementById("accessConfigPrompt"),
-      authForm: document.getElementById("authForm"),
-      authEmail: document.getElementById("authEmail"),
-      authStartBtn: document.getElementById("authStartBtn"),
-      authOpenBtn: document.getElementById("authOpenBtn"),
-      authOpenSettingsBtn: document.getElementById("authOpenSettingsBtn"),
-      authTokenInput: document.getElementById("authTokenInput"),
-      authTokenSaveBtn: document.getElementById("authTokenSaveBtn"),
-      billingStartBtn: document.getElementById("billingStartBtn"),
-      billingManageBtn: document.getElementById("billingManageBtn"),
-      authLogoutBtn: document.getElementById("authLogoutBtn"),
-      accountGreeting: document.getElementById("accountGreeting"),
-      accountSubtext: document.getElementById("accountSubtext"),
-      accountRefreshBtn: document.getElementById("accountRefreshBtn"),
-      statusText: document.getElementById("statusText"),
-      statusMeta: document.getElementById("statusMeta"),
-      activityPanel: document.getElementById("activityPanel"),
-      activityCloseBtn: document.getElementById("activityCloseBtn"),
-      toolLog: document.getElementById("toolLog"),
-      thinkingPanel: document.getElementById("thinkingPanel"),
-      agentNav: document.getElementById("agentNav"),
+      settingsBtn: document.getElementById('settingsBtn'),
+      accountBtn: document.getElementById('accountBtn'),
+      settingsPanel: document.getElementById('settingsPanel'),
+      chatInterface: document.getElementById('chatInterface'),
+      accessPanel: document.getElementById('accessPanel'),
+      authPanel: document.getElementById('authPanel'),
+      billingPanel: document.getElementById('billingPanel'),
+      accountPanel: document.getElementById('accountPanel'),
+      authSubtitle: document.getElementById('authSubtitle'),
+      accessConfigPrompt: document.getElementById('accessConfigPrompt'),
+      authForm: document.getElementById('authForm'),
+      authEmail: document.getElementById('authEmail'),
+      authStartBtn: document.getElementById('authStartBtn'),
+      authOpenBtn: document.getElementById('authOpenBtn'),
+      authOpenSettingsBtn: document.getElementById('authOpenSettingsBtn'),
+      authTokenInput: document.getElementById('authTokenInput'),
+      authTokenSaveBtn: document.getElementById('authTokenSaveBtn'),
+      billingStartBtn: document.getElementById('billingStartBtn'),
+      billingManageBtn: document.getElementById('billingManageBtn'),
+      authLogoutBtn: document.getElementById('authLogoutBtn'),
+      accountGreeting: document.getElementById('accountGreeting'),
+      accountSubtext: document.getElementById('accountSubtext'),
+      accountRefreshBtn: document.getElementById('accountRefreshBtn'),
+      statusText: document.getElementById('statusText'),
+      statusMeta: document.getElementById('statusMeta'),
+      activityPanel: document.getElementById('activityPanel'),
+      activityCloseBtn: document.getElementById('activityCloseBtn'),
+      toolLog: document.getElementById('toolLog'),
+      thinkingPanel: document.getElementById('thinkingPanel'),
+      agentNav: document.getElementById('agentNav'),
 
-      tabSelectorBtn: document.getElementById("tabSelectorBtn"),
-      tabSelector: document.getElementById("tabSelector"),
-      tabList: document.getElementById("tabList"),
-      closeTabSelector: document.getElementById("closeTabSelector"),
-      selectedTabsBar: document.getElementById("selectedTabsBar"),
-      scrollToLatestBtn: document.getElementById("scrollToLatestBtn"),
-      viewChatBtn: document.getElementById("viewChatBtn"),
-      viewHistoryBtn: document.getElementById("viewHistoryBtn"),
-      historyPanel: document.getElementById("historyPanel"),
-      historyItems: document.getElementById("historyItems"),
-      startNewSessionBtn: document.getElementById("startNewSessionBtn"),
-      settingsTabGeneralBtn: document.getElementById("settingsTabGeneralBtn"),
-      settingsTabProfilesBtn: document.getElementById("settingsTabProfilesBtn"),
-      settingsTabGeneral: document.getElementById("settingsTabGeneral"),
-      settingsTabProfiles: document.getElementById("settingsTabProfiles"),
-      newProfileNameInput: document.getElementById("newProfileNameInput"),
-      createProfileBtn: document.getElementById("createProfileBtn"),
-      openGeneralBtn: document.getElementById("openGeneralBtn"),
-      openProfilesBtn: document.getElementById("openProfilesBtn"),
-      generalProfileSelect: document.getElementById("generalProfileSelect"),
-      profileEditorTitle: document.getElementById("profileEditorTitle"),
-      profileEditorName: document.getElementById("profileEditorName"),
-      profileEditorProvider: document.getElementById("profileEditorProvider"),
-      profileEditorApiKey: document.getElementById("profileEditorApiKey"),
-      profileEditorModel: document.getElementById("profileEditorModel"),
-      profileEditorEndpoint: document.getElementById("profileEditorEndpoint"),
-      profileEditorEndpointGroup: document.getElementById(
-        "profileEditorEndpointGroup",
-      ),
-      profileEditorTemperature: document.getElementById(
-        "profileEditorTemperature",
-      ),
-      profileEditorTemperatureValue: document.getElementById(
-        "profileEditorTemperatureValue",
-      ),
-      profileEditorMaxTokens: document.getElementById("profileEditorMaxTokens"),
-      profileEditorTimeout: document.getElementById("profileEditorTimeout"),
-      profileEditorEnableScreenshots: document.getElementById(
-        "profileEditorEnableScreenshots",
-      ),
-      profileEditorSendScreenshots: document.getElementById(
-        "profileEditorSendScreenshots",
-      ),
-      profileEditorScreenshotQuality: document.getElementById(
-        "profileEditorScreenshotQuality",
-      ),
-      profileEditorPrompt: document.getElementById("profileEditorPrompt"),
-      saveProfileBtn: document.getElementById("saveProfileBtn"),
-      permissionRead: document.getElementById("permissionRead"),
-      permissionInteract: document.getElementById("permissionInteract"),
-      permissionNavigate: document.getElementById("permissionNavigate"),
-      permissionTabs: document.getElementById("permissionTabs"),
-      permissionScreenshots: document.getElementById("permissionScreenshots"),
-      allowedDomains: document.getElementById("allowedDomains"),
-      accountSettingsSection: document.getElementById("accountSettingsSection"),
-      accountApiBaseGroup: document.getElementById("accountApiBaseGroup"),
-      accountApiBase: document.getElementById("accountApiBase"),
-      exportSettingsBtn: document.getElementById("exportSettingsBtn"),
-      importSettingsBtn: document.getElementById("importSettingsBtn"),
-      importSettingsInput: document.getElementById("importSettingsInput"),
-      accessStatus: document.getElementById("accessStatus"),
+      tabSelectorBtn: document.getElementById('tabSelectorBtn'),
+      tabSelector: document.getElementById('tabSelector'),
+      tabList: document.getElementById('tabList'),
+      closeTabSelector: document.getElementById('closeTabSelector'),
+      selectedTabsBar: document.getElementById('selectedTabsBar'),
+      scrollToLatestBtn: document.getElementById('scrollToLatestBtn'),
+      viewChatBtn: document.getElementById('viewChatBtn'),
+      viewHistoryBtn: document.getElementById('viewHistoryBtn'),
+      historyPanel: document.getElementById('historyPanel'),
+      historyItems: document.getElementById('historyItems'),
+      startNewSessionBtn: document.getElementById('startNewSessionBtn'),
+      settingsTabGeneralBtn: document.getElementById('settingsTabGeneralBtn'),
+      settingsTabProfilesBtn: document.getElementById('settingsTabProfilesBtn'),
+      settingsTabGeneral: document.getElementById('settingsTabGeneral'),
+      settingsTabProfiles: document.getElementById('settingsTabProfiles'),
+      newProfileNameInput: document.getElementById('newProfileNameInput'),
+      createProfileBtn: document.getElementById('createProfileBtn'),
+      openGeneralBtn: document.getElementById('openGeneralBtn'),
+      openProfilesBtn: document.getElementById('openProfilesBtn'),
+      generalProfileSelect: document.getElementById('generalProfileSelect'),
+      profileEditorTitle: document.getElementById('profileEditorTitle'),
+      profileEditorName: document.getElementById('profileEditorName'),
+      profileEditorProvider: document.getElementById('profileEditorProvider'),
+      profileEditorApiKey: document.getElementById('profileEditorApiKey'),
+      profileEditorModel: document.getElementById('profileEditorModel'),
+      profileEditorEndpoint: document.getElementById('profileEditorEndpoint'),
+      profileEditorEndpointGroup: document.getElementById('profileEditorEndpointGroup'),
+      profileEditorTemperature: document.getElementById('profileEditorTemperature'),
+      profileEditorTemperatureValue: document.getElementById('profileEditorTemperatureValue'),
+      profileEditorMaxTokens: document.getElementById('profileEditorMaxTokens'),
+      profileEditorTimeout: document.getElementById('profileEditorTimeout'),
+      profileEditorEnableScreenshots: document.getElementById('profileEditorEnableScreenshots'),
+      profileEditorSendScreenshots: document.getElementById('profileEditorSendScreenshots'),
+      profileEditorScreenshotQuality: document.getElementById('profileEditorScreenshotQuality'),
+      profileEditorPrompt: document.getElementById('profileEditorPrompt'),
+      saveProfileBtn: document.getElementById('saveProfileBtn'),
+      permissionRead: document.getElementById('permissionRead'),
+      permissionInteract: document.getElementById('permissionInteract'),
+      permissionNavigate: document.getElementById('permissionNavigate'),
+      permissionTabs: document.getElementById('permissionTabs'),
+      permissionScreenshots: document.getElementById('permissionScreenshots'),
+      allowedDomains: document.getElementById('allowedDomains'),
+      accountSettingsSection: document.getElementById('accountSettingsSection'),
+      accountApiBaseGroup: document.getElementById('accountApiBaseGroup'),
+      accountApiBase: document.getElementById('accountApiBase'),
+      exportSettingsBtn: document.getElementById('exportSettingsBtn'),
+      importSettingsBtn: document.getElementById('importSettingsBtn'),
+      importSettingsInput: document.getElementById('importSettingsInput'),
+      accessStatus: document.getElementById('accessStatus'),
 
       // Form elements - Provider & model
-      provider: document.getElementById("provider"),
-      apiKey: document.getElementById("apiKey"),
-      model: document.getElementById("model"),
-      customEndpoint: document.getElementById("customEndpoint"),
-      customEndpointGroup: document.getElementById("customEndpointGroup"),
+      provider: document.getElementById('provider'),
+      apiKey: document.getElementById('apiKey'),
+      model: document.getElementById('model'),
+      customEndpoint: document.getElementById('customEndpoint'),
+      customEndpointGroup: document.getElementById('customEndpointGroup'),
 
       // Form elements - Model parameters
-      temperature: document.getElementById("temperature"),
-      temperatureValue: document.getElementById("temperatureValue"),
-      maxTokens: document.getElementById("maxTokens"),
-      contextLimit: document.getElementById("contextLimit"),
-      timeout: document.getElementById("timeout"),
+      temperature: document.getElementById('temperature'),
+      temperatureValue: document.getElementById('temperatureValue'),
+      maxTokens: document.getElementById('maxTokens'),
+      contextLimit: document.getElementById('contextLimit'),
+      timeout: document.getElementById('timeout'),
 
       // Form elements - Screenshots & vision
-      enableScreenshots: document.getElementById("enableScreenshots"),
-      sendScreenshotsAsImages: document.getElementById(
-        "sendScreenshotsAsImages",
-      ),
-      screenshotQuality: document.getElementById("screenshotQuality"),
-      visionBridge: document.getElementById("visionBridge"),
-      visionProfile: document.getElementById("visionProfile"),
+      enableScreenshots: document.getElementById('enableScreenshots'),
+      sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
+      screenshotQuality: document.getElementById('screenshotQuality'),
+      visionBridge: document.getElementById('visionBridge'),
+      visionProfile: document.getElementById('visionProfile'),
 
       // Form elements - Behavior
-      showThinking: document.getElementById("showThinking"),
-      streamResponses: document.getElementById("streamResponses"),
-      autoScroll: document.getElementById("autoScroll"),
-      confirmActions: document.getElementById("confirmActions"),
-      saveHistory: document.getElementById("saveHistory"),
+      showThinking: document.getElementById('showThinking'),
+      streamResponses: document.getElementById('streamResponses'),
+      autoScroll: document.getElementById('autoScroll'),
+      confirmActions: document.getElementById('confirmActions'),
+      saveHistory: document.getElementById('saveHistory'),
 
       // Form elements - Orchestrator
-      orchestratorToggle: document.getElementById("orchestratorToggle"),
-      orchestratorProfile: document.getElementById("orchestratorProfile"),
+      orchestratorToggle: document.getElementById('orchestratorToggle'),
+      orchestratorProfile: document.getElementById('orchestratorProfile'),
 
       // Form elements - System prompt
-      systemPrompt: document.getElementById("systemPrompt"),
+      systemPrompt: document.getElementById('systemPrompt'),
 
       // Settings actions
-      saveSettingsBtn: document.getElementById("saveSettingsBtn"),
-      cancelSettingsBtn: document.getElementById("cancelSettingsBtn"),
+      saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+      cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
 
       // Profile management
-      activeConfig: document.getElementById("activeConfig"),
-      newConfigBtn: document.getElementById("newConfigBtn"),
-      deleteConfigBtn: document.getElementById("deleteConfigBtn"),
-      refreshProfilesBtn: document.getElementById("refreshProfilesBtn"),
-      agentGrid: document.getElementById("agentGrid"),
+      activeConfig: document.getElementById('activeConfig'),
+      newConfigBtn: document.getElementById('newConfigBtn'),
+      deleteConfigBtn: document.getElementById('deleteConfigBtn'),
+      refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
+      agentGrid: document.getElementById('agentGrid'),
 
       // Chat interface
-      chatMessages: document.getElementById("chatMessages"),
-      userInput: document.getElementById("userInput"),
-      sendBtn: document.getElementById("sendBtn"),
-      composer: document.getElementById("composer"),
-      modelSelect: document.getElementById("modelSelect"),
-      fileBtn: document.getElementById("fileBtn"),
-      fileInput: document.getElementById("fileInput"),
-      planStatus: document.getElementById("planStatus"),
+      chatMessages: document.getElementById('chatMessages'),
+      userInput: document.getElementById('userInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      composer: document.getElementById('composer'),
+      modelSelect: document.getElementById('modelSelect'),
+      fileBtn: document.getElementById('fileBtn'),
+      fileInput: document.getElementById('fileInput'),
+      planStatus: document.getElementById('planStatus'),
 
       // Account panel elements
-      accountCheckoutBtn: document.getElementById("accountCheckoutBtn"),
-      accountPortalBtn: document.getElementById("accountPortalBtn"),
-      accountLogoutBtn: document.getElementById("accountLogoutBtn"),
-      accountOpenSettingsBtn: document.getElementById("accountOpenSettingsBtn"),
-      accountOpenProfilesBtn: document.getElementById("accountOpenProfilesBtn"),
-      accountOpenHistoryBtn: document.getElementById("accountOpenHistoryBtn"),
-      accountPlanStatus: document.getElementById("accountPlanStatus"),
-      accountPlanBadge: document.getElementById("accountPlanBadge"),
-      accountPlanDetails: document.getElementById("accountPlanDetails"),
-      accountBillingSummary: document.getElementById("accountBillingSummary"),
-      accountSettingsSummary: document.getElementById("accountSettingsSummary"),
-      accountConfigs: document.getElementById("accountConfigs"),
-      accountHistory: document.getElementById("accountHistory"),
-      accountInvoices: document.getElementById("accountInvoices"),
+      accountCheckoutBtn: document.getElementById('accountCheckoutBtn'),
+      accountPortalBtn: document.getElementById('accountPortalBtn'),
+      accountLogoutBtn: document.getElementById('accountLogoutBtn'),
+      accountOpenSettingsBtn: document.getElementById('accountOpenSettingsBtn'),
+      accountOpenProfilesBtn: document.getElementById('accountOpenProfilesBtn'),
+      accountOpenHistoryBtn: document.getElementById('accountOpenHistoryBtn'),
+      accountPlanStatus: document.getElementById('accountPlanStatus'),
+      accountPlanBadge: document.getElementById('accountPlanBadge'),
+      accountPlanDetails: document.getElementById('accountPlanDetails'),
+      accountBillingSummary: document.getElementById('accountBillingSummary'),
+      accountSettingsSummary: document.getElementById('accountSettingsSummary'),
+      accountConfigs: document.getElementById('accountConfigs'),
+      accountHistory: document.getElementById('accountHistory'),
+      accountInvoices: document.getElementById('accountInvoices'),
     };
 
     this.displayHistory = [];
     this.contextHistory = [];
     this.sessionId = `session-${Date.now()}`;
     this.sessionStartedAt = Date.now();
-    this.firstUserMessage = "";
-    this.currentConfig = "default";
+    this.firstUserMessage = '';
+    this.currentConfig = 'default';
     this.configs = { default: {} };
     this.toolCallViews = new Map();
     this.lastChatTurn = null;
@@ -329,25 +309,25 @@ class SidePanelUI {
       totalTokens: 0,
     };
     this.auxAgentProfiles = [];
-    this.currentView = "chat";
-    this.currentSettingsTab = "general";
-    this.profileEditorTarget = "default";
-    this.authState = { status: "signed_out" };
-    this.entitlement = { active: false, plan: "none" };
+    this.currentView = 'chat';
+    this.currentSettingsTab = 'general';
+    this.profileEditorTarget = 'default';
+    this.authState = { status: 'signed_out' };
+    this.entitlement = { active: false, plan: 'none' };
     this.billingOverview = null;
     this.accessPanelVisible = false;
     this.settingsOpen = false;
     this.accountClient = new AccountClient({
-      baseUrl: "",
-      getAuthToken: () => this.authState?.accessToken || "",
+      baseUrl: '',
+      getAuthToken: () => this.authState?.accessToken || '',
     });
     // Subagent tracking
     this.subagents = new Map(); // id -> { name, status, messages }
-    this.activeAgent = "main";
+    this.activeAgent = 'main';
     this.activityPanelOpen = false;
     this.latestThinking = null;
     this.activeToolName = null;
-    this.streamingReasoning = "";
+    this.streamingReasoning = '';
     this.currentPlan = null;
     this.init();
   }
@@ -356,12 +336,12 @@ class SidePanelUI {
     this.setupEventListeners();
     this.setupResizeObserver();
     // Start with sidebar closed by default
-    this.elements.sidebar?.classList.add("closed");
+    this.elements.sidebar?.classList.add('closed');
     await this.loadSettings();
     await this.loadHistoryList();
     await this.loadAccessState();
     if (this.isAccessReady()) {
-      this.updateStatus("Ready", "success");
+      this.updateStatus('Ready', 'success');
     }
     this.updateModelDisplay();
     this.fetchAvailableModels();
@@ -369,268 +349,184 @@ class SidePanelUI {
 
   setupEventListeners() {
     // Sidebar toggle
-    this.elements.openSidebarBtn?.addEventListener("click", () => {
-      this.elements.sidebar?.classList.remove("closed");
+    this.elements.openSidebarBtn?.addEventListener('click', () => {
+      this.elements.sidebar?.classList.remove('closed');
     });
-    this.elements.closeSidebarBtn?.addEventListener("click", () => {
-      this.elements.sidebar?.classList.add("closed");
+    this.elements.closeSidebarBtn?.addEventListener('click', () => {
+      this.elements.sidebar?.classList.add('closed');
     });
 
     // Sidebar navigation
-    this.elements.navChatBtn?.addEventListener("click", () => {
+    this.elements.navChatBtn?.addEventListener('click', () => {
       this.showSidebarPanel(null);
-      this.switchView("chat");
-      this.updateNavActive("chat");
+      this.switchView('chat');
+      this.updateNavActive('chat');
     });
 
-    this.elements.navHistoryBtn?.addEventListener("click", () => {
-      this.showSidebarPanel("history");
-      this.updateNavActive("history");
+    this.elements.navHistoryBtn?.addEventListener('click', () => {
+      this.showSidebarPanel('history');
+      this.updateNavActive('history');
     });
-    this.elements.navSettingsBtn?.addEventListener("click", () => {
-      this.showSidebarPanel("settings");
-      this.updateNavActive("settings");
+    this.elements.navSettingsBtn?.addEventListener('click', () => {
+      this.showSidebarPanel('settings');
+      this.updateNavActive('settings');
     });
-    this.elements.navAccountBtn?.addEventListener("click", () => {
-      this.showSidebarPanel("account");
-      this.updateNavActive("account");
+    this.elements.navAccountBtn?.addEventListener('click', () => {
+      this.showSidebarPanel('account');
+      this.updateNavActive('account');
     });
 
     // Legacy settings toggle (if old button exists)
-    this.elements.settingsBtn?.addEventListener("click", () => {
+    this.elements.settingsBtn?.addEventListener('click', () => {
       void this.toggleSettings();
     });
 
-    this.elements.accountBtn?.addEventListener("click", () => {
+    this.elements.accountBtn?.addEventListener('click', () => {
       this.toggleAccessPanel();
     });
 
-    this.elements.authStartBtn?.addEventListener("click", (event) => {
+    this.elements.authStartBtn?.addEventListener('click', (event) => {
       event?.preventDefault?.();
       this.startEmailAuth();
     });
-    this.elements.authForm?.addEventListener("submit", (event) => {
+    this.elements.authForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       this.startEmailAuth();
     });
-    this.elements.authOpenBtn?.addEventListener("click", () =>
-      this.openAuthPage(),
-    );
-    this.elements.authTokenSaveBtn?.addEventListener("click", () =>
-      this.saveAccessToken(),
-    );
-    this.elements.authOpenSettingsBtn?.addEventListener("click", () =>
+    this.elements.authOpenBtn?.addEventListener('click', () => this.openAuthPage());
+    this.elements.authTokenSaveBtn?.addEventListener('click', () => this.saveAccessToken());
+    this.elements.authOpenSettingsBtn?.addEventListener('click', () =>
       this.openAccountSettings({ focusAccountApi: true }),
     );
-    this.elements.billingStartBtn?.addEventListener("click", () =>
-      this.startSubscription(),
-    );
-    this.elements.billingManageBtn?.addEventListener("click", () =>
-      this.manageBilling(),
-    );
-    this.elements.authLogoutBtn?.addEventListener("click", () =>
-      this.signOut(),
-    );
-    this.elements.accountRefreshBtn?.addEventListener("click", () =>
-      this.refreshAccountData(),
-    );
-    this.elements.accountCheckoutBtn?.addEventListener("click", () =>
-      this.startSubscription(),
-    );
-    this.elements.accountPortalBtn?.addEventListener("click", () =>
-      this.manageBilling(),
-    );
-    this.elements.accountOpenSettingsBtn?.addEventListener("click", () =>
-      this.openSettingsFromAccount(),
-    );
-    this.elements.accountOpenProfilesBtn?.addEventListener("click", () =>
-      this.openProfilesFromAccount(),
-    );
-    this.elements.accountOpenHistoryBtn?.addEventListener("click", () =>
-      this.openHistoryFromAccount(),
-    );
-    this.elements.accountLogoutBtn?.addEventListener("click", () =>
-      this.signOut(),
-    );
+    this.elements.billingStartBtn?.addEventListener('click', () => this.startSubscription());
+    this.elements.billingManageBtn?.addEventListener('click', () => this.manageBilling());
+    this.elements.authLogoutBtn?.addEventListener('click', () => this.signOut());
+    this.elements.accountRefreshBtn?.addEventListener('click', () => this.refreshAccountData());
+    this.elements.accountCheckoutBtn?.addEventListener('click', () => this.startSubscription());
+    this.elements.accountPortalBtn?.addEventListener('click', () => this.manageBilling());
+    this.elements.accountOpenSettingsBtn?.addEventListener('click', () => this.openSettingsFromAccount());
+    this.elements.accountOpenProfilesBtn?.addEventListener('click', () => this.openProfilesFromAccount());
+    this.elements.accountOpenHistoryBtn?.addEventListener('click', () => this.openHistoryFromAccount());
+    this.elements.accountLogoutBtn?.addEventListener('click', () => this.signOut());
 
-    this.elements.startNewSessionBtn?.addEventListener("click", () =>
-      this.startNewSession(),
-    );
+    this.elements.startNewSessionBtn?.addEventListener('click', () => this.startNewSession());
 
     // Provider change
-    this.elements.provider.addEventListener("change", () => {
+    this.elements.provider.addEventListener('change', () => {
       this.toggleCustomEndpoint();
       this.updateScreenshotToggleState();
     });
 
     // Custom endpoint validation
-    this.elements.customEndpoint?.addEventListener("input", () =>
-      this.validateCustomEndpoint(),
-    );
+    this.elements.customEndpoint?.addEventListener('input', () => this.validateCustomEndpoint());
 
     // Temperature slider
-    this.elements.temperature.addEventListener("input", () => {
-      this.elements.temperatureValue.textContent =
-        this.elements.temperature.value;
+    this.elements.temperature.addEventListener('input', () => {
+      this.elements.temperatureValue.textContent = this.elements.temperature.value;
     });
 
     // Configuration management
-    this.elements.newConfigBtn.addEventListener("click", () =>
-      this.createNewConfig(),
-    );
-    this.elements.deleteConfigBtn.addEventListener("click", () =>
-      this.deleteConfig(),
-    );
-    this.elements.activeConfig.addEventListener("change", () =>
-      this.switchConfig(),
-    );
+    this.elements.newConfigBtn.addEventListener('click', () => this.createNewConfig());
+    this.elements.deleteConfigBtn.addEventListener('click', () => this.deleteConfig());
+    this.elements.activeConfig.addEventListener('change', () => this.switchConfig());
 
-    this.elements.settingsTabGeneralBtn?.addEventListener("click", () =>
-      this.switchSettingsTab("general"),
-    );
-    this.elements.settingsTabProfilesBtn?.addEventListener("click", () =>
-      this.switchSettingsTab("profiles"),
-    );
-    this.elements.createProfileBtn?.addEventListener("click", () =>
-      this.createProfileFromInput(),
-    );
-    this.elements.openGeneralBtn?.addEventListener("click", () =>
-      this.switchSettingsTab("general"),
-    );
-    this.elements.openProfilesBtn?.addEventListener("click", () =>
-      this.switchSettingsTab("profiles"),
-    );
-    this.elements.generalProfileSelect?.addEventListener("change", (e) =>
-      this.setActiveConfig(e.target.value),
-    );
+    this.elements.settingsTabGeneralBtn?.addEventListener('click', () => this.switchSettingsTab('general'));
+    this.elements.settingsTabProfilesBtn?.addEventListener('click', () => this.switchSettingsTab('profiles'));
+    this.elements.createProfileBtn?.addEventListener('click', () => this.createProfileFromInput());
+    this.elements.openGeneralBtn?.addEventListener('click', () => this.switchSettingsTab('general'));
+    this.elements.openProfilesBtn?.addEventListener('click', () => this.switchSettingsTab('profiles'));
+    this.elements.generalProfileSelect?.addEventListener('change', (e) => this.setActiveConfig(e.target.value));
 
-    this.elements.agentGrid?.addEventListener("click", (event) => {
-      const pill = event.target.closest(".role-pill");
+    this.elements.agentGrid?.addEventListener('click', (event) => {
+      const pill = event.target.closest('.role-pill');
       if (pill) {
         const role = pill.dataset.role;
         const profile = pill.dataset.profile;
         this.assignProfileRole(profile, role);
         return;
       }
-      const card = event.target.closest(".agent-card");
+      const card = event.target.closest('.agent-card');
       if (card) {
         const profile = card.dataset.profile;
         this.editProfile(profile);
       }
     });
-    this.elements.refreshProfilesBtn?.addEventListener("click", () =>
-      this.renderProfileGrid(),
-    );
+    this.elements.refreshProfilesBtn?.addEventListener('click', () => this.renderProfileGrid());
 
     // Agent management grid
-    this.elements.agentGrid?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-role]");
+    this.elements.agentGrid?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-role]');
       if (!button) return;
       const role = button.dataset.role;
       const profile = button.dataset.profile;
       this.assignProfileRole(profile, role);
     });
-    this.elements.refreshProfilesBtn?.addEventListener("click", () =>
-      this.renderProfileGrid(),
-    );
+    this.elements.refreshProfilesBtn?.addEventListener('click', () => this.renderProfileGrid());
 
     // View toggles
-    this.elements.viewChatBtn?.addEventListener("click", () =>
-      this.switchView("chat"),
-    );
-    this.elements.viewHistoryBtn?.addEventListener("click", () =>
-      this.switchView("history"),
-    );
+    this.elements.viewChatBtn?.addEventListener('click', () => this.switchView('chat'));
+    this.elements.viewHistoryBtn?.addEventListener('click', () => this.switchView('history'));
 
     // Screenshot + vision controls
-    this.elements.enableScreenshots?.addEventListener("change", () =>
-      this.updateScreenshotToggleState(),
-    );
-    this.elements.visionProfile?.addEventListener("change", () =>
-      this.updateScreenshotToggleState(),
-    );
-    this.elements.sendScreenshotsAsImages?.addEventListener("change", () =>
-      this.updateScreenshotToggleState(),
-    );
+    this.elements.enableScreenshots?.addEventListener('change', () => this.updateScreenshotToggleState());
+    this.elements.visionProfile?.addEventListener('change', () => this.updateScreenshotToggleState());
+    this.elements.sendScreenshotsAsImages?.addEventListener('change', () => this.updateScreenshotToggleState());
 
     // Save settings
-    this.elements.saveSettingsBtn.addEventListener("click", () => {
+    this.elements.saveSettingsBtn.addEventListener('click', () => {
       void this.saveSettings();
     });
 
     // Cancel settings
-    this.elements.cancelSettingsBtn.addEventListener("click", () => {
+    this.elements.cancelSettingsBtn.addEventListener('click', () => {
       void this.cancelSettings();
     });
 
-    this.elements.exportSettingsBtn?.addEventListener("click", () =>
-      this.exportSettings(),
-    );
-    this.elements.importSettingsBtn?.addEventListener("click", () => {
+    this.elements.exportSettingsBtn?.addEventListener('click', () => this.exportSettings());
+    this.elements.importSettingsBtn?.addEventListener('click', () => {
       this.elements.importSettingsInput?.click();
     });
-    this.elements.importSettingsInput?.addEventListener("change", (event) =>
-      this.importSettings(event),
-    );
+    this.elements.importSettingsInput?.addEventListener('change', (event) => this.importSettings(event));
 
     // Send message
-    this.elements.sendBtn.addEventListener("click", () => {
+    this.elements.sendBtn.addEventListener('click', () => {
       this.sendMessage();
     });
 
     // Enter to send (Shift+Enter for newline)
-    this.elements.userInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+    this.elements.userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage();
       }
     });
 
     // Model selector
-    this.elements.modelSelect?.addEventListener("change", () =>
-      this.handleModelSelectChange(),
-    );
+    this.elements.modelSelect?.addEventListener('change', () => this.handleModelSelectChange());
 
     // File upload
-    this.elements.fileBtn?.addEventListener("click", () => {
+    this.elements.fileBtn?.addEventListener('click', () => {
       this.elements.fileInput?.click();
     });
-    this.elements.fileInput?.addEventListener("change", (e) =>
-      this.handleFileSelection(e),
-    );
+    this.elements.fileInput?.addEventListener('change', (e) => this.handleFileSelection(e));
 
     // Tab selector
-    this.elements.tabSelectorBtn.addEventListener("click", () =>
-      this.toggleTabSelector(),
-    );
-    this.elements.closeTabSelector.addEventListener("click", () =>
-      this.closeTabSelector(),
-    );
+    this.elements.tabSelectorBtn.addEventListener('click', () => this.toggleTabSelector());
+    this.elements.closeTabSelector.addEventListener('click', () => this.closeTabSelector());
 
-    this.elements.chatMessages?.addEventListener("scroll", () =>
-      this.handleChatScroll(),
-    );
-    this.elements.scrollToLatestBtn?.addEventListener("click", () =>
-      this.scrollToBottom({ force: true }),
-    );
+    this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
+    this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));
 
-    this.elements.activityCloseBtn?.addEventListener("click", () =>
-      this.toggleActivityPanel(false),
-    );
+    this.elements.activityCloseBtn?.addEventListener('click', () => this.toggleActivityPanel(false));
 
     // Profile editor controls
-    this.elements.profileEditorProvider?.addEventListener("change", () =>
-      this.toggleProfileEditorEndpoint(),
-    );
-    this.elements.profileEditorTemperature?.addEventListener("input", () => {
+    this.elements.profileEditorProvider?.addEventListener('change', () => this.toggleProfileEditorEndpoint());
+    this.elements.profileEditorTemperature?.addEventListener('input', () => {
       if (this.elements.profileEditorTemperatureValue) {
-        this.elements.profileEditorTemperatureValue.textContent =
-          this.elements.profileEditorTemperature.value;
+        this.elements.profileEditorTemperatureValue.textContent = this.elements.profileEditorTemperature.value;
       }
     });
-    this.elements.saveProfileBtn?.addEventListener("click", () =>
-      this.saveProfileEdits(),
-    );
+    this.elements.saveProfileBtn?.addEventListener('click', () => this.saveProfileEdits());
 
     // Listen for messages from background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -639,66 +535,49 @@ class SidePanelUI {
         return;
       }
 
-      if (message.type === "tool_execution_start") {
+      if (message.type === 'tool_execution_start') {
         this.pendingToolCount += 1;
         this.clearErrorBanner();
         this.updateActivityState();
         this.activeToolName = message.tool || null;
         this.displayToolExecution(message.tool, message.args, null, message.id);
-      } else if (message.type === "tool_execution_result") {
+      } else if (message.type === 'tool_execution_result') {
         this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
         this.updateActivityState();
         this.activeToolName = null;
-        this.displayToolExecution(
-          message.tool,
-          message.args,
-          message.result,
-          message.id,
-        );
-      } else if (
-        message.type === "assistant_response" ||
-        message.type === "assistant_final"
-      ) {
-        this.displayAssistantMessage(
-          message.content,
-          message.thinking,
-          message.usage,
-          message.model,
-        );
+        this.displayToolExecution(message.tool, message.args, message.result, message.id);
+      } else if (message.type === 'assistant_response' || message.type === 'assistant_final') {
+        this.displayAssistantMessage(message.content, message.thinking, message.usage, message.model);
         if (message.usage?.inputTokens) {
           this.updateContextUsage(message.usage.inputTokens);
         } else {
           this.updateContextUsage();
         }
-      } else if (message.type === "assistant_stream_start") {
-        this.handleAssistantStream({ status: "start" });
-      } else if (message.type === "assistant_stream_delta") {
+      } else if (message.type === 'assistant_stream_start') {
+        this.handleAssistantStream({ status: 'start' });
+      } else if (message.type === 'assistant_stream_delta') {
         this.handleAssistantStream({
-          status: "delta",
+          status: 'delta',
           content: message.content,
         });
-      } else if (message.type === "assistant_stream_stop") {
-        this.handleAssistantStream({ status: "stop" });
-      } else if (message.type === "run_error" || message.type === "error") {
+      } else if (message.type === 'assistant_stream_stop') {
+        this.handleAssistantStream({ status: 'stop' });
+      } else if (message.type === 'run_error' || message.type === 'error') {
         this.showErrorBanner(message.message);
-        this.updateStatus("Error", "error");
-      } else if (message.type === "run_warning" || message.type === "warning") {
+        this.updateStatus('Error', 'error');
+      } else if (message.type === 'run_warning' || message.type === 'warning') {
         this.showErrorBanner(message.message);
-      } else if (message.type === "subagent_start") {
+      } else if (message.type === 'subagent_start') {
         this.addSubagent(message.id, message.name, message.tasks);
-        this.updateStatus(`Sub-agent "${message.name}" started`, "active");
-      } else if (message.type === "subagent_complete") {
-        this.updateSubagentStatus(
-          message.id,
-          message.success ? "completed" : "error",
-        );
+        this.updateStatus(`Sub-agent "${message.name}" started`, 'active');
+      } else if (message.type === 'subagent_complete') {
+        this.updateSubagentStatus(message.id, message.success ? 'completed' : 'error');
       }
     });
   }
 
   setupResizeObserver() {
-    if (!this.elements.chatMessages || typeof ResizeObserver === "undefined")
-      return;
+    if (!this.elements.chatMessages || typeof ResizeObserver === 'undefined') return;
     this.chatResizeObserver = new ResizeObserver(() => {
       if (this.shouldAutoScroll() && this.isNearBottom) {
         this.scrollToBottom();
@@ -708,38 +587,38 @@ class SidePanelUI {
   }
 
   handleRuntimeMessage(message) {
-    if (message.type === "assistant_stream_start") {
-      this.streamingReasoning = "";
-      this.handleAssistantStream({ status: "start" });
+    if (message.type === 'assistant_stream_start') {
+      this.streamingReasoning = '';
+      this.handleAssistantStream({ status: 'start' });
       return;
     }
-    if (message.type === "assistant_stream_delta") {
-      if (message.channel === "reasoning") {
-        const delta = message.content || "";
+    if (message.type === 'assistant_stream_delta') {
+      if (message.channel === 'reasoning') {
+        const delta = message.content || '';
         this.streamingReasoning = `${this.streamingReasoning}${delta}`;
         this.updateThinkingPanel(this.streamingReasoning, true);
         this.updateStreamReasoning(delta);
         return;
       }
-      this.handleAssistantStream({ status: "delta", content: message.content });
+      this.handleAssistantStream({ status: 'delta', content: message.content });
       return;
     }
-    if (message.type === "assistant_stream_stop") {
-      this.handleAssistantStream({ status: "stop" });
+    if (message.type === 'assistant_stream_stop') {
+      this.handleAssistantStream({ status: 'stop' });
       return;
     }
 
-    if (message.type === "plan_update") {
+    if (message.type === 'plan_update') {
       this.applyPlanUpdate(message.plan);
       return;
     }
 
-    if (message.type === "manual_plan_update") {
+    if (message.type === 'manual_plan_update') {
       this.applyManualPlanUpdate(message.steps);
       return;
     }
 
-    if (message.type === "tool_execution_start") {
+    if (message.type === 'tool_execution_start') {
       this.pendingToolCount += 1;
       this.clearErrorBanner();
       this.updateActivityState();
@@ -747,31 +626,17 @@ class SidePanelUI {
       this.displayToolExecution(message.tool, message.args, null, message.id);
       return;
     }
-    if (message.type === "tool_execution_result") {
+    if (message.type === 'tool_execution_result') {
       this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
       this.updateActivityState();
       this.activeToolName = null;
-      this.displayToolExecution(
-        message.tool,
-        message.args,
-        message.result,
-        message.id,
-      );
+      this.displayToolExecution(message.tool, message.args, message.result, message.id);
       return;
     }
 
-    if (message.type === "assistant_final") {
-      this.displayAssistantMessage(
-        message.content,
-        message.thinking,
-        message.usage,
-        message.model,
-      );
-      this.appendContextMessages(
-        message.responseMessages,
-        message.content,
-        message.thinking,
-      );
+    if (message.type === 'assistant_final') {
+      this.displayAssistantMessage(message.content, message.thinking, message.usage, message.model);
+      this.appendContextMessages(message.responseMessages, message.content, message.thinking);
       if (message.usage?.inputTokens) {
         this.updateContextUsage(message.usage.inputTokens);
       } else if (message.contextUsage?.approxTokens) {
@@ -782,30 +647,27 @@ class SidePanelUI {
       return;
     }
 
-    if (message.type === "context_compacted") {
+    if (message.type === 'context_compacted') {
       this.handleContextCompaction(message);
       return;
     }
 
-    if (message.type === "run_error") {
+    if (message.type === 'run_error') {
       this.showErrorBanner(message.message);
-      this.updateStatus("Error", "error");
+      this.updateStatus('Error', 'error');
       return;
     }
-    if (message.type === "run_warning") {
+    if (message.type === 'run_warning') {
       this.showErrorBanner(message.message);
       return;
     }
-    if (message.type === "subagent_start") {
+    if (message.type === 'subagent_start') {
       this.addSubagent(message.id, message.name, message.tasks);
-      this.updateStatus(`Sub-agent "${message.name}" started`, "active");
+      this.updateStatus(`Sub-agent "${message.name}" started`, 'active');
       return;
     }
-    if (message.type === "subagent_complete") {
-      this.updateSubagentStatus(
-        message.id,
-        message.success ? "completed" : "error",
-      );
+    if (message.type === 'subagent_complete') {
+      this.updateSubagentStatus(message.id, message.success ? 'completed' : 'error');
       return;
     }
   }
@@ -817,8 +679,8 @@ class SidePanelUI {
   ) {
     if (!responseMessages || responseMessages.length === 0) {
       const assistantEntry = createMessage({
-        role: "assistant",
-        content: fallbackContent || "",
+        role: 'assistant',
+        content: fallbackContent || '',
         thinking: fallbackThinking || null,
       });
       if (assistantEntry) {
@@ -826,27 +688,23 @@ class SidePanelUI {
       }
       return;
     }
-    const normalized = normalizeConversationHistory(
-      responseMessages as unknown as Message[],
-    );
+    const normalized = normalizeConversationHistory(responseMessages as unknown as Message[]);
     this.contextHistory.push(...normalized);
   }
 
   handleContextCompaction(message) {
-    const normalized = normalizeConversationHistory(
-      message.contextMessages as unknown as Message[],
-    );
+    const normalized = normalizeConversationHistory(message.contextMessages as unknown as Message[]);
     this.contextHistory = normalized;
     this.sessionId = message.newSessionId || this.sessionId;
 
-    const summaryText = message.summary || "Context compacted.";
+    const summaryText = message.summary || 'Context compacted.';
     const summaryEntry = createMessage({
-      role: "system",
+      role: 'system',
       content: summaryText,
       meta: {
-        kind: "summary",
+        kind: 'summary',
         summaryOfCount: message.trimmedCount,
-        source: "auto",
+        source: 'auto',
       },
     });
     if (summaryEntry) {
@@ -860,23 +718,23 @@ class SidePanelUI {
   }
 
   async toggleSettings(saveOnClose = true) {
-    const isOpen = !this.elements.settingsPanel.classList.contains("hidden");
+    const isOpen = !this.elements.settingsPanel.classList.contains('hidden');
     if (isOpen) {
       if (saveOnClose) {
         this.configs[this.currentConfig] = this.collectCurrentFormProfile();
         await this.persistAllSettings({ silent: true });
       }
-      this.elements.settingsPanel.classList.add("hidden");
+      this.elements.settingsPanel.classList.add('hidden');
       this.settingsOpen = false;
       this.updateAccessUI();
       return;
     }
-    this.elements.settingsPanel.classList.remove("hidden");
+    this.elements.settingsPanel.classList.remove('hidden');
     this.settingsOpen = true;
-    this.elements.accessPanel?.classList.add("hidden");
-    this.elements.chatInterface?.classList.add("hidden");
-    this.elements.historyPanel?.classList.add("hidden");
-    this.switchSettingsTab(this.currentSettingsTab || "general");
+    this.elements.accessPanel?.classList.add('hidden');
+    this.elements.chatInterface?.classList.add('hidden');
+    this.elements.historyPanel?.classList.add('hidden');
+    this.switchSettingsTab(this.currentSettingsTab || 'general');
   }
 
   async cancelSettings() {
@@ -885,13 +743,10 @@ class SidePanelUI {
   }
 
   toggleCustomEndpoint() {
-    const isCustom = this.elements.provider.value === "custom";
-    this.elements.customEndpointGroup.style.display = isCustom
-      ? "block"
-      : "none";
+    const isCustom = this.elements.provider.value === 'custom';
+    this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
     if (isCustom && !this.elements.customEndpoint.value) {
-      this.elements.customEndpoint.placeholder =
-        "https://api.example.com/v1/chat/completions";
+      this.elements.customEndpoint.placeholder = 'https://api.example.com/v1/chat/completions';
     }
   }
 
@@ -900,10 +755,10 @@ class SidePanelUI {
     if (!url) return true;
     try {
       new URL(url);
-      this.elements.customEndpoint.style.borderColor = "";
+      this.elements.customEndpoint.style.borderColor = '';
       return true;
     } catch {
-      this.elements.customEndpoint.style.borderColor = "var(--status-error)";
+      this.elements.customEndpoint.style.borderColor = 'var(--status-error)';
       return false;
     }
   }
@@ -911,77 +766,70 @@ class SidePanelUI {
   toggleProfileEditorEndpoint() {
     const provider = this.elements.profileEditorProvider?.value;
     if (!this.elements.profileEditorEndpointGroup) return;
-    this.elements.profileEditorEndpointGroup.style.display =
-      provider === "custom" ? "block" : "none";
+    this.elements.profileEditorEndpointGroup.style.display = provider === 'custom' ? 'block' : 'none';
   }
 
-  switchSettingsTab(tabName: "general" | "profiles" = "general") {
-    if (this.currentSettingsTab === "general" && tabName === "profiles") {
+  switchSettingsTab(tabName: 'general' | 'profiles' = 'general') {
+    if (this.currentSettingsTab === 'general' && tabName === 'profiles') {
       this.configs[this.currentConfig] = this.collectCurrentFormProfile();
       void this.persistAllSettings({ silent: true });
     }
     this.currentSettingsTab = tabName;
     const general = this.elements.settingsTabGeneral;
     const profiles = this.elements.settingsTabProfiles;
-    general?.classList.toggle("hidden", tabName !== "general");
-    profiles?.classList.toggle("hidden", tabName !== "profiles");
-    this.elements.settingsTabGeneralBtn?.classList.toggle(
-      "active",
-      tabName === "general",
-    );
-    this.elements.settingsTabProfilesBtn?.classList.toggle(
-      "active",
-      tabName === "profiles",
-    );
+    general?.classList.toggle('hidden', tabName !== 'general');
+    profiles?.classList.toggle('hidden', tabName !== 'profiles');
+    this.elements.settingsTabGeneralBtn?.classList.toggle('active', tabName === 'general');
+    this.elements.settingsTabProfilesBtn?.classList.toggle('active', tabName === 'profiles');
   }
 
   createProfileFromInput() {
-    const name = (this.elements.newProfileNameInput?.value || "").trim();
+    const name = (this.elements.newProfileNameInput?.value || '').trim();
     if (!name) {
-      this.updateStatus("Enter a profile name first", "warning");
+      this.updateStatus('Enter a profile name first', 'warning');
       return;
     }
     if (this.configs[name]) {
-      this.updateStatus("Profile already exists", "warning");
+      this.updateStatus('Profile already exists', 'warning');
       return;
     }
-    this.elements.newProfileNameInput.value = "";
+    this.elements.newProfileNameInput.value = '';
     this.createNewConfig(name);
     this.editProfile(name, true);
   }
 
   async loadSettings() {
     const settings = await chrome.storage.local.get([
-      "visionBridge",
-      "visionProfile",
-      "useOrchestrator",
-      "orchestratorProfile",
-      "showThinking",
-      "streamResponses",
-      "autoScroll",
-      "confirmActions",
-      "saveHistory",
-      "toolPermissions",
-      "allowedDomains",
-      "activeConfig",
-      "configs",
-      "auxAgentProfiles",
-      "accountApiBase",
+      'visionBridge',
+      'visionProfile',
+      'useOrchestrator',
+      'orchestratorProfile',
+      'showThinking',
+      'streamResponses',
+      'autoScroll',
+      'confirmActions',
+      'saveHistory',
+      'toolPermissions',
+      'allowedDomains',
+      'activeConfig',
+      'configs',
+      'auxAgentProfiles',
+      'accountApiBase',
     ]);
 
     const storedConfigs = settings.configs || {};
     const baseConfig = {
-      provider: "openai",
-      apiKey: "",
-      model: "gpt-4o",
-      customEndpoint: "",
+      provider: 'openai',
+      apiKey: '',
+      model: 'gpt-4o',
+      customEndpoint: '',
       systemPrompt: this.getDefaultSystemPrompt(),
       temperature: 0.7,
       maxTokens: 4096,
       contextLimit: 200000,
       timeout: 30000,
       sendScreenshotsAsImages: false,
-      screenshotQuality: "high",
+      screenshotQuality: 'high',
       showThinking: true,
       streamResponses: true,
       autoScroll: true,
@@ -994,40 +842,21 @@ class SidePanelUI {
       default: { ...baseConfig, ...(storedConfigs.default || {}) },
       ...storedConfigs,
     };
-    this.currentConfig = this.configs[settings.activeConfig]
-      ? settings.activeConfig
-      : "default";
+    this.currentConfig = this.configs[settings.activeConfig] ? settings.activeConfig : 'default';
     this.auxAgentProfiles = settings.auxAgentProfiles || [];
 
-    this.elements.visionBridge.value =
-      settings.visionBridge !== undefined
-        ? String(settings.visionBridge)
-        : "true";
-    this.elements.visionProfile.value = settings.visionProfile || "";
+    this.elements.visionBridge.value = settings.visionBridge !== undefined ? String(settings.visionBridge) : 'true';
+    this.elements.visionProfile.value = settings.visionProfile || '';
     this.elements.orchestratorToggle.value =
-      settings.useOrchestrator !== undefined
-        ? String(settings.useOrchestrator)
-        : "false";
-    this.elements.orchestratorProfile.value =
-      settings.orchestratorProfile || "";
-    this.elements.showThinking.value =
-      settings.showThinking !== undefined
-        ? String(settings.showThinking)
-        : "true";
+      settings.useOrchestrator !== undefined ? String(settings.useOrchestrator) : 'false';
+    this.elements.orchestratorProfile.value = settings.orchestratorProfile || '';
+    this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
     this.elements.streamResponses.value =
-      settings.streamResponses !== undefined
-        ? String(settings.streamResponses)
-        : "true";
-    this.elements.autoScroll.value =
-      settings.autoScroll !== undefined ? String(settings.autoScroll) : "true";
+      settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
+    this.elements.autoScroll.value = settings.autoScroll !== undefined ? String(settings.autoScroll) : 'true';
     this.elements.confirmActions.value =
-      settings.confirmActions !== undefined
-        ? String(settings.confirmActions)
-        : "true";
-    this.elements.saveHistory.value =
-      settings.saveHistory !== undefined
-        ? String(settings.saveHistory)
-        : "true";
+      settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
+    this.elements.saveHistory.value = settings.saveHistory !== undefined ? String(settings.saveHistory) : 'true';
 
     const defaultPermissions = {
       read: true,
@@ -1040,26 +869,19 @@ class SidePanelUI {
       ...defaultPermissions,
       ...(settings.toolPermissions || {}),
     };
-    if (this.elements.permissionRead)
-      this.elements.permissionRead.value = String(toolPermissions.read);
-    if (this.elements.permissionInteract)
-      this.elements.permissionInteract.value = String(toolPermissions.interact);
-    if (this.elements.permissionNavigate)
-      this.elements.permissionNavigate.value = String(toolPermissions.navigate);
-    if (this.elements.permissionTabs)
-      this.elements.permissionTabs.value = String(toolPermissions.tabs);
+    if (this.elements.permissionRead) this.elements.permissionRead.value = String(toolPermissions.read);
+    if (this.elements.permissionInteract) this.elements.permissionInteract.value = String(toolPermissions.interact);
+    if (this.elements.permissionNavigate) this.elements.permissionNavigate.value = String(toolPermissions.navigate);
+    if (this.elements.permissionTabs) this.elements.permissionTabs.value = String(toolPermissions.tabs);
     if (this.elements.permissionScreenshots)
-      this.elements.permissionScreenshots.value = String(
-        toolPermissions.screenshots,
-      );
-    if (this.elements.allowedDomains)
-      this.elements.allowedDomains.value = settings.allowedDomains || "";
+      this.elements.permissionScreenshots.value = String(toolPermissions.screenshots);
+    if (this.elements.allowedDomains) this.elements.allowedDomains.value = settings.allowedDomains || '';
     const fallbackAccountBase = this.getDefaultAccountApiBase();
     const accountApiBase = settings.accountApiBase || fallbackAccountBase;
     if (this.elements.accountApiBase) {
-      this.elements.accountApiBase.value = accountApiBase || "";
+      this.elements.accountApiBase.value = accountApiBase || '';
     }
-    this.accountClient.setBaseUrl(accountApiBase || "");
+    this.accountClient.setBaseUrl(accountApiBase || '');
     if (!settings.accountApiBase && accountApiBase) {
       await chrome.storage.local.set({ accountApiBase });
     }
@@ -1073,32 +895,26 @@ class SidePanelUI {
   }
 
   async loadAccessState() {
-    const { authState, entitlement } = await chrome.storage.local.get([
-      "authState",
-      "entitlement",
-    ]);
+    const { authState, entitlement } = await chrome.storage.local.get(['authState', 'entitlement']);
     this.authState = this.normalizeAuthState(authState);
     this.entitlement = this.normalizeEntitlement(entitlement);
     this.updateAccessUI();
-    if (this.authState?.status === "signed_in" && this.authState?.accessToken) {
+    if (this.authState?.status === 'signed_in' && this.authState?.accessToken) {
       await this.refreshAccountData({ silent: true });
     }
   }
 
   normalizeAuthState(state: Record<string, any> | null | undefined): AuthState {
-    const normalized: AuthState = { status: "signed_out" };
-    if (!state || typeof state !== "object") return normalized;
-    const status: AuthState["status"] =
-      state.status === "signed_out" ||
-      state.status === "device_code" ||
-      state.status === "signed_in"
+    const normalized: AuthState = { status: 'signed_out' };
+    if (!state || typeof state !== 'object') return normalized;
+    const status: AuthState['status'] =
+      state.status === 'signed_out' || state.status === 'device_code' || state.status === 'signed_in'
         ? state.status
-        : "signed_out";
+        : 'signed_out';
     normalized.status = status;
     if (state.code) normalized.code = String(state.code);
     if (state.deviceCode) normalized.deviceCode = String(state.deviceCode);
-    if (state.verificationUrl)
-      normalized.verificationUrl = String(state.verificationUrl);
+    if (state.verificationUrl) normalized.verificationUrl = String(state.verificationUrl);
     if (state.accessToken) normalized.accessToken = String(state.accessToken);
     if (state.email) normalized.email = String(state.email);
     if (state.expiresAt) normalized.expiresAt = Number(state.expiresAt);
@@ -1106,14 +922,14 @@ class SidePanelUI {
   }
 
   normalizeEntitlement(state) {
-    if (!state || typeof state !== "object") {
-      return { active: false, plan: "none" };
+    if (!state || typeof state !== 'object') {
+      return { active: false, plan: 'none' };
     }
     return {
       active: Boolean(state.active),
-      plan: state.plan ? String(state.plan) : "none",
-      renewsAt: state.renewsAt ? String(state.renewsAt) : "",
-      status: state.status ? String(state.status) : "",
+      plan: state.plan ? String(state.plan) : 'none',
+      renewsAt: state.renewsAt ? String(state.renewsAt) : '',
+      status: state.status ? String(state.status) : '',
     };
   }
 
@@ -1125,36 +941,36 @@ class SidePanelUI {
   }
 
   getAccessState() {
-    if (!this.isAccountRequired()) return "ready";
-    if (!this.authState || this.authState.status !== "signed_in") return "auth";
-    if (!this.entitlement || !this.entitlement.active) return "billing";
-    return "ready";
+    if (!this.isAccountRequired()) return 'ready';
+    if (!this.authState || this.authState.status !== 'signed_in') return 'auth';
+    if (!this.entitlement || !this.entitlement.active) return 'billing';
+    return 'ready';
   }
 
   isAccessReady() {
-    return this.getAccessState() === "ready";
+    return this.getAccessState() === 'ready';
   }
 
   updateAccessUI() {
     const accountRequired = this.isAccountRequired();
     const state = this.getAccessState();
     this.updateAccessConfigPrompt();
-    const showAccess = this.accessPanelVisible || state !== "ready";
-    const showAccount = this.accessPanelVisible && state !== "auth";
-    const showBilling = state === "billing" && !showAccount;
-    const showAuth = state === "auth";
+    const showAccess = this.accessPanelVisible || state !== 'ready';
+    const showAccount = this.accessPanelVisible && state !== 'auth';
+    const showBilling = state === 'billing' && !showAccount;
+    const showAuth = state === 'auth';
 
     if (this.elements.accessPanel) {
-      this.elements.accessPanel.classList.toggle("hidden", !showAccess);
+      this.elements.accessPanel.classList.toggle('hidden', !showAccess);
     }
     if (this.elements.authPanel) {
-      this.elements.authPanel.classList.toggle("hidden", !showAuth);
+      this.elements.authPanel.classList.toggle('hidden', !showAuth);
     }
     if (this.elements.billingPanel) {
-      this.elements.billingPanel.classList.toggle("hidden", !showBilling);
+      this.elements.billingPanel.classList.toggle('hidden', !showBilling);
     }
     if (this.elements.accountPanel) {
-      this.elements.accountPanel.classList.toggle("hidden", !showAccount);
+      this.elements.accountPanel.classList.toggle('hidden', !showAccount);
       if (showAccount) {
         this.renderAccountPanel();
       }
@@ -1166,65 +982,57 @@ class SidePanelUI {
     }
     if (this.elements.planStatus) {
       this.elements.planStatus.textContent = this.entitlement?.active
-        ? `Active${this.entitlement.renewsAt ? ` · Renews ${new Date(this.entitlement.renewsAt).toLocaleDateString()}` : ""}`
-        : "No active plan";
+        ? `Active${this.entitlement.renewsAt ? ` · Renews ${new Date(this.entitlement.renewsAt).toLocaleDateString()}` : ''}`
+        : 'No active plan';
     }
 
     if (this.elements.accountBtn) {
       const label = accountRequired
-        ? state === "auth"
-          ? "Signed out"
-          : this.authState?.email || "Signed in"
-        : this.authState?.email || "Account";
+        ? state === 'auth'
+          ? 'Signed out'
+          : this.authState?.email || 'Signed in'
+        : this.authState?.email || 'Account';
       this.elements.accountBtn.textContent = label;
     }
 
     // Update sidebar account nav label
     if (this.elements.accountNavLabel) {
-      const navLabel = this.authState?.email || "Account";
+      const navLabel = this.authState?.email || 'Account';
       this.elements.accountNavLabel.textContent = navLabel;
     }
 
     if (this.settingsOpen) {
-      this.elements.accessPanel?.classList.add("hidden");
+      this.elements.accessPanel?.classList.add('hidden');
       return;
     }
 
     const locked = showAccess;
     if (this.elements.viewChatBtn) this.elements.viewChatBtn.disabled = locked;
-    if (this.elements.viewHistoryBtn)
-      this.elements.viewHistoryBtn.disabled = locked;
-    if (this.elements.startNewSessionBtn)
-      this.elements.startNewSessionBtn.disabled = locked;
+    if (this.elements.viewHistoryBtn) this.elements.viewHistoryBtn.disabled = locked;
+    if (this.elements.startNewSessionBtn) this.elements.startNewSessionBtn.disabled = locked;
     if (this.elements.sendBtn) this.elements.sendBtn.disabled = locked;
     if (this.elements.userInput) this.elements.userInput.disabled = locked;
 
     if (showAccess) {
-      this.elements.chatInterface?.classList.add("hidden");
-      this.elements.historyPanel?.classList.add("hidden");
-      if (state !== "ready") {
-        this.updateStatus(
-          state === "auth" ? "Sign in required" : "Subscription required",
-          "warning",
-        );
+      this.elements.chatInterface?.classList.add('hidden');
+      this.elements.historyPanel?.classList.add('hidden');
+      if (state !== 'ready') {
+        this.updateStatus(state === 'auth' ? 'Sign in required' : 'Subscription required', 'warning');
       }
     } else {
-      this.switchView(this.currentView || "chat");
+      this.switchView(this.currentView || 'chat');
     }
   }
 
   updateAccessConfigPrompt() {
     const apiConfigured = Boolean(this.accountClient?.baseUrl);
     if (this.elements.accessConfigPrompt) {
-      this.elements.accessConfigPrompt.classList.toggle(
-        "hidden",
-        apiConfigured,
-      );
+      this.elements.accessConfigPrompt.classList.toggle('hidden', apiConfigured);
     }
     if (this.elements.authSubtitle) {
       this.elements.authSubtitle.textContent = apiConfigured
-        ? "Sign in with your email to unlock billing and sync."
-        : "Set the account API base URL in Settings before signing in.";
+        ? 'Sign in with your email to unlock billing and sync.'
+        : 'Set the account API base URL in Settings before signing in.';
     }
   }
 
@@ -1239,16 +1047,11 @@ class SidePanelUI {
   }
 
   openAuthPage() {
-    const fallbackUrl = this.accountClient?.baseUrl
-      ? `${this.accountClient.baseUrl}/portal`
-      : "";
+    const fallbackUrl = this.accountClient?.baseUrl ? `${this.accountClient.baseUrl}/portal` : '';
     const url = this.authState?.verificationUrl || fallbackUrl;
     if (!url) {
-      this.setAccessStatus(
-        "Set the account API base URL in Settings to open the account page.",
-        "warning",
-      );
-      this.updateStatus("No account page available yet.", "warning");
+      this.setAccessStatus('Set the account API base URL in Settings to open the account page.', 'warning');
+      this.updateStatus('No account page available yet.', 'warning');
       this.openAccountSettings({ focusAccountApi: true });
       return;
     }
@@ -1256,7 +1059,7 @@ class SidePanelUI {
   }
 
   async refreshAccountData({ silent = false } = {}) {
-    if (!this.authState || this.authState.status !== "signed_in") return;
+    if (!this.authState || this.authState.status !== 'signed_in') return;
     try {
       const [account, billing] = await Promise.all([
         this.accountClient.getAccount(),
@@ -1272,25 +1075,19 @@ class SidePanelUI {
       await this.persistAccessState();
       this.updateAccessUI();
       if (!silent) {
-        this.updateStatus("Account synced", "success");
+        this.updateStatus('Account synced', 'success');
       }
     } catch (error) {
-      const message = error?.message || "Unable to refresh account";
-      if (
-        message.includes("Session expired") ||
-        message.includes("Missing access token")
-      ) {
+      const message = error?.message || 'Unable to refresh account';
+      if (message.includes('Session expired') || message.includes('Missing access token')) {
         await this.signOut();
         if (!silent) {
-          this.updateStatus(
-            "Session expired. Please sign in again.",
-            "warning",
-          );
+          this.updateStatus('Session expired. Please sign in again.', 'warning');
         }
         return;
       }
       if (!silent) {
-        this.updateStatus(message, "error");
+        this.updateStatus(message, 'error');
       }
     }
   }
@@ -1302,10 +1099,10 @@ class SidePanelUI {
   openAccountSettings({ focusAccountApi = false } = {}) {
     this.accessPanelVisible = false;
     this.updateAccessUI();
-    if (this.elements.settingsPanel?.classList.contains("hidden")) {
+    if (this.elements.settingsPanel?.classList.contains('hidden')) {
       void this.toggleSettings();
     }
-    this.switchSettingsTab("general");
+    this.switchSettingsTab('general');
     const accountSection = this.elements.accountSettingsSection;
     if (accountSection && accountSection instanceof HTMLDetailsElement) {
       accountSection.open = true;
@@ -1321,35 +1118,35 @@ class SidePanelUI {
     if (!input) return;
     requestAnimationFrame(() => {
       if (group?.classList) {
-        group.classList.add("highlight");
-        window.setTimeout(() => group.classList.remove("highlight"), 1600);
+        group.classList.add('highlight');
+        window.setTimeout(() => group.classList.remove('highlight'), 1600);
       }
       input.focus();
-      input.scrollIntoView({ behavior: "smooth", block: "center" });
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
   openProfilesFromAccount() {
     this.accessPanelVisible = false;
     this.updateAccessUI();
-    if (this.elements.settingsPanel?.classList.contains("hidden")) {
+    if (this.elements.settingsPanel?.classList.contains('hidden')) {
       void this.toggleSettings();
     }
-    this.switchSettingsTab("profiles");
+    this.switchSettingsTab('profiles');
   }
 
   openHistoryFromAccount() {
     this.accessPanelVisible = false;
     this.updateAccessUI();
-    this.switchView("history");
+    this.switchView('history');
   }
 
   async startEmailAuth() {
     if (!this.ensureAccountApiBase()) return;
-    const email = (this.elements.authEmail?.value || "").trim();
+    const email = (this.elements.authEmail?.value || '').trim();
     if (!email) {
-      this.setAccessStatus("Enter your email to sign in.", "warning");
-      this.updateStatus("Email is required to sign in", "warning");
+      this.setAccessStatus('Enter your email to sign in.', 'warning');
+      this.updateStatus('Email is required to sign in', 'warning');
       this.elements.authEmail?.focus();
       return;
     }
@@ -1359,30 +1156,28 @@ class SidePanelUI {
     if (this.elements.authEmail) {
       this.elements.authEmail.disabled = true;
     }
-    this.setAccessStatus("Signing you in…");
+    this.setAccessStatus('Signing you in…');
     try {
       const response = await this.accountClient.signInWithEmail(email);
       const accessToken = response?.accessToken || response?.token;
       if (!accessToken) {
-        throw new Error("Sign-in did not return an access token.");
+        throw new Error('Sign-in did not return an access token.');
       }
       this.authState = {
-        status: "signed_in",
+        status: 'signed_in',
         accessToken,
         email: response?.user?.email || email,
       };
-      this.entitlement = this.normalizeEntitlement(
-        response?.entitlement || { active: false, plan: "none" },
-      );
+      this.entitlement = this.normalizeEntitlement(response?.entitlement || { active: false, plan: 'none' });
       await this.persistAccessState();
       await this.refreshAccountData({ silent: true });
       this.accessPanelVisible = true;
       this.updateAccessUI();
-      this.setAccessStatus("Signed in successfully.", "success");
-      this.updateStatus("Signed in — subscription required", "warning");
+      this.setAccessStatus('Signed in successfully.', 'success');
+      this.updateStatus('Signed in — subscription required', 'warning');
     } catch (error) {
-      this.setAccessStatus(error.message || "Unable to sign in", "error");
-      this.updateStatus(error.message || "Unable to sign in", "error");
+      this.setAccessStatus(error.message || 'Unable to sign in', 'error');
+      this.updateStatus(error.message || 'Unable to sign in', 'error');
     } finally {
       if (this.elements.authStartBtn) {
         this.elements.authStartBtn.disabled = false;
@@ -1394,63 +1189,54 @@ class SidePanelUI {
   }
 
   async saveAccessToken() {
-    const token = (this.elements.authTokenInput?.value || "").trim();
+    const token = (this.elements.authTokenInput?.value || '').trim();
     if (!token) {
-      this.setAccessStatus("Paste an access token to continue.", "warning");
-      this.updateStatus("Access token required", "warning");
+      this.setAccessStatus('Paste an access token to continue.', 'warning');
+      this.updateStatus('Access token required', 'warning');
       this.elements.authTokenInput?.focus();
       return;
     }
     this.authState = {
-      status: "signed_in",
+      status: 'signed_in',
       accessToken: token,
-      email: this.authState?.email || "Token user",
+      email: this.authState?.email || 'Token user',
     };
     await this.persistAccessState();
     this.accessPanelVisible = true;
     this.updateAccessUI();
-    this.setAccessStatus("Access token saved.", "success");
-    this.updateStatus("Signed in with token", "success");
-    this.elements.authTokenInput.value = "";
+    this.setAccessStatus('Access token saved.', 'success');
+    this.updateStatus('Signed in with token', 'success');
+    this.elements.authTokenInput.value = '';
   }
 
   async startSubscription() {
     if (!this.ensureAccountApiBase()) return;
-    if (!this.authState || this.authState.status !== "signed_in") {
-      this.setAccessStatus("Sign in required before subscribing.", "warning");
-      this.updateStatus("Sign in required before subscribing", "warning");
+    if (!this.authState || this.authState.status !== 'signed_in') {
+      this.setAccessStatus('Sign in required before subscribing.', 'warning');
+      this.updateStatus('Sign in required before subscribing', 'warning');
       return;
     }
     try {
       const response = await this.accountClient.createCheckout();
       if (response?.url) {
         this.openExternalUrl(response.url);
-        this.setAccessStatus("Checkout opened in a new tab.", "success");
-        this.updateStatus("Checkout opened in a new tab", "active");
+        this.setAccessStatus('Checkout opened in a new tab.', 'success');
+        this.updateStatus('Checkout opened in a new tab', 'active');
       } else {
-        this.setAccessStatus("Checkout link unavailable.", "warning");
-        this.updateStatus("Checkout link unavailable", "warning");
+        this.setAccessStatus('Checkout link unavailable.', 'warning');
+        this.updateStatus('Checkout link unavailable', 'warning');
       }
     } catch (error) {
-      this.setAccessStatus(
-        error.message || "Unable to start subscription",
-        "error",
-      );
-      this.updateStatus(
-        error.message || "Unable to start subscription",
-        "error",
-      );
+      this.setAccessStatus(error.message || 'Unable to start subscription', 'error');
+      this.updateStatus(error.message || 'Unable to start subscription', 'error');
     }
   }
 
   manageBilling() {
     if (!this.ensureAccountApiBase()) return;
-    if (!this.authState || this.authState.status !== "signed_in") {
-      this.setAccessStatus(
-        "Sign in required before opening billing.",
-        "warning",
-      );
-      this.updateStatus("Sign in required before opening billing", "warning");
+    if (!this.authState || this.authState.status !== 'signed_in') {
+      this.setAccessStatus('Sign in required before opening billing.', 'warning');
+      this.updateStatus('Sign in required before opening billing', 'warning');
       return;
     }
     this.accountClient
@@ -1458,48 +1244,33 @@ class SidePanelUI {
       .then((response) => {
         if (response?.url) {
           this.openExternalUrl(response.url);
-          this.setAccessStatus(
-            "Billing portal opened in a new tab.",
-            "success",
-          );
-          this.updateStatus("Billing portal opened in a new tab", "success");
+          this.setAccessStatus('Billing portal opened in a new tab.', 'success');
+          this.updateStatus('Billing portal opened in a new tab', 'success');
         } else {
-          this.setAccessStatus("Billing portal unavailable.", "warning");
-          this.updateStatus("Billing portal unavailable", "warning");
+          this.setAccessStatus('Billing portal unavailable.', 'warning');
+          this.updateStatus('Billing portal unavailable', 'warning');
         }
       })
       .catch((error) => {
-        this.setAccessStatus(
-          error.message || "Unable to open billing portal",
-          "error",
-        );
-        this.updateStatus(
-          error.message || "Unable to open billing portal",
-          "error",
-        );
+        this.setAccessStatus(error.message || 'Unable to open billing portal', 'error');
+        this.updateStatus(error.message || 'Unable to open billing portal', 'error');
       });
   }
 
   ensureAccountApiBase() {
     if (this.accountClient?.baseUrl) return true;
-    this.setAccessStatus(
-      "Open Settings → Account & billing and add the account API base URL.",
-      "warning",
-    );
-    this.updateStatus("Account API base URL is not configured", "warning");
+    this.setAccessStatus('Open Settings → Account & billing and add the account API base URL.', 'warning');
+    this.updateStatus('Account API base URL is not configured', 'warning');
     this.openAccountSettings({ focusAccountApi: true });
     return false;
   }
 
-  setAccessStatus(
-    message: string,
-    tone: "success" | "warning" | "error" | "" = "",
-  ) {
+  setAccessStatus(message: string, tone: 'success' | 'warning' | 'error' | '' = '') {
     const statusEl = this.elements.accessStatus;
     if (!statusEl) return;
     if (!message) {
-      statusEl.textContent = "";
-      statusEl.className = "access-status hidden";
+      statusEl.textContent = '';
+      statusEl.className = 'access-status hidden';
       return;
     }
     statusEl.textContent = message;
@@ -1507,22 +1278,22 @@ class SidePanelUI {
   }
 
   async signOut() {
-    this.authState = { status: "signed_out" };
-    this.entitlement = { active: false, plan: "none" };
+    this.authState = { status: 'signed_out' };
+    this.entitlement = { active: false, plan: 'none' };
     this.billingOverview = null;
     await this.persistAccessState();
     this.accessPanelVisible = true;
     this.updateAccessUI();
-    this.setAccessStatus("Signed out.", "warning");
-    this.updateStatus("Signed out", "warning");
+    this.setAccessStatus('Signed out.', 'warning');
+    this.updateStatus('Signed out', 'warning');
   }
 
-  formatCurrency(amount, currency = "usd") {
-    if (amount === null || amount === undefined) return "";
+  formatCurrency(amount, currency = 'usd') {
+    if (amount === null || amount === undefined) return '';
     const value = Number(amount) / 100;
     try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
         currency: currency.toUpperCase(),
       }).format(value);
     } catch (error) {
@@ -1531,14 +1302,14 @@ class SidePanelUI {
   }
 
   formatShortDate(value) {
-    if (!value) return "";
+    if (!value) return '';
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
+    if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString();
   }
 
   formatTokenCount(value: number) {
-    if (!value || value <= 0) return "0";
+    if (!value || value <= 0) return '0';
     if (value >= 1000) {
       const precision = value >= 10000 ? 0 : 1;
       return `${(value / 1000).toFixed(precision)}k`;
@@ -1550,16 +1321,13 @@ class SidePanelUI {
     if (!usage) return null;
     const inputTokens = Math.max(0, usage.inputTokens || 0);
     const outputTokens = Math.max(0, usage.outputTokens || 0);
-    const totalTokens = Math.max(
-      0,
-      usage.totalTokens || inputTokens + outputTokens,
-    );
+    const totalTokens = Math.max(0, usage.totalTokens || inputTokens + outputTokens);
     if (!inputTokens && !outputTokens && !totalTokens) return null;
     return { inputTokens, outputTokens, totalTokens };
   }
 
   buildUsageLabel(usage: UsageStats | null) {
-    if (!usage) return "";
+    if (!usage) return '';
     const parts: string[] = [];
     if (usage.inputTokens) {
       parts.push(`${this.formatTokenCount(usage.inputTokens)} in`);
@@ -1570,7 +1338,7 @@ class SidePanelUI {
     if (!parts.length && usage.totalTokens) {
       parts.push(`${this.formatTokenCount(usage.totalTokens)} total`);
     }
-    return parts.length ? `Tokens ${parts.join(" / ")}` : "";
+    return parts.length ? `Tokens ${parts.join(' / ')}` : '';
   }
 
   buildMessageMeta(usage: UsageStats | null, modelLabel?: string | null) {
@@ -1583,7 +1351,7 @@ class SidePanelUI {
     if (usageLabel) {
       segments.push(usageLabel);
     }
-    return segments.join(" · ");
+    return segments.join(' · ');
   }
 
   estimateUsageFromContent(content: string) {
@@ -1598,11 +1366,7 @@ class SidePanelUI {
   }
 
   getActiveModelLabel() {
-    return (
-      this.elements.modelSelect?.value ||
-      this.configs[this.currentConfig]?.model ||
-      ""
-    );
+    return this.elements.modelSelect?.value || this.configs[this.currentConfig]?.model || '';
   }
 
   updateUsageStats(usage: UsageStats | null) {
@@ -1619,48 +1383,38 @@ class SidePanelUI {
   renderAccountPanel() {
     const email = this.authState?.email;
     if (this.elements.accountGreeting) {
-      this.elements.accountGreeting.textContent = email
-        ? `Welcome back, ${email}`
-        : "Welcome back";
+      this.elements.accountGreeting.textContent = email ? `Welcome back, ${email}` : 'Welcome back';
     }
 
     const apiConfigured = Boolean(this.accountClient?.baseUrl);
-    const signedIn = this.authState?.status === "signed_in";
+    const signedIn = this.authState?.status === 'signed_in';
 
     if (this.elements.accountSubtext) {
       this.elements.accountSubtext.textContent = apiConfigured
-        ? "Manage your subscription, billing, and workspace settings."
-        : "Set the account API base URL in settings to enable billing.";
+        ? 'Manage your subscription, billing, and workspace settings.'
+        : 'Set the account API base URL in settings to enable billing.';
     }
 
     if (this.elements.accountRefreshBtn) {
       this.elements.accountRefreshBtn.disabled = !signedIn || !apiConfigured;
     }
 
-    const planLabel = this.entitlement?.active
-      ? this.entitlement?.plan || "Active"
-      : "No plan";
+    const planLabel = this.entitlement?.active ? this.entitlement?.plan || 'Active' : 'No plan';
     if (this.elements.accountPlanBadge) {
       this.elements.accountPlanBadge.textContent = planLabel;
     }
     if (this.elements.accountPlanStatus) {
-      const renewsAt = this.entitlement?.renewsAt
-        ? ` · Renews ${this.formatShortDate(this.entitlement.renewsAt)}`
-        : "";
-      this.elements.accountPlanStatus.textContent = this.entitlement?.active
-        ? `Active${renewsAt}`
-        : "No active plan";
+      const renewsAt = this.entitlement?.renewsAt ? ` · Renews ${this.formatShortDate(this.entitlement.renewsAt)}` : '';
+      this.elements.accountPlanStatus.textContent = this.entitlement?.active ? `Active${renewsAt}` : 'No active plan';
     }
 
     if (this.elements.accountPlanDetails) {
       if (!apiConfigured) {
-        this.elements.accountPlanDetails.textContent =
-          "Connect billing to activate a subscription.";
+        this.elements.accountPlanDetails.textContent = 'Connect billing to activate a subscription.';
       } else if (this.entitlement?.active) {
-        this.elements.accountPlanDetails.textContent = `Plan: ${this.entitlement.plan || "Pro"} · Status: ${this.entitlement.status || "active"}`;
+        this.elements.accountPlanDetails.textContent = `Plan: ${this.entitlement.plan || 'Pro'} · Status: ${this.entitlement.status || 'active'}`;
       } else {
-        this.elements.accountPlanDetails.textContent =
-          "No subscription on this device yet.";
+        this.elements.accountPlanDetails.textContent = 'No subscription on this device yet.';
       }
     }
 
@@ -1668,39 +1422,31 @@ class SidePanelUI {
     const payment = billing?.paymentMethod;
     if (this.elements.accountBillingSummary) {
       if (payment?.brand && payment?.last4) {
-        const exp = payment?.expMonth
-          ? ` · exp ${payment.expMonth}/${payment.expYear}`
-          : "";
+        const exp = payment?.expMonth ? ` · exp ${payment.expMonth}/${payment.expYear}` : '';
         this.elements.accountBillingSummary.textContent = `${payment.brand.toUpperCase()} •••• ${payment.last4}${exp}`;
       } else if (!apiConfigured) {
         this.elements.accountBillingSummary.textContent =
-          "Billing data unavailable until the account API is configured.";
+          'Billing data unavailable until the account API is configured.';
       } else {
-        this.elements.accountBillingSummary.textContent =
-          "No payment method on file yet.";
+        this.elements.accountBillingSummary.textContent = 'No payment method on file yet.';
       }
     }
     if (this.elements.accountInvoices) {
       const invoices = Array.isArray(billing?.invoices) ? billing.invoices : [];
-      this.elements.accountInvoices.innerHTML = "";
+      this.elements.accountInvoices.innerHTML = '';
       if (!invoices.length) {
         this.elements.accountInvoices.innerHTML =
           '<div class="account-list-item"><span class="muted">No invoices yet.</span></div>';
       } else {
         invoices.slice(0, 4).forEach((invoice) => {
-          const item = document.createElement("div");
-          item.className = "account-list-item";
-          const amount = this.formatCurrency(
-            invoice.amountDue,
-            invoice.currency,
-          );
-          const date = this.formatShortDate(
-            invoice.periodEnd || invoice.createdAt,
-          );
+          const item = document.createElement('div');
+          item.className = 'account-list-item';
+          const amount = this.formatCurrency(invoice.amountDue, invoice.currency);
+          const date = this.formatShortDate(invoice.periodEnd || invoice.createdAt);
           const link = invoice.hostedInvoiceUrl;
           item.innerHTML = link
-            ? `<a href="${this.escapeAttribute(link)}" target="_blank" rel="noopener noreferrer">${amount || "Invoice"}</a><span class="muted">${this.escapeHtml(date || "")}</span>`
-            : `<span>${this.escapeHtml(amount || "Invoice")}</span><span class="muted">${this.escapeHtml(date || "")}</span>`;
+            ? `<a href="${this.escapeAttribute(link)}" target="_blank" rel="noopener noreferrer">${amount || 'Invoice'}</a><span class="muted">${this.escapeHtml(date || '')}</span>`
+            : `<span>${this.escapeHtml(amount || 'Invoice')}</span><span class="muted">${this.escapeHtml(date || '')}</span>`;
           this.elements.accountInvoices.appendChild(item);
         });
       }
@@ -1714,31 +1460,25 @@ class SidePanelUI {
     }
 
     if (this.elements.accountSettingsSummary) {
-      const profile = this.currentConfig || "default";
-      const stream =
-        this.elements.streamResponses?.value === "true"
-          ? "Streaming on"
-          : "Streaming off";
-      const history =
-        this.elements.saveHistory?.value === "true"
-          ? "History saved"
-          : "History off";
+      const profile = this.currentConfig || 'default';
+      const stream = this.elements.streamResponses?.value === 'true' ? 'Streaming on' : 'Streaming off';
+      const history = this.elements.saveHistory?.value === 'true' ? 'History saved' : 'History off';
       this.elements.accountSettingsSummary.textContent = `Profile: ${profile} · ${stream} · ${history}`;
     }
 
     if (this.elements.accountConfigs) {
       const configs = Object.entries(this.configs || {});
-      this.elements.accountConfigs.innerHTML = "";
+      this.elements.accountConfigs.innerHTML = '';
       if (!configs.length) {
         this.elements.accountConfigs.innerHTML =
           '<div class="account-list-item"><span class="muted">No profiles saved.</span></div>';
       } else {
         configs.slice(0, 4).forEach(([name, config]) => {
-          const item = document.createElement("div");
-          item.className = "account-list-item";
+          const item = document.createElement('div');
+          item.className = 'account-list-item';
           item.innerHTML = `
             <span>${this.escapeHtml(name)}</span>
-            <span class="muted">${this.escapeHtml(config.provider || "provider")} · ${this.escapeHtml(config.model || "model")}</span>
+            <span class="muted">${this.escapeHtml(config.provider || 'provider')} · ${this.escapeHtml(config.model || 'model')}</span>
           `;
           this.elements.accountConfigs.appendChild(item);
         });
@@ -1750,36 +1490,30 @@ class SidePanelUI {
 
   async renderHistoryPreview() {
     if (!this.elements.accountHistory) return;
-    const { chatSessions = [] } = await chrome.storage.local.get([
-      "chatSessions",
-    ]);
-    this.elements.accountHistory.innerHTML = "";
+    const { chatSessions = [] } = await chrome.storage.local.get(['chatSessions']);
+    this.elements.accountHistory.innerHTML = '';
     if (!chatSessions.length) {
       this.elements.accountHistory.innerHTML =
         '<div class="account-list-item"><span class="muted">No saved chats yet.</span></div>';
       return;
     }
     chatSessions.slice(0, 4).forEach((session) => {
-      const item = document.createElement("div");
-      item.className = "account-list-item";
-      const date = new Date(
-        session.updatedAt || session.startedAt || Date.now(),
-      );
+      const item = document.createElement('div');
+      item.className = 'account-list-item';
+      const date = new Date(session.updatedAt || session.startedAt || Date.now());
       item.innerHTML = `
-        <span>${this.escapeHtml(session.title || "Session")}</span>
+        <span>${this.escapeHtml(session.title || 'Session')}</span>
         <span class="muted">${this.escapeHtml(date.toLocaleDateString())}</span>
       `;
-      item.addEventListener("click", () => {
+      item.addEventListener('click', () => {
         this.openHistoryFromAccount();
         if (Array.isArray(session.transcript)) {
           this.recordScrollPosition();
-          const normalized = normalizeConversationHistory(
-            session.transcript || [],
-          );
+          const normalized = normalizeConversationHistory(session.transcript || []);
           this.displayHistory = normalized;
           this.contextHistory = normalized;
           this.sessionId = session.id || `session-${Date.now()}`;
-          this.firstUserMessage = session.title || "";
+          this.firstUserMessage = session.title || '';
           this.renderConversationHistory();
           this.updateContextUsage();
         }
@@ -1789,11 +1523,8 @@ class SidePanelUI {
   }
 
   async saveSettings() {
-    if (
-      this.elements.provider.value === "custom" &&
-      !this.validateCustomEndpoint()
-    ) {
-      this.updateStatus("Invalid custom endpoint URL", "error");
+    if (this.elements.provider.value === 'custom' && !this.validateCustomEndpoint()) {
+      this.updateStatus('Invalid custom endpoint URL', 'error');
       return;
     }
     this.configs[this.currentConfig] = this.collectCurrentFormProfile();
@@ -1804,21 +1535,21 @@ class SidePanelUI {
   async exportSettings() {
     try {
       const keys = [
-        "configs",
-        "activeConfig",
-        "auxAgentProfiles",
-        "visionBridge",
-        "visionProfile",
-        "useOrchestrator",
-        "orchestratorProfile",
-        "showThinking",
-        "streamResponses",
-        "autoScroll",
-        "confirmActions",
-        "saveHistory",
-        "toolPermissions",
-        "allowedDomains",
-        "accountApiBase",
+        'configs',
+        'activeConfig',
+        'auxAgentProfiles',
+        'visionBridge',
+        'visionProfile',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'showThinking',
+        'streamResponses',
+        'autoScroll',
+        'confirmActions',
+        'saveHistory',
+        'toolPermissions',
+        'allowedDomains',
+        'accountApiBase',
       ];
       const settings = await chrome.storage.local.get(keys);
       const payload = {
@@ -1827,17 +1558,17 @@ class SidePanelUI {
         exportVersion: 1,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
+        type: 'application/json',
       });
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
+      const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `parchi-settings-${new Date().toISOString().slice(0, 10)}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
-      this.updateStatus("Settings export downloaded", "success");
+      this.updateStatus('Settings export downloaded', 'success');
     } catch (error) {
-      this.updateStatus("Unable to export settings", "error");
+      this.updateStatus('Unable to export settings', 'error');
     }
   }
 
@@ -1850,39 +1581,39 @@ class SidePanelUI {
       const data = JSON.parse(text);
       const payload: Record<string, any> = {};
       const allowedKeys = [
-        "configs",
-        "activeConfig",
-        "auxAgentProfiles",
-        "visionBridge",
-        "visionProfile",
-        "useOrchestrator",
-        "orchestratorProfile",
-        "showThinking",
-        "streamResponses",
-        "autoScroll",
-        "confirmActions",
-        "saveHistory",
-        "toolPermissions",
-        "allowedDomains",
-        "accountApiBase",
+        'configs',
+        'activeConfig',
+        'auxAgentProfiles',
+        'visionBridge',
+        'visionProfile',
+        'useOrchestrator',
+        'orchestratorProfile',
+        'showThinking',
+        'streamResponses',
+        'autoScroll',
+        'confirmActions',
+        'saveHistory',
+        'toolPermissions',
+        'allowedDomains',
+        'accountApiBase',
       ];
       allowedKeys.forEach((key) => {
         if (data[key] !== undefined) {
           payload[key] = data[key];
         }
       });
-      if (payload.configs && typeof payload.configs !== "object") {
-        throw new Error("Invalid configs payload");
+      if (payload.configs && typeof payload.configs !== 'object') {
+        throw new Error('Invalid configs payload');
       }
       await chrome.storage.local.set(payload);
       await this.loadSettings();
       this.renderProfileGrid();
       this.updateAccessUI();
-      this.updateStatus("Settings imported successfully", "success");
+      this.updateStatus('Settings imported successfully', 'success');
     } catch (error) {
-      this.updateStatus("Unable to import settings", "error");
+      this.updateStatus('Unable to import settings', 'error');
     } finally {
-      if (input) input.value = "";
+      if (input) input.value = '';
     }
   }
 
@@ -1890,66 +1621,44 @@ class SidePanelUI {
     // Get current config as base to preserve values if form elements are missing
     const current = this.configs[this.currentConfig] || {};
     return {
-      provider: this.elements.provider?.value || current.provider || "openai",
-      apiKey: this.elements.apiKey?.value || current.apiKey || "",
-      model: this.elements.model?.value || current.model || "gpt-4o",
-      customEndpoint:
-        this.elements.customEndpoint?.value || current.customEndpoint || "",
-      systemPrompt:
-        this.elements.systemPrompt?.value || current.systemPrompt || "",
-      temperature:
-        Number.parseFloat(this.elements.temperature?.value) ||
-        current.temperature ||
-        0.7,
-      maxTokens:
-        Number.parseInt(this.elements.maxTokens?.value) ||
-        current.maxTokens ||
-        4096,
-      contextLimit:
-        Number.parseInt(this.elements.contextLimit?.value) ||
-        current.contextLimit ||
-        200000,
-      timeout:
-        Number.parseInt(this.elements.timeout?.value) ||
-        current.timeout ||
-        30000,
-      enableScreenshots:
-        this.elements.enableScreenshots?.value === "true" ||
-        current.enableScreenshots ||
-        false,
+      provider: this.elements.provider?.value || current.provider || 'openai',
+      apiKey: this.elements.apiKey?.value || current.apiKey || '',
+      model: this.elements.model?.value || current.model || 'gpt-4o',
+      customEndpoint: this.elements.customEndpoint?.value || current.customEndpoint || '',
+      systemPrompt: this.elements.systemPrompt?.value || current.systemPrompt || '',
+      temperature: Number.parseFloat(this.elements.temperature?.value) || current.temperature || 0.7,
+      maxTokens: Number.parseInt(this.elements.maxTokens?.value) || current.maxTokens || 4096,
+      contextLimit: Number.parseInt(this.elements.contextLimit?.value) || current.contextLimit || 200000,
+      timeout: Number.parseInt(this.elements.timeout?.value) || current.timeout || 30000,
+      enableScreenshots: this.elements.enableScreenshots?.value === 'true' || current.enableScreenshots || false,
       sendScreenshotsAsImages:
-        this.elements.sendScreenshotsAsImages?.value === "true" ||
-        current.sendScreenshotsAsImages ||
-        false,
-      screenshotQuality:
-        this.elements.screenshotQuality?.value ||
-        current.screenshotQuality ||
-        "high",
-      showThinking: this.elements.showThinking?.value === "true",
-      streamResponses: this.elements.streamResponses?.value === "true",
-      autoScroll: this.elements.autoScroll?.value === "true",
-      confirmActions: this.elements.confirmActions?.value === "true",
-      saveHistory: this.elements.saveHistory?.value === "true",
+        this.elements.sendScreenshotsAsImages?.value === 'true' || current.sendScreenshotsAsImages || false,
+      screenshotQuality: this.elements.screenshotQuality?.value || current.screenshotQuality || 'high',
+      showThinking: this.elements.showThinking?.value === 'true',
+      streamResponses: this.elements.streamResponses?.value === 'true',
+      autoScroll: this.elements.autoScroll?.value === 'true',
+      confirmActions: this.elements.confirmActions?.value === 'true',
+      saveHistory: this.elements.saveHistory?.value === 'true',
     };
   }
 
   collectToolPermissions() {
     return {
-      read: this.elements.permissionRead?.value !== "false",
-      interact: this.elements.permissionInteract?.value !== "false",
-      navigate: this.elements.permissionNavigate?.value !== "false",
-      tabs: this.elements.permissionTabs?.value !== "false",
-      screenshots: this.elements.permissionScreenshots?.value === "true",
+      read: this.elements.permissionRead?.value !== 'false',
+      interact: this.elements.permissionInteract?.value !== 'false',
+      navigate: this.elements.permissionNavigate?.value !== 'false',
+      tabs: this.elements.permissionTabs?.value !== 'false',
+      screenshots: this.elements.permissionScreenshots?.value === 'true',
     };
   }
 
   async persistAllSettings({ silent = false } = {}) {
     const activeProfile = this.configs[this.currentConfig] || {};
     const payload = {
-      provider: activeProfile.provider || "openai",
-      apiKey: activeProfile.apiKey || "",
-      model: activeProfile.model || "gpt-4o",
-      customEndpoint: activeProfile.customEndpoint || "",
+      provider: activeProfile.provider || 'openai',
+      apiKey: activeProfile.apiKey || '',
+      model: activeProfile.model || 'gpt-4o',
+      customEndpoint: activeProfile.customEndpoint || '',
       systemPrompt: activeProfile.systemPrompt || this.getDefaultSystemPrompt(),
       temperature: activeProfile.temperature ?? 0.7,
       maxTokens: activeProfile.maxTokens || 4096,
@@ -1957,19 +1666,19 @@ class SidePanelUI {
       timeout: activeProfile.timeout || 30000,
       enableScreenshots: activeProfile.enableScreenshots ?? false,
       sendScreenshotsAsImages: activeProfile.sendScreenshotsAsImages ?? false,
-      screenshotQuality: activeProfile.screenshotQuality || "high",
+      screenshotQuality: activeProfile.screenshotQuality || 'high',
       showThinking: activeProfile.showThinking !== false,
       streamResponses: activeProfile.streamResponses !== false,
       autoScroll: activeProfile.autoScroll !== false,
       confirmActions: activeProfile.confirmActions !== false,
       saveHistory: activeProfile.saveHistory !== false,
-      visionBridge: this.elements.visionBridge?.value === "true",
-      visionProfile: this.elements.visionProfile?.value || "",
-      useOrchestrator: this.elements.orchestratorToggle?.value === "true",
-      orchestratorProfile: this.elements.orchestratorProfile?.value || "",
+      visionBridge: this.elements.visionBridge?.value === 'true',
+      visionProfile: this.elements.visionProfile?.value || '',
+      useOrchestrator: this.elements.orchestratorToggle?.value === 'true',
+      orchestratorProfile: this.elements.orchestratorProfile?.value || '',
       toolPermissions: this.collectToolPermissions(),
-      allowedDomains: this.elements.allowedDomains?.value || "",
-      accountApiBase: this.elements.accountApiBase?.value?.trim() || "",
+      allowedDomains: this.elements.allowedDomains?.value || '',
+      accountApiBase: this.elements.accountApiBase?.value?.trim() || '',
       auxAgentProfiles: this.auxAgentProfiles,
       activeConfig: this.currentConfig,
       configs: this.configs,
@@ -1979,7 +1688,7 @@ class SidePanelUI {
     this.updateAccessConfigPrompt();
     this.updateContextUsage();
     if (!silent) {
-      this.updateStatus("Settings saved successfully", "success");
+      this.updateStatus('Settings saved successfully', 'success');
     }
   }
 
@@ -2028,20 +1737,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     try {
       const manifest = chrome.runtime.getManifest();
       const config = manifest && (manifest as Record<string, any>).parchi;
-      if (config && typeof config.accountApiBase === "string") {
+      if (config && typeof config.accountApiBase === 'string') {
         return config.accountApiBase.trim();
       }
     } catch (error) {
       // Ignore manifest read failures and fall back to empty.
     }
-    return "";
+    return '';
   }
 
   isAccountRequired() {
     try {
       const manifest = chrome.runtime.getManifest();
       const config = manifest && (manifest as Record<string, any>).parchi;
-      if (config && typeof config.requireAccount === "boolean") {
+      if (config && typeof config.requireAccount === 'boolean') {
         return config.requireAccount;
       }
     } catch (error) {
@@ -2051,11 +1760,10 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   async createNewConfig(name?: string) {
-    const trimmedName =
-      (name || "").trim() || prompt("Enter profile name:") || "";
+    const trimmedName = (name || '').trim() || prompt('Enter profile name:') || '';
     if (!trimmedName) return;
     if (this.configs[trimmedName]) {
-      alert("Profile already exists!");
+      alert('Profile already exists!');
       return;
     }
 
@@ -2068,37 +1776,36 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       temperature: Number.parseFloat(this.elements.temperature.value),
       maxTokens: Number.parseInt(this.elements.maxTokens.value),
       timeout: Number.parseInt(this.elements.timeout.value),
-      sendScreenshotsAsImages:
-        this.elements.sendScreenshotsAsImages.value === "true",
+      sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
       screenshotQuality: this.elements.screenshotQuality.value,
-      streamResponses: this.elements.streamResponses.value === "true",
-      enableScreenshots: this.elements.enableScreenshots.value === "true",
+      streamResponses: this.elements.streamResponses.value === 'true',
+      enableScreenshots: this.elements.enableScreenshots.value === 'true',
     };
 
     this.refreshConfigDropdown();
     this.setActiveConfig(trimmedName, true);
-    this.updateStatus(`Profile "${trimmedName}" created`, "success");
+    this.updateStatus(`Profile "${trimmedName}" created`, 'success');
   }
 
   async deleteConfig() {
-    if (this.currentConfig === "default") {
-      alert("Cannot delete default profile");
+    if (this.currentConfig === 'default') {
+      alert('Cannot delete default profile');
       return;
     }
 
     if (confirm(`Delete profile "${this.currentConfig}"?`)) {
       delete this.configs[this.currentConfig];
-      this.currentConfig = "default";
+      this.currentConfig = 'default';
       this.refreshConfigDropdown();
       this.setActiveConfig(this.currentConfig, true);
-      this.updateStatus("Profile deleted", "success");
+      this.updateStatus('Profile deleted', 'success');
     }
   }
 
   async switchConfig() {
     const newConfig = this.elements.activeConfig.value;
     if (!this.configs[newConfig]) {
-      alert("Profile not found");
+      alert('Profile not found');
       return;
     }
     this.configs[this.currentConfig] = this.collectCurrentFormProfile();
@@ -2107,12 +1814,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   refreshConfigDropdown() {
-    this.elements.activeConfig.innerHTML = "";
+    this.elements.activeConfig.innerHTML = '';
     if (this.elements.generalProfileSelect) {
-      this.elements.generalProfileSelect.innerHTML = "";
+      this.elements.generalProfileSelect.innerHTML = '';
     }
     Object.keys(this.configs).forEach((name) => {
-      const option = document.createElement("option");
+      const option = document.createElement('option');
       option.value = name;
       option.textContent = name;
       if (name === this.currentConfig) {
@@ -2121,7 +1828,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.activeConfig.appendChild(option);
 
       if (this.elements.generalProfileSelect) {
-        const opt = document.createElement("option");
+        const opt = document.createElement('option');
         opt.value = name;
         opt.textContent = name;
         if (name === this.currentConfig) {
@@ -2137,15 +1844,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   refreshProfileSelectors() {
     const names = Object.keys(this.configs);
-    const selects = [
-      this.elements.orchestratorProfile,
-      this.elements.visionProfile,
-    ];
+    const selects = [this.elements.orchestratorProfile, this.elements.visionProfile];
     selects.forEach((select) => {
       if (!select) return;
       select.innerHTML = '<option value="">Use active config</option>';
       names.forEach((name) => {
-        const option = document.createElement("option");
+        const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
@@ -2155,39 +1859,33 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   renderProfileGrid() {
     if (!this.elements.agentGrid) return;
-    this.elements.agentGrid.innerHTML = "";
+    this.elements.agentGrid.innerHTML = '';
     const currentVision = this.elements.visionProfile?.value;
     const currentOrchestrator = this.elements.orchestratorProfile?.value;
     const configs = Object.keys(this.configs);
     if (!configs.length) {
-      this.elements.agentGrid.innerHTML =
-        '<div class="history-empty">No profiles yet.</div>';
+      this.elements.agentGrid.innerHTML = '<div class="history-empty">No profiles yet.</div>';
       return;
     }
     configs.forEach((name) => {
-      const card = document.createElement("div");
-      card.className = "agent-card";
+      const card = document.createElement('div');
+      card.className = 'agent-card';
       if (name === this.profileEditorTarget) {
-        card.classList.add("editing");
+        card.classList.add('editing');
       }
       card.dataset.profile = name;
-      const rolePills = ["main", "vision", "orchestrator", "aux"]
+      const rolePills = ['main', 'vision', 'orchestrator', 'aux']
         .map((role) => {
-          const isActive = this.isProfileActiveForRole(
-            name,
-            role,
-            currentVision,
-            currentOrchestrator,
-          );
+          const isActive = this.isProfileActiveForRole(name, role, currentVision, currentOrchestrator);
           const label = this.getRoleLabel(role);
-          return `<span class="role-pill ${isActive ? "active" : ""} ${role}-pill" data-role="${role}" data-profile="${name}">${label}</span>`;
+          return `<span class="role-pill ${isActive ? 'active' : ''} ${role}-pill" data-role="${role}" data-profile="${name}">${label}</span>`;
         })
-        .join("");
+        .join('');
       const config = this.configs[name] || {};
       card.innerHTML = `
         <div>
           <h4>${this.escapeHtml(name)}</h4>
-          <span>${this.escapeHtml(config.provider || "Provider")} · ${this.escapeHtml(config.model || "Model")}</span>
+          <span>${this.escapeHtml(config.provider || 'Provider')} · ${this.escapeHtml(config.model || 'Model')}</span>
         </div>
         <div class="role-pills">${rolePills}</div>
       `;
@@ -2197,36 +1895,36 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   getRoleLabel(role) {
     switch (role) {
-      case "main":
-        return "Main";
-      case "vision":
-        return "Vision";
-      case "orchestrator":
-        return "Orchestrator";
+      case 'main':
+        return 'Main';
+      case 'vision':
+        return 'Vision';
+      case 'orchestrator':
+        return 'Orchestrator';
       default:
-        return "Team";
+        return 'Team';
     }
   }
 
   isProfileActiveForRole(name, role, visionName, orchestratorName) {
-    if (role === "main") return name === this.currentConfig;
-    if (role === "vision") return name && visionName === name;
-    if (role === "orchestrator") return name && orchestratorName === name;
-    if (role === "aux") return this.auxAgentProfiles.includes(name);
+    if (role === 'main') return name === this.currentConfig;
+    if (role === 'vision') return name && visionName === name;
+    if (role === 'orchestrator') return name && orchestratorName === name;
+    if (role === 'aux') return this.auxAgentProfiles.includes(name);
     return false;
   }
 
   assignProfileRole(profileName, role) {
     if (!profileName) return;
-    if (role === "main") {
+    if (role === 'main') {
       this.setActiveConfig(profileName);
       return;
     }
-    if (role === "vision") {
-      this.toggleProfileRole("visionProfile", profileName);
-    } else if (role === "orchestrator") {
-      this.toggleProfileRole("orchestratorProfile", profileName);
-    } else if (role === "aux") {
+    if (role === 'vision') {
+      this.toggleProfileRole('visionProfile', profileName);
+    } else if (role === 'orchestrator') {
+      this.toggleProfileRole('orchestratorProfile', profileName);
+    } else if (role === 'aux') {
       this.toggleAuxProfile(profileName);
     }
   }
@@ -2234,7 +1932,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   toggleProfileRole(elementId, profileName) {
     const element = this.elements[elementId];
     if (!element) return;
-    element.value = element.value === profileName ? "" : profileName;
+    element.value = element.value === profileName ? '' : profileName;
     this.renderProfileGrid();
   }
 
@@ -2253,33 +1951,26 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!name || !this.configs[name]) return;
     this.profileEditorTarget = name;
     const config = this.configs[name];
-    this.elements.profileEditorTitle &&
-      (this.elements.profileEditorTitle.textContent = `Editing: ${name}`);
-    this.elements.profileEditorName &&
-      (this.elements.profileEditorName.value = name);
-    this.elements.profileEditorProvider.value = config.provider || "openai";
-    this.elements.profileEditorApiKey.value = config.apiKey || "";
-    this.elements.profileEditorModel.value = config.model || "";
-    this.elements.profileEditorEndpoint.value = config.customEndpoint || "";
+    this.elements.profileEditorTitle && (this.elements.profileEditorTitle.textContent = `Editing: ${name}`);
+    this.elements.profileEditorName && (this.elements.profileEditorName.value = name);
+    this.elements.profileEditorProvider.value = config.provider || 'openai';
+    this.elements.profileEditorApiKey.value = config.apiKey || '';
+    this.elements.profileEditorModel.value = config.model || '';
+    this.elements.profileEditorEndpoint.value = config.customEndpoint || '';
     this.elements.profileEditorTemperature.value = config.temperature ?? 0.7;
     if (this.elements.profileEditorTemperatureValue) {
-      this.elements.profileEditorTemperatureValue.textContent =
-        this.elements.profileEditorTemperature.value;
+      this.elements.profileEditorTemperatureValue.textContent = this.elements.profileEditorTemperature.value;
     }
     this.elements.profileEditorMaxTokens.value = config.maxTokens || 2048;
     this.elements.profileEditorTimeout.value = config.timeout || 30000;
-    this.elements.profileEditorEnableScreenshots.value =
-      config.enableScreenshots ? "true" : "false";
-    this.elements.profileEditorSendScreenshots.value =
-      config.sendScreenshotsAsImages ? "true" : "false";
-    this.elements.profileEditorScreenshotQuality.value =
-      config.screenshotQuality || "high";
-    this.elements.profileEditorPrompt.value =
-      config.systemPrompt || this.getDefaultSystemPrompt();
+    this.elements.profileEditorEnableScreenshots.value = config.enableScreenshots ? 'true' : 'false';
+    this.elements.profileEditorSendScreenshots.value = config.sendScreenshotsAsImages ? 'true' : 'false';
+    this.elements.profileEditorScreenshotQuality.value = config.screenshotQuality || 'high';
+    this.elements.profileEditorPrompt.value = config.systemPrompt || this.getDefaultSystemPrompt();
     this.toggleProfileEditorEndpoint();
     this.renderProfileGrid();
     if (!silent) {
-      this.switchSettingsTab("profiles");
+      this.switchSettingsTab('profiles');
     }
   }
 
@@ -2289,28 +1980,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       apiKey: this.elements.profileEditorApiKey.value,
       model: this.elements.profileEditorModel.value,
       customEndpoint: this.elements.profileEditorEndpoint.value,
-      temperature:
-        Number.parseFloat(this.elements.profileEditorTemperature.value) || 0.7,
-      maxTokens:
-        Number.parseInt(this.elements.profileEditorMaxTokens.value) || 2048,
-      timeout:
-        Number.parseInt(this.elements.profileEditorTimeout.value) || 30000,
-      enableScreenshots:
-        this.elements.profileEditorEnableScreenshots.value === "true",
-      sendScreenshotsAsImages:
-        this.elements.profileEditorSendScreenshots.value === "true",
-      screenshotQuality:
-        this.elements.profileEditorScreenshotQuality.value || "high",
-      systemPrompt:
-        this.elements.profileEditorPrompt.value ||
-        this.getDefaultSystemPrompt(),
+      temperature: Number.parseFloat(this.elements.profileEditorTemperature.value) || 0.7,
+      maxTokens: Number.parseInt(this.elements.profileEditorMaxTokens.value) || 2048,
+      timeout: Number.parseInt(this.elements.profileEditorTimeout.value) || 30000,
+      enableScreenshots: this.elements.profileEditorEnableScreenshots.value === 'true',
+      sendScreenshotsAsImages: this.elements.profileEditorSendScreenshots.value === 'true',
+      screenshotQuality: this.elements.profileEditorScreenshotQuality.value || 'high',
+      systemPrompt: this.elements.profileEditorPrompt.value || this.getDefaultSystemPrompt(),
     };
   }
 
   async saveProfileEdits() {
     const target = this.profileEditorTarget;
     if (!target || !this.configs[target]) {
-      this.updateStatus("Select a profile to edit", "warning");
+      this.updateStatus('Select a profile to edit', 'warning');
       return;
     }
     const existing = this.configs[target] || {};
@@ -2321,40 +2004,28 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.toggleCustomEndpoint();
     }
     this.renderProfileGrid();
-    this.updateStatus(`Profile "${target}" saved`, "success");
+    this.updateStatus(`Profile "${target}" saved`, 'success');
   }
 
   populateFormFromConfig(config: Record<string, any> = {}) {
-    this.elements.provider.value = config.provider || "openai";
-    this.elements.apiKey.value = config.apiKey || "";
-    this.elements.model.value = config.model || "gpt-4o";
-    this.elements.customEndpoint.value = config.customEndpoint || "";
-    this.elements.systemPrompt.value =
-      config.systemPrompt || this.getDefaultSystemPrompt();
-    this.elements.temperature.value =
-      config.temperature !== undefined ? config.temperature : 0.7;
-    this.elements.temperatureValue.textContent =
-      this.elements.temperature.value;
+    this.elements.provider.value = config.provider || 'openai';
+    this.elements.apiKey.value = config.apiKey || '';
+    this.elements.model.value = config.model || 'gpt-4o';
+    this.elements.customEndpoint.value = config.customEndpoint || '';
+    this.elements.systemPrompt.value = config.systemPrompt || this.getDefaultSystemPrompt();
+    this.elements.temperature.value = config.temperature !== undefined ? config.temperature : 0.7;
+    this.elements.temperatureValue.textContent = this.elements.temperature.value;
     this.elements.maxTokens.value = config.maxTokens || 4096;
     this.elements.contextLimit.value = config.contextLimit || 200000;
     this.elements.timeout.value = config.timeout || 30000;
-    this.elements.enableScreenshots.value = config.enableScreenshots
-      ? "true"
-      : "false";
-    this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages
-      ? "true"
-      : "false";
-    this.elements.screenshotQuality.value = config.screenshotQuality || "high";
-    this.elements.streamResponses.value =
-      config.streamResponses !== false ? "true" : "true";
-    this.elements.showThinking.value =
-      config.showThinking !== false ? "true" : "false";
-    this.elements.autoScroll.value =
-      config.autoScroll !== false ? "true" : "false";
-    this.elements.confirmActions.value =
-      config.confirmActions !== false ? "true" : "false";
-    this.elements.saveHistory.value =
-      config.saveHistory !== false ? "true" : "false";
+    this.elements.enableScreenshots.value = config.enableScreenshots ? 'true' : 'false';
+    this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages ? 'true' : 'false';
+    this.elements.screenshotQuality.value = config.screenshotQuality || 'high';
+    this.elements.streamResponses.value = config.streamResponses !== false ? 'true' : 'true';
+    this.elements.showThinking.value = config.showThinking !== false ? 'true' : 'false';
+    this.elements.autoScroll.value = config.autoScroll !== false ? 'true' : 'false';
+    this.elements.confirmActions.value = config.confirmActions !== false ? 'true' : 'false';
+    this.elements.saveHistory.value = config.saveHistory !== false ? 'true' : 'false';
   }
 
   setActiveConfig(name, quiet = false) {
@@ -2369,7 +2040,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.updateModelDisplay();
     this.fetchAvailableModels();
     if (!quiet) {
-      this.updateStatus(`Switched to configuration "${name}"`, "success");
+      this.updateStatus(`Switched to configuration "${name}"`, 'success');
     }
   }
 
@@ -2378,12 +2049,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!userMessage) return;
     if (!this.isAccessReady()) {
       this.updateAccessUI();
-      this.updateStatus("Sign in required", "warning");
+      this.updateStatus('Sign in required', 'warning');
       return;
     }
 
     // Clear input
-    this.elements.userInput.value = "";
+    this.elements.userInput.value = '';
     if (!this.firstUserMessage) {
       this.firstUserMessage = userMessage;
     }
@@ -2403,25 +2074,25 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     // Display user message (show original without context)
     this.displayUserMessage(userMessage);
 
-    const displayEntry = createMessage({ role: "user", content: userMessage });
+    const displayEntry = createMessage({ role: 'user', content: userMessage });
     if (displayEntry) {
       this.displayHistory.push(displayEntry);
     }
 
-    const contextEntry = createMessage({ role: "user", content: fullMessage });
+    const contextEntry = createMessage({ role: 'user', content: fullMessage });
     if (contextEntry) {
       this.contextHistory.push(contextEntry);
     }
     this.updateContextUsage();
 
     // Update status and input area
-    this.updateStatus("Processing...", "active");
-    this.elements.composer?.classList.add("running");
+    this.updateStatus('Processing...', 'active');
+    this.elements.composer?.classList.add('running');
 
     // Send to background for processing
     try {
       chrome.runtime.sendMessage({
-        type: "user_message",
+        type: 'user_message',
         message: fullMessage,
         conversationHistory: this.contextHistory,
         selectedTabs: Array.from(this.selectedTabs.values()),
@@ -2429,19 +2100,17 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       });
       this.persistHistory();
     } catch (error) {
-      this.updateStatus("Error: " + error.message, "error");
-      this.elements.composer?.classList.remove("running");
-      this.displayAssistantMessage(
-        "Sorry, an error occurred: " + error.message,
-      );
+      this.updateStatus('Error: ' + error.message, 'error');
+      this.elements.composer?.classList.remove('running');
+      this.displayAssistantMessage('Sorry, an error occurred: ' + error.message);
     }
   }
 
   displayUserMessage(content) {
-    const turn = document.createElement("div");
-    turn.className = "chat-turn";
-    const messageDiv = document.createElement("div");
-    messageDiv.className = "message user";
+    const turn = document.createElement('div');
+    turn.className = 'chat-turn';
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user';
     messageDiv.innerHTML = `
       <div class="message-header">You</div>
       <div class="message-content">${this.escapeHtml(content)}</div>
@@ -2453,12 +2122,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   displaySummaryMessage(messageOrEntry: Message | string) {
-    const content =
-      typeof messageOrEntry === "string"
-        ? messageOrEntry
-        : String(messageOrEntry.content || "");
-    const container = document.createElement("div");
-    container.className = "message summary";
+    const content = typeof messageOrEntry === 'string' ? messageOrEntry : String(messageOrEntry.content || '');
+    const container = document.createElement('div');
+    container.className = 'message summary';
     container.innerHTML = `
       <div class="summary-header">Context compacted</div>
       <div class="summary-body">${this.renderMarkdown(content)}</div>
@@ -2475,23 +2141,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   ) {
     const streamResult = this.finishStreamingMessage();
     const streamedContainer = streamResult?.container;
-    const streamEventsEl = streamedContainer?.querySelector(
-      ".stream-events",
-    ) as HTMLElement | null;
-    const hasStreamEvents = Boolean(
-      streamEventsEl && streamEventsEl.children.length > 0,
-    );
+    const streamEventsEl = streamedContainer?.querySelector('.stream-events') as HTMLElement | null;
+    const hasStreamEvents = Boolean(streamEventsEl && streamEventsEl.children.length > 0);
     let normalizedUsage = this.normalizeUsage(usage);
     const modelLabel = model || this.getActiveModelLabel();
-    const combinedThinking =
-      [streamResult?.thinking, thinking].filter(Boolean).join("\n\n") || null;
+    const combinedThinking = [streamResult?.thinking, thinking].filter(Boolean).join('\n\n') || null;
 
-    if ((!content || content.trim() === "") && !combinedThinking && !hasStreamEvents) {
+    if ((!content || content.trim() === '') && !combinedThinking && !hasStreamEvents) {
       if (streamedContainer) {
         streamedContainer.remove();
       }
-      this.updateStatus("Ready", "success");
-      this.elements.composer?.classList.remove("running");
+      this.updateStatus('Ready', 'success');
+      this.elements.composer?.classList.remove('running');
       this.pendingToolCount = 0;
       this.updateActivityState();
       return;
@@ -2512,7 +2173,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     // Add to conversation history
     const assistantEntry = createMessage({
-      role: "assistant",
+      role: 'assistant',
       content,
       thinking,
     });
@@ -2521,23 +2182,21 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     if (streamedContainer) {
-      if (!streamedContainer.querySelector(".message-header")) {
-        const header = document.createElement("div");
-        header.className = "message-header";
-        header.textContent = "Assistant";
+      if (!streamedContainer.querySelector('.message-header')) {
+        const header = document.createElement('div');
+        header.className = 'message-header';
+        header.textContent = 'Assistant';
         streamedContainer.prepend(header);
       }
 
       if (messageMeta) {
-        let metaEl = streamedContainer.querySelector(
-          ".message-meta",
-        ) as HTMLElement | null;
+        let metaEl = streamedContainer.querySelector('.message-meta') as HTMLElement | null;
         if (!metaEl) {
-          metaEl = document.createElement("div");
-          metaEl.className = "message-meta";
-          const header = streamedContainer.querySelector(".message-header");
+          metaEl = document.createElement('div');
+          metaEl.className = 'message-meta';
+          const header = streamedContainer.querySelector('.message-header');
           if (header) {
-            header.insertAdjacentElement("afterend", metaEl);
+            header.insertAdjacentElement('afterend', metaEl);
           } else {
             streamedContainer.prepend(metaEl);
           }
@@ -2545,36 +2204,34 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         metaEl.textContent = messageMeta;
       }
 
-      if (content && content.trim() !== "" && streamEventsEl) {
-        const hasTextEvent = streamEventsEl.querySelector(
-          ".stream-event-text",
-        );
+      if (content && content.trim() !== '' && streamEventsEl) {
+        const hasTextEvent = streamEventsEl.querySelector('.stream-event-text');
         if (!hasTextEvent) {
-          const textEvent = document.createElement("div");
-          textEvent.className = "stream-event stream-event-text";
+          const textEvent = document.createElement('div');
+          textEvent.className = 'stream-event stream-event-text';
           textEvent.innerHTML = this.renderMarkdown(content);
           streamEventsEl.appendChild(textEvent);
         }
       }
 
       this.scrollToBottom();
-      this.updateStatus("Ready", "success");
-      this.elements.composer?.classList.remove("running");
+      this.updateStatus('Ready', 'success');
+      this.elements.composer?.classList.remove('running');
       this.pendingToolCount = 0;
       this.updateActivityState();
       this.persistHistory();
       return;
     }
 
-    const messageDiv = document.createElement("div");
-    messageDiv.className = "message assistant";
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant';
 
     let html = `<div class="message-header">Assistant</div>`;
     if (messageMeta) {
       html += `<div class="message-meta">${this.escapeHtml(messageMeta)}</div>`;
     }
 
-    const showThinking = this.elements.showThinking.value === "true";
+    const showThinking = this.elements.showThinking.value === 'true';
     if (thinking && showThinking) {
       const cleanedThinking = dedupeThinking(thinking);
       html += `
@@ -2591,7 +2248,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     // Only add content div if content is not empty
-    if (content && content.trim() !== "") {
+    if (content && content.trim() !== '') {
       const renderedContent = this.renderMarkdown(content);
       html += `<div class="message-content markdown-body">${renderedContent}</div>`;
     }
@@ -2599,17 +2256,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     messageDiv.innerHTML = html;
 
     // Add click handler for collapsible thinking blocks
-    const thinkingHeader = messageDiv.querySelector(".thinking-header");
+    const thinkingHeader = messageDiv.querySelector('.thinking-header');
     if (thinkingHeader) {
-      thinkingHeader.addEventListener("click", () => {
-        const block = thinkingHeader.closest(".thinking-block");
-        if (!block || block.classList.contains("thinking-hidden")) return;
-        block.classList.toggle("collapsed");
-        const expanded = !block.classList.contains("collapsed");
-        thinkingHeader.setAttribute(
-          "aria-expanded",
-          expanded ? "true" : "false",
-        );
+      thinkingHeader.addEventListener('click', () => {
+        const block = thinkingHeader.closest('.thinking-block');
+        if (!block || block.classList.contains('thinking-hidden')) return;
+        block.classList.toggle('collapsed');
+        const expanded = !block.classList.contains('collapsed');
+        thinkingHeader.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       });
     }
 
@@ -2619,34 +2273,30 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.elements.chatMessages.appendChild(messageDiv);
     }
     this.scrollToBottom();
-    this.updateStatus("Ready", "success");
-    this.elements.composer?.classList.remove("running");
+    this.updateStatus('Ready', 'success');
+    this.elements.composer?.classList.remove('running');
     this.pendingToolCount = 0;
     this.updateActivityState();
     this.persistHistory();
   }
 
   renderMarkdown(text) {
-    if (!text) return "";
+    if (!text) return '';
 
-    const escape = (value = "") => this.escapeHtmlBasic(value);
-    const escapeAttr = (value = "") => this.escapeAttribute(value);
+    const escape = (value = '') => this.escapeHtmlBasic(value);
+    const escapeAttr = (value = '') => this.escapeAttribute(value);
 
-    let working = String(text).replace(/\r\n/g, "\n");
+    let working = String(text).replace(/\r\n/g, '\n');
     const codeBlocks: string[] = [];
     const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
-    working = working.replace(codeBlockRegex, (_, lang = "", body = "") => {
+    working = working.replace(codeBlockRegex, (_, lang = '', body = '') => {
       const placeholder = `@@CODE_BLOCK_${codeBlocks.length}@@`;
-      const languageClass = lang
-        ? ` class="language-${escapeAttr(lang.toLowerCase())}"`
-        : "";
-      codeBlocks.push(
-        `<pre><code${languageClass}>${escape(body)}</code></pre>`,
-      );
+      const languageClass = lang ? ` class="language-${escapeAttr(lang.toLowerCase())}"` : '';
+      codeBlocks.push(`<pre><code${languageClass}>${escape(body)}</code></pre>`);
       return placeholder;
     });
 
-    const applyInline = (value = "") => {
+    const applyInline = (value = '') => {
       let html = escape(value);
       html = html.replace(
         /!\[([^\]]*)\]\(([^)]+)\)/g,
@@ -2654,22 +2304,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       );
       html = html.replace(
         /\[([^\]]+)\]\(([^)]+)\)/g,
-        (_, label, url) =>
-          `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`,
+        (_, label, url) => `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`,
       );
-      html = html.replace(
-        /`([^`]+)`/g,
-        (_, code) => `<code>${escape(code)}</code>`,
-      );
-      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-      html = html.replace(/__(.+?)__/g, "<strong>$1</strong>");
-      html = html.replace(/~~(.+?)~~/g, "<del>$1</del>");
-      html = html.replace(/(?<!\*)\*(?!\s)(.+?)\*(?!\*)/g, "<em>$1</em>");
-      html = html.replace(/(?<!_)_(?!\s)(.+?)_(?!_)/g, "<em>$1</em>");
+      html = html.replace(/`([^`]+)`/g, (_, code) => `<code>${escape(code)}</code>`);
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+      html = html.replace(/(?<!\*)\*(?!\s)(.+?)\*(?!\*)/g, '<em>$1</em>');
+      html = html.replace(/(?<!_)_(?!\s)(.+?)_(?!_)/g, '<em>$1</em>');
       return html;
     };
 
-    const lines = working.split("\n");
+    const lines = working.split('\n');
     const blocks: string[] = [];
     let paragraph: string[] = [];
     let inUl = false;
@@ -2677,18 +2323,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     const closeLists = () => {
       if (inUl) {
-        blocks.push("</ul>");
+        blocks.push('</ul>');
         inUl = false;
       }
       if (inOl) {
-        blocks.push("</ol>");
+        blocks.push('</ol>');
         inOl = false;
       }
     };
 
     const flushParagraph = () => {
       if (!paragraph.length) return;
-      blocks.push(`<p>${applyInline(paragraph.join("\n"))}</p>`);
+      blocks.push(`<p>${applyInline(paragraph.join('\n'))}</p>`);
       paragraph = [];
     };
 
@@ -2713,7 +2359,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       if (/^([-*_])(\s*\1){2,}$/.test(trimmed)) {
         flushParagraph();
         closeLists();
-        blocks.push("<hr>");
+        blocks.push('<hr>');
         continue;
       }
 
@@ -2729,39 +2375,35 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       if (/^\s*>\s*/.test(line)) {
         flushParagraph();
         closeLists();
-        blocks.push(
-          `<blockquote>${applyInline(line.replace(/^\s*>\s?/, ""))}</blockquote>`,
-        );
+        blocks.push(`<blockquote>${applyInline(line.replace(/^\s*>\s?/, ''))}</blockquote>`);
         continue;
       }
 
       if (/^\s*[-*]\s+/.test(line)) {
         flushParagraph();
         if (inOl) {
-          blocks.push("</ol>");
+          blocks.push('</ol>');
           inOl = false;
         }
         if (!inUl) {
-          blocks.push("<ul>");
+          blocks.push('<ul>');
           inUl = true;
         }
-        blocks.push(`<li>${applyInline(line.replace(/^\s*[-*]\s+/, ""))}</li>`);
+        blocks.push(`<li>${applyInline(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
         continue;
       }
 
       if (/^\s*\d+[.)]\s+/.test(line)) {
         flushParagraph();
         if (inUl) {
-          blocks.push("</ul>");
+          blocks.push('</ul>');
           inUl = false;
         }
         if (!inOl) {
-          blocks.push("<ol>");
+          blocks.push('<ol>');
           inOl = true;
         }
-        blocks.push(
-          `<li>${applyInline(line.replace(/^\s*\d+[.)]\s+/, ""))}</li>`,
-        );
+        blocks.push(`<li>${applyInline(line.replace(/^\s*\d+[.)]\s+/, ''))}</li>`);
         continue;
       }
 
@@ -2771,7 +2413,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     flushParagraph();
     closeLists();
 
-    let html = blocks.join("");
+    let html = blocks.join('');
     codeBlocks.forEach((block, index) => {
       const placeholder = `@@CODE_BLOCK_${index}@@`;
       html = html.split(placeholder).join(block);
@@ -2781,15 +2423,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   handleAssistantStream(event) {
-    if (event.status === "start") {
+    if (event.status === 'start') {
       this.isStreaming = true;
       this.clearErrorBanner(); // Clear any existing errors when new activity starts
       this.startStreamingMessage();
-      this.updateStatus("Model is thinking...", "active");
-    } else if (event.status === "delta") {
+      this.updateStatus('Model is thinking...', 'active');
+    } else if (event.status === 'delta') {
       this.isStreaming = true;
-      this.updateStreamingMessage(event.content || "");
-    } else if (event.status === "stop") {
+      this.updateStreamingMessage(event.content || '');
+    } else if (event.status === 'stop') {
       this.isStreaming = false;
       this.completeStreamingMessage();
     }
@@ -2798,8 +2440,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   startStreamingMessage() {
     if (this.streamingState) return;
-    const container = document.createElement("div");
-    container.className = "message assistant streaming";
+    const container = document.createElement('div');
+    container.className = 'message assistant streaming';
     container.innerHTML = `
       <div class="message-content streaming-content markdown-body">
         <div class="typing-indicator"><span></span><span></span><span></span></div>
@@ -2810,12 +2452,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.chatMessages.appendChild(container);
     this.streamingState = {
       container,
-      eventsEl: container.querySelector(".stream-events") as HTMLElement | null,
+      eventsEl: container.querySelector('.stream-events') as HTMLElement | null,
       lastEventType: undefined,
       textEventEl: null,
       reasoningEventEl: null,
-      textBuffer: "",
-      reasoningBuffer: "",
+      textBuffer: '',
+      reasoningBuffer: '',
       planEl: null,
       planListEl: null,
       planMetaEl: null,
@@ -2831,20 +2473,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!this.streamingState?.eventsEl) return;
 
     // Start a new text event block if needed
-    if (this.streamingState.lastEventType !== "text") {
-      const textEvent = document.createElement("div");
-      textEvent.className = "stream-event stream-event-text";
+    if (this.streamingState.lastEventType !== 'text') {
+      const textEvent = document.createElement('div');
+      textEvent.className = 'stream-event stream-event-text';
       this.streamingState.eventsEl.appendChild(textEvent);
       this.streamingState.textEventEl = textEvent;
-      this.streamingState.textBuffer = "";
-      this.streamingState.lastEventType = "text";
+      this.streamingState.textBuffer = '';
+      this.streamingState.lastEventType = 'text';
     }
 
-    this.streamingState.textBuffer = `${this.streamingState.textBuffer || ""}${content || ""}`;
+    this.streamingState.textBuffer = `${this.streamingState.textBuffer || ''}${content || ''}`;
     if (this.streamingState.textEventEl) {
-      this.streamingState.textEventEl.innerHTML = this.renderMarkdown(
-        this.streamingState.textBuffer || "",
-      );
+      this.streamingState.textEventEl.innerHTML = this.renderMarkdown(this.streamingState.textBuffer || '');
     }
 
     this.scrollToBottom();
@@ -2852,10 +2492,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   completeStreamingMessage() {
     if (!this.streamingState?.container) return;
-    const indicator =
-      this.streamingState.container.querySelector(".typing-indicator");
+    const indicator = this.streamingState.container.querySelector('.typing-indicator');
     if (indicator) indicator.remove();
-    this.streamingState.container.classList.remove("streaming");
+    this.streamingState.container.classList.remove('streaming');
     if (this.streamingReasoning) {
       this.updateThinkingPanel(this.streamingReasoning, false);
     } else {
@@ -2868,22 +2507,22 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (delta === null || delta === undefined) return;
     if (!delta.trim() && !this.streamingState.reasoningBuffer) return;
 
-    if (this.streamingState.lastEventType !== "reasoning") {
-      const reasoningEvent = document.createElement("div");
-      reasoningEvent.className = "stream-event stream-event-reasoning";
+    if (this.streamingState.lastEventType !== 'reasoning') {
+      const reasoningEvent = document.createElement('div');
+      reasoningEvent.className = 'stream-event stream-event-reasoning';
       reasoningEvent.innerHTML = `
         <div class="stream-reasoning-label">Reasoning</div>
         <div class="stream-reasoning-content"></div>
       `;
       this.streamingState.eventsEl.appendChild(reasoningEvent);
       this.streamingState.reasoningEventEl = reasoningEvent.querySelector(
-        ".stream-reasoning-content",
+        '.stream-reasoning-content',
       ) as HTMLElement | null;
-      this.streamingState.reasoningBuffer = "";
-      this.streamingState.lastEventType = "reasoning";
+      this.streamingState.reasoningBuffer = '';
+      this.streamingState.lastEventType = 'reasoning';
     }
 
-    const nextBuffer = `${this.streamingState.reasoningBuffer || ""}${delta}`;
+    const nextBuffer = `${this.streamingState.reasoningBuffer || ''}${delta}`;
     this.streamingState.reasoningBuffer = nextBuffer;
     const cleaned = dedupeThinking(nextBuffer);
     if (this.streamingState.reasoningEventEl) {
@@ -2898,23 +2537,17 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.renderPlanBlock(plan);
   }
 
-  applyManualPlanUpdate(
-    steps: Array<{ title: string; status?: string; notes?: string }> = [],
-  ) {
+  applyManualPlanUpdate(steps: Array<{ title: string; status?: string; notes?: string }> = []) {
     if (!steps || steps.length === 0) return;
     const now = Date.now();
     const normalizedSteps = steps
       .map((step, index) => {
         const status =
-          step.status === "running" ||
-          step.status === "done" ||
-          step.status === "blocked"
-            ? step.status
-            : "pending";
+          step.status === 'running' || step.status === 'done' || step.status === 'blocked' ? step.status : 'pending';
         return {
           id: `step-${index + 1}`,
           title: step.title,
-          status: status as RunPlan["steps"][number]["status"],
+          status: status as RunPlan['steps'][number]['status'],
           notes: step.notes,
         };
       })
@@ -2939,17 +2572,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     const steps = Array.isArray(plan.steps) ? plan.steps : [];
     if (this.streamingState.planMetaEl) {
-      this.streamingState.planMetaEl.textContent =
-        steps.length === 1 ? "1 step" : `${steps.length} steps`;
+      this.streamingState.planMetaEl.textContent = steps.length === 1 ? '1 step' : `${steps.length} steps`;
     }
     if (this.streamingState.planListEl) {
       this.streamingState.planListEl.innerHTML = steps
         .map((step) => {
-          const status = step.status || "pending";
+          const status = step.status || 'pending';
           const statusClass = `plan-step-${status}`;
-          const notes = step.notes
-            ? `<div class="plan-step-notes">${this.escapeHtml(step.notes)}</div>`
-            : "";
+          const notes = step.notes ? `<div class="plan-step-notes">${this.escapeHtml(step.notes)}</div>` : '';
           return `
             <li class="plan-step ${statusClass}">
               <span class="plan-step-dot"></span>
@@ -2960,7 +2590,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
             </li>
           `;
         })
-        .join("");
+        .join('');
     }
     this.scrollToBottom();
   }
@@ -2969,8 +2599,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!this.streamingState?.eventsEl) return null;
     if (this.streamingState.planEl) return this.streamingState.planEl;
 
-    const container = document.createElement("div");
-    container.className = "plan-block";
+    const container = document.createElement('div');
+    container.className = 'plan-block';
     container.innerHTML = `
       <div class="plan-header">
         <span class="plan-title">Plan</span>
@@ -2987,12 +2617,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     this.streamingState.planEl = container;
-    this.streamingState.planListEl = container.querySelector(
-      ".plan-steps",
-    ) as HTMLOListElement | null;
-    this.streamingState.planMetaEl = container.querySelector(
-      ".plan-meta",
-    ) as HTMLElement | null;
+    this.streamingState.planListEl = container.querySelector('.plan-steps') as HTMLOListElement | null;
+    this.streamingState.planMetaEl = container.querySelector('.plan-meta') as HTMLElement | null;
     return container;
   }
 
@@ -3012,9 +2638,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   displayToolExecution(toolName, args, result, toolCallId = null) {
-    const entryId =
-      toolCallId ||
-      `tool-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const entryId = toolCallId || `tool-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     let entry = this.toolCallViews.get(entryId);
 
     if (!entry) {
@@ -3029,7 +2653,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         const inlineEntry = this.createToolTreeItem(entryId, toolName, args);
         entry.inline = inlineEntry;
         this.streamingState.eventsEl.appendChild(inlineEntry.container);
-        this.streamingState.lastEventType = "tool";
+        this.streamingState.lastEventType = 'tool';
       }
 
       // Activity panel log (right sidebar)
@@ -3046,9 +2670,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.updateToolMessage(entry, result);
       const isError = result && (result.error || result.success === false);
       if (isError) {
-        this.showErrorBanner(
-          `${toolName}: ${result.error || "Tool execution failed"}`,
-        );
+        this.showErrorBanner(`${toolName}: ${result.error || 'Tool execution failed'}`);
       }
     }
     this.updateActivityToggle();
@@ -3056,26 +2678,26 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   createToolMessage(entryId, toolName, args) {
     if (!this.elements.toolLog) {
-      const container = document.createElement("div");
-      container.className = "message tool";
+      const container = document.createElement('div');
+      container.className = 'message tool';
       container.dataset.id = entryId;
-      const safeToolName = toolName || "tool";
+      const safeToolName = toolName || 'tool';
       const argsPreview = this.getArgsPreview(args);
       const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
 
-      const details = document.createElement("details");
-      details.className = "tool-event running";
+      const details = document.createElement('details');
+      details.className = 'tool-event running';
       details.innerHTML = `
         <summary>
           <span class="tool-event-dot"></span>
           <span class="tool-event-name">${this.escapeHtml(safeToolName)}</span>
-          <span class="tool-event-preview">${this.escapeHtml(argsPreview || "No args")}</span>
+          <span class="tool-event-preview">${this.escapeHtml(argsPreview || 'No args')}</span>
           <span class="tool-event-status">Running</span>
         </summary>
         <div class="tool-event-body">
           <div class="tool-event-section">
             <div class="tool-event-label">Args</div>
-            <pre class="tool-event-args-pre">${this.escapeHtml(argsText || "No args")}</pre>
+            <pre class="tool-event-args-pre">${this.escapeHtml(argsText || 'No args')}</pre>
           </div>
           <div class="tool-event-section">
             <div class="tool-event-label">Result</div>
@@ -3088,16 +2710,16 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       return {
         container,
         details,
-        statusEl: details.querySelector(".tool-event-status"),
-        resultEl: details.querySelector(".tool-event-result-pre"),
-        previewEl: details.querySelector(".tool-event-preview"),
+        statusEl: details.querySelector('.tool-event-status'),
+        resultEl: details.querySelector('.tool-event-result-pre'),
+        previewEl: details.querySelector('.tool-event-preview'),
       };
     }
 
-    const container = document.createElement("div");
-    container.className = "tool-log-item running";
+    const container = document.createElement('div');
+    container.className = 'tool-log-item running';
     container.dataset.id = entryId;
-    const safeToolName = toolName || "tool";
+    const safeToolName = toolName || 'tool';
     const argsPreview = this.getArgsPreview(args);
     const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
 
@@ -3106,26 +2728,26 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         <div class="tool-log-title"><span>${this.escapeHtml(safeToolName)}</span></div>
         <span class="tool-log-status">Running</span>
       </div>
-      <div class="tool-log-meta">${this.escapeHtml(argsPreview || "No args")}</div>
+      <div class="tool-log-meta">${this.escapeHtml(argsPreview || 'No args')}</div>
       <div class="tool-log-body">
-        <div class="tool-log-args">${this.escapeHtml(argsText || "No args")}</div>
+        <div class="tool-log-args">${this.escapeHtml(argsText || 'No args')}</div>
         <div class="tool-log-result">Waiting...</div>
       </div>
       <button class="tool-log-toggle" type="button">Details</button>
     `;
 
-    const toggleBtn = container.querySelector(".tool-log-toggle");
-    toggleBtn?.addEventListener("click", () => {
-      container.classList.toggle("expanded");
-      const expanded = container.classList.contains("expanded");
-      toggleBtn.textContent = expanded ? "Hide" : "Details";
+    const toggleBtn = container.querySelector('.tool-log-toggle');
+    toggleBtn?.addEventListener('click', () => {
+      container.classList.toggle('expanded');
+      const expanded = container.classList.contains('expanded');
+      toggleBtn.textContent = expanded ? 'Hide' : 'Details';
     });
 
     return {
       container,
-      statusEl: container.querySelector(".tool-log-status"),
-      resultEl: container.querySelector(".tool-log-result"),
-      previewEl: container.querySelector(".tool-log-meta"),
+      statusEl: container.querySelector('.tool-log-status'),
+      resultEl: container.querySelector('.tool-log-result'),
+      previewEl: container.querySelector('.tool-log-meta'),
       toggleBtn,
     };
   }
@@ -3139,8 +2761,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         this.updateToolTreeItem(entry.inline, result);
       }
       if (entry.log) {
-        const isTreeItem =
-          entry.log.container?.classList?.contains("tool-tree-item");
+        const isTreeItem = entry.log.container?.classList?.contains('tool-tree-item');
         if (isTreeItem) {
           this.updateToolTreeItem(entry.log, result);
         } else {
@@ -3159,24 +2780,17 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const isError = result && (result.error || result.success === false);
 
     if (entry.details) {
-      entry.details.classList.remove("running", "success", "error");
-      entry.details.classList.add(isError ? "error" : "success");
-      if (entry.statusEl)
-        entry.statusEl.textContent = isError ? "Error" : "Done";
+      entry.details.classList.remove('running', 'success', 'error');
+      entry.details.classList.add(isError ? 'error' : 'success');
+      if (entry.statusEl) entry.statusEl.textContent = isError ? 'Error' : 'Done';
 
       if (entry.resultEl) {
-        const resultText = this.truncateText(
-          this.safeJsonStringify(result),
-          2000,
-        );
-        entry.resultEl.textContent =
-          resultText || (isError ? "Tool failed" : "Done");
+        const resultText = this.truncateText(this.safeJsonStringify(result), 2000);
+        entry.resultEl.textContent = resultText || (isError ? 'Tool failed' : 'Done');
       }
 
       if (entry.previewEl) {
-        const preview = isError
-          ? result?.error || "Tool failed"
-          : result?.message || result?.summary || "";
+        const preview = isError ? result?.error || 'Tool failed' : result?.message || result?.summary || '';
         if (preview) {
           entry.previewEl.textContent = this.truncateText(String(preview), 120);
         }
@@ -3189,33 +2803,27 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
 
     if (entry.container) {
-      entry.container.classList.remove("running", "success", "error");
-      entry.container.classList.add(isError ? "error" : "success");
+      entry.container.classList.remove('running', 'success', 'error');
+      entry.container.classList.add(isError ? 'error' : 'success');
     }
-    if (entry.statusEl) entry.statusEl.textContent = isError ? "Error" : "Done";
+    if (entry.statusEl) entry.statusEl.textContent = isError ? 'Error' : 'Done';
 
     if (entry.resultEl) {
-      const resultText = this.truncateText(
-        this.safeJsonStringify(result),
-        2000,
-      );
-      entry.resultEl.textContent =
-        resultText || (isError ? "Tool failed" : "Done");
+      const resultText = this.truncateText(this.safeJsonStringify(result), 2000);
+      entry.resultEl.textContent = resultText || (isError ? 'Tool failed' : 'Done');
     }
 
     if (entry.previewEl) {
-      const preview = isError
-        ? result?.error || "Tool failed"
-        : result?.message || result?.summary || "";
+      const preview = isError ? result?.error || 'Tool failed' : result?.message || result?.summary || '';
       if (preview) {
         entry.previewEl.textContent = this.truncateText(String(preview), 120);
       }
     }
 
     if (isError && entry.container) {
-      entry.container.classList.add("expanded");
+      entry.container.classList.add('expanded');
       if (entry.toggleBtn) {
-        entry.toggleBtn.textContent = "Hide";
+        entry.toggleBtn.textContent = 'Hide';
       }
     }
 
@@ -3226,12 +2834,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   showErrorBanner(message) {
     // Remove existing error banner if present
-    const existing =
-      this.elements.chatInterface?.querySelector(".error-banner");
+    const existing = this.elements.chatInterface?.querySelector('.error-banner');
     if (existing) existing.remove();
 
-    const banner = document.createElement("div");
-    banner.className = "error-banner";
+    const banner = document.createElement('div');
+    banner.className = 'error-banner';
     banner.innerHTML = `
       <svg class="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"></circle>
@@ -3247,8 +2854,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       </button>
     `;
 
-    const dismissButton = banner.querySelector(".error-dismiss");
-    dismissButton?.addEventListener("click", () => banner.remove());
+    const dismissButton = banner.querySelector('.error-dismiss');
+    dismissButton?.addEventListener('click', () => banner.remove());
 
     // Insert after status bar
     const statusBar = this.elements.statusBar;
@@ -3262,19 +2869,17 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   showRunIncompleteBanner() {
-    const existing = this.elements.chatInterface?.querySelector(
-      ".run-incomplete-banner",
-    );
+    const existing = this.elements.chatInterface?.querySelector('.run-incomplete-banner');
     if (existing) return;
-    const banner = document.createElement("div");
-    banner.className = "run-incomplete-banner";
+    const banner = document.createElement('div');
+    banner.className = 'run-incomplete-banner';
     banner.innerHTML = `
       <span class="run-incomplete-dot"></span>
       <span>Run incomplete — response may be partial.</span>
       <button class="run-incomplete-dismiss" title="Dismiss">Dismiss</button>
     `;
-    const dismiss = banner.querySelector(".run-incomplete-dismiss");
-    dismiss?.addEventListener("click", () => banner.remove());
+    const dismiss = banner.querySelector('.run-incomplete-dismiss');
+    dismiss?.addEventListener('click', () => banner.remove());
     const statusBar = this.elements.statusBar;
     if (statusBar && statusBar.parentNode) {
       statusBar.parentNode.insertBefore(banner, statusBar.nextSibling);
@@ -3282,34 +2887,29 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   clearRunIncompleteBanner() {
-    const existing = this.elements.chatInterface?.querySelector(
-      ".run-incomplete-banner",
-    );
+    const existing = this.elements.chatInterface?.querySelector('.run-incomplete-banner');
     if (existing) existing.remove();
   }
 
   clearErrorBanner() {
-    const existing =
-      this.elements.chatInterface?.querySelector(".error-banner");
+    const existing = this.elements.chatInterface?.querySelector('.error-banner');
     if (existing) existing.remove();
   }
 
   getArgsPreview(args) {
-    if (!args) return "";
-    if (args.url)
-      return args.url.substring(0, 30) + (args.url.length > 30 ? "..." : "");
-    if (args.text)
-      return `"${args.text.substring(0, 20)}${args.text.length > 20 ? "..." : ""}"`;
+    if (!args) return '';
+    if (args.url) return args.url.substring(0, 30) + (args.url.length > 30 ? '...' : '');
+    if (args.text) return `"${args.text.substring(0, 20)}${args.text.length > 20 ? '...' : ''}"`;
     if (args.selector) return args.selector.substring(0, 25);
     if (args.key) return args.key;
     if (args.direction) return args.direction;
     if (args.type) return args.type;
-    return "";
+    return '';
   }
 
   createToolTreeItem(entryId, toolName, args) {
-    const container = document.createElement("div");
-    container.className = "tool-tree-item running";
+    const container = document.createElement('div');
+    container.className = 'tool-tree-item running';
     container.dataset.id = entryId;
     container.dataset.start = String(Date.now());
 
@@ -3321,8 +2921,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       <span class="tool-tree-status"></span>
       <div class="tool-tree-content">
         <div class="tool-tree-header">
-          <span class="tool-tree-name">${this.escapeHtml(toolName || "tool")}</span>
-          <span class="tool-tree-args">${this.escapeHtml(argsPreview || "")}</span>
+          <span class="tool-tree-name">${this.escapeHtml(toolName || 'tool')}</span>
+          <span class="tool-tree-args">${this.escapeHtml(argsPreview || '')}</span>
         </div>
         <span class="tool-tree-meta">Running</span>
       </div>
@@ -3330,24 +2930,24 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     return {
       container,
-      statusEl: container.querySelector(".tool-tree-meta"),
+      statusEl: container.querySelector('.tool-tree-meta'),
     };
   }
 
   updateToolTreeItem(entry, result) {
     if (!entry?.container) return;
     const isError = result && (result.error || result.success === false);
-    entry.container.classList.remove("running", "success", "error");
-    entry.container.classList.add(isError ? "error" : "success");
+    entry.container.classList.remove('running', 'success', 'error');
+    entry.container.classList.add(isError ? 'error' : 'success');
 
-    const start = Number.parseInt(entry.container.dataset.start || "0", 10);
+    const start = Number.parseInt(entry.container.dataset.start || '0', 10);
     const dur = start ? Date.now() - start : 0;
-    
+
     if (entry.statusEl) {
       if (isError) {
-        entry.statusEl.textContent = "Error";
+        entry.statusEl.textContent = 'Error';
       } else {
-        entry.statusEl.textContent = dur > 0 ? `${dur}ms` : "Done";
+        entry.statusEl.textContent = dur > 0 ? `${dur}ms` : 'Done';
       }
     }
   }
@@ -3355,35 +2955,35 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   ensureToolTree() {
     const container = this.lastChatTurn || this.elements.chatMessages;
     if (!container) {
-      return document.createElement("div");
+      return document.createElement('div');
     }
-    let tree = container.querySelector(".tool-tree");
+    let tree = container.querySelector('.tool-tree');
     if (!tree) {
-      tree = document.createElement("div");
-      tree.className = "tool-tree";
+      tree = document.createElement('div');
+      tree.className = 'tool-tree';
       container.appendChild(tree);
     }
     return tree;
   }
 
-  updateStatus(text, type = "default") {
+  updateStatus(text, type = 'default') {
     if (this.elements.statusText) {
       this.elements.statusText.textContent = text;
     }
     // Update status dot color based on type
-    const statusDot = document.getElementById("statusDot");
+    const statusDot = document.getElementById('statusDot');
     if (statusDot) {
-      statusDot.className = "status-dot";
-      if (type === "error") statusDot.classList.add("error");
-      else if (type === "warning") statusDot.classList.add("warning");
-      else if (type === "active") statusDot.classList.add("active");
+      statusDot.className = 'status-dot';
+      if (type === 'error') statusDot.classList.add('error');
+      else if (type === 'warning') statusDot.classList.add('warning');
+      else if (type === 'active') statusDot.classList.add('active');
     }
     this.updateActivityState();
   }
 
   updateModelDisplay() {
     const config = this.configs[this.currentConfig] || {};
-    const modelName = config.model || "";
+    const modelName = config.model || '';
     // Update the model selector if it exists
     if (this.elements.modelSelect) {
       this.elements.modelSelect.value = modelName;
@@ -3392,37 +2992,37 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   async fetchAvailableModels() {
     const config = this.configs[this.currentConfig] || {};
-    const provider = config.provider || "openai";
-    const apiKey = config.apiKey || "";
-    const customEndpoint = config.customEndpoint || "";
+    const provider = config.provider || 'openai';
+    const apiKey = config.apiKey || '';
+    const customEndpoint = config.customEndpoint || '';
 
     if (!apiKey) {
-      this.populateModelSelect([config.model || "gpt-4o"]);
+      this.populateModelSelect([config.model || 'gpt-4o']);
       return;
     }
 
-    let baseUrl = "";
-    if (provider === "custom" && customEndpoint) {
+    let baseUrl = '';
+    if (provider === 'custom' && customEndpoint) {
       baseUrl = customEndpoint
-        .replace(/\/chat\/completions\/?$/i, "")
-        .replace(/\/v1\/?$/i, "")
-        .replace(/\/+$/, "");
-    } else if (provider === "openai") {
-      baseUrl = "https://api.openai.com";
-    } else if (provider === "anthropic") {
+        .replace(/\/chat\/completions\/?$/i, '')
+        .replace(/\/v1\/?$/i, '')
+        .replace(/\/+$/, '');
+    } else if (provider === 'openai') {
+      baseUrl = 'https://api.openai.com';
+    } else if (provider === 'anthropic') {
       // Anthropic doesn't have a models endpoint, use known models
       this.populateModelSelect([
-        "claude-opus-4-20250514",
-        "claude-sonnet-4-20250514",
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
+        'claude-opus-4-20250514',
+        'claude-sonnet-4-20250514',
+        'claude-3-7-sonnet-20250219',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-haiku-20241022',
       ]);
       return;
     }
 
     if (!baseUrl) {
-      this.populateModelSelect([config.model || "gpt-4o"]);
+      this.populateModelSelect([config.model || 'gpt-4o']);
       return;
     }
 
@@ -3430,30 +3030,30 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       const response = await fetch(`${baseUrl}/v1/models`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       });
 
       if (!response.ok) {
-        console.warn("Failed to fetch models:", response.status);
-        this.populateModelSelect([config.model || "gpt-4o"]);
+        console.warn('Failed to fetch models:', response.status);
+        this.populateModelSelect([config.model || 'gpt-4o']);
         return;
       }
 
       const data = await response.json();
       const models = (data.data || [])
         .map((m: { id: string }) => m.id)
-        .filter((id: string) => id && typeof id === "string")
+        .filter((id: string) => id && typeof id === 'string')
         .sort((a: string, b: string) => a.localeCompare(b));
 
       if (models.length > 0) {
         this.populateModelSelect(models);
       } else {
-        this.populateModelSelect([config.model || "gpt-4o"]);
+        this.populateModelSelect([config.model || 'gpt-4o']);
       }
     } catch (error) {
-      console.warn("Error fetching models:", error);
-      this.populateModelSelect([config.model || "gpt-4o"]);
+      console.warn('Error fetching models:', error);
+      this.populateModelSelect([config.model || 'gpt-4o']);
     }
   }
 
@@ -3462,14 +3062,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!select) return;
 
     const config = this.configs[this.currentConfig] || {};
-    const currentModel = config.model || "";
+    const currentModel = config.model || '';
 
     // Clear existing options
-    select.innerHTML = "";
+    select.innerHTML = '';
 
     // Add models
     for (const model of models) {
-      const option = document.createElement("option");
+      const option = document.createElement('option');
       option.value = model;
       option.textContent = model;
       if (model === currentModel) {
@@ -3480,7 +3080,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     // If current model not in list, add it
     if (currentModel && !models.includes(currentModel)) {
-      const option = document.createElement("option");
+      const option = document.createElement('option');
       option.value = currentModel;
       option.textContent = currentModel;
       option.selected = true;
@@ -3513,20 +3113,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!this.elements.statusMeta) return;
     const labels: string[] = [];
     if (this.pendingToolCount > 0) {
-      labels.push(
-        `${this.pendingToolCount} action${this.pendingToolCount > 1 ? "s" : ""} running`,
-      );
+      labels.push(`${this.pendingToolCount} action${this.pendingToolCount > 1 ? 's' : ''} running`);
     }
     if (this.isStreaming) {
-      labels.push("Streaming response");
+      labels.push('Streaming response');
     }
     if (this.contextUsage && this.contextUsage.maxContextTokens) {
       const used = Math.max(0, this.contextUsage.approxTokens || 0);
       const max = Math.max(1, this.contextUsage.maxContextTokens || 0);
-      const usedLabel =
-        used >= 10000
-          ? `${(used / 1000).toFixed(1)}k`
-          : `${used}`;
+      const usedLabel = used >= 10000 ? `${(used / 1000).toFixed(1)}k` : `${used}`;
       const maxLabel = max >= 10000 ? `${(max / 1000).toFixed(0)}k` : `${max}`;
       labels.push(`Context ~ ${usedLabel} / ${maxLabel}`);
     }
@@ -3535,11 +3130,11 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       labels.push(usageLabel);
     }
     if (labels.length > 0) {
-      this.elements.statusMeta.textContent = labels.join(" · ");
-      this.elements.statusMeta.classList.remove("hidden");
+      this.elements.statusMeta.textContent = labels.join(' · ');
+      this.elements.statusMeta.classList.remove('hidden');
     } else {
-      this.elements.statusMeta.textContent = "";
-      this.elements.statusMeta.classList.add("hidden");
+      this.elements.statusMeta.textContent = '';
+      this.elements.statusMeta.classList.add('hidden');
     }
     this.updateActivityToggle();
   }
@@ -3551,34 +3146,28 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const hasThinking = Boolean(this.latestThinking);
     const segments: string[] = [];
     if (toolCount > 0) {
-      segments.push(`${toolCount} tool${toolCount === 1 ? "" : "s"}`);
+      segments.push(`${toolCount} tool${toolCount === 1 ? '' : 's'}`);
     }
     if (hasThinking) {
-      segments.push("thinking");
+      segments.push('thinking');
     }
     if (this.activeToolName) {
       segments.push(`${this.activeToolName}…`);
     }
-    toggle.textContent = segments.length
-      ? `Activity · ${segments.join(" · ")}`
-      : "Activity";
+    toggle.textContent = segments.length ? `Activity · ${segments.join(' · ')}` : 'Activity';
     const hasActiveWork = this.pendingToolCount > 0 || this.isStreaming;
-    toggle.classList.toggle("active", hasActiveWork);
+    toggle.classList.toggle('active', hasActiveWork);
   }
 
   toggleActivityPanel(force?: boolean) {
-    const shouldOpen =
-      typeof force === "boolean" ? force : !this.activityPanelOpen;
+    const shouldOpen = typeof force === 'boolean' ? force : !this.activityPanelOpen;
     this.activityPanelOpen = shouldOpen;
     if (this.elements.activityPanel) {
-      this.elements.activityPanel.classList.toggle("open", shouldOpen);
-      this.elements.activityPanel.setAttribute(
-        "aria-hidden",
-        shouldOpen ? "false" : "true",
-      );
+      this.elements.activityPanel.classList.toggle('open', shouldOpen);
+      this.elements.activityPanel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
     }
-    this.elements.activityToggleBtn?.classList.toggle("open", shouldOpen);
-    this.elements.chatInterface?.classList.toggle("activity-open", shouldOpen);
+    this.elements.activityToggleBtn?.classList.toggle('open', shouldOpen);
+    this.elements.chatInterface?.classList.toggle('activity-open', shouldOpen);
     if (shouldOpen) {
       this.scrollToolLogToBottom();
     }
@@ -3587,30 +3176,28 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   updateThinkingPanel(thinking: string | null, isStreaming = false) {
     const panel = this.elements.thinkingPanel;
     if (!panel) return;
-    const content = thinking ? thinking.trim() : "";
+    const content = thinking ? thinking.trim() : '';
     if (content) {
       const cleaned = dedupeThinking(content);
       this.latestThinking = cleaned;
       panel.textContent = cleaned;
-      panel.classList.remove("empty");
+      panel.classList.remove('empty');
     } else {
       if (!isStreaming) {
         this.latestThinking = null;
       }
-      panel.textContent = isStreaming
-        ? "Thinking…"
-        : "No reasoning captured yet.";
-      panel.classList.add("empty");
+      panel.textContent = isStreaming ? 'Thinking…' : 'No reasoning captured yet.';
+      panel.classList.add('empty');
     }
-    panel.classList.toggle("streaming", isStreaming);
+    panel.classList.toggle('streaming', isStreaming);
   }
 
   resetActivityPanel() {
     if (this.elements.toolLog) {
-      this.elements.toolLog.innerHTML = "";
+      this.elements.toolLog.innerHTML = '';
     }
     if (this.elements.chatMessages) {
-      const tree = this.elements.chatMessages.querySelector(".tool-tree");
+      const tree = this.elements.chatMessages.querySelector('.tool-tree');
       if (tree) tree.remove();
     }
     this.latestThinking = null;
@@ -3628,8 +3215,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!this.elements.chatMessages) return;
     if (!force && !this.shouldAutoScroll()) return;
     requestAnimationFrame(() => {
-      this.elements.chatMessages.scrollTop =
-        this.elements.chatMessages.scrollHeight;
+      this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
       this.isNearBottom = true;
       this.userScrolledUp = false;
       this.updateScrollButton();
@@ -3637,14 +3223,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   shouldAutoScroll() {
-    const autoScrollEnabled = this.elements.autoScroll?.value !== "false";
+    const autoScrollEnabled = this.elements.autoScroll?.value !== 'false';
     return autoScrollEnabled && !this.userScrolledUp;
   }
 
   handleChatScroll() {
     if (!this.elements.chatMessages) return;
-    const { scrollTop, scrollHeight, clientHeight } =
-      this.elements.chatMessages;
+    const { scrollTop, scrollHeight, clientHeight } = this.elements.chatMessages;
     const nearBottom = scrollHeight - scrollTop - clientHeight < 60;
     this.isNearBottom = nearBottom;
     this.userScrolledUp = !nearBottom;
@@ -3654,10 +3239,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   recordScrollPosition() {
     if (!this.elements.chatMessages) return;
-    this.scrollPositions.set(
-      this.sessionId,
-      this.elements.chatMessages.scrollTop,
-    );
+    this.scrollPositions.set(this.sessionId, this.elements.chatMessages.scrollTop);
   }
 
   restoreScrollPosition() {
@@ -3675,15 +3257,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   updateScrollButton() {
     if (!this.elements.scrollToLatestBtn) return;
-    this.elements.scrollToLatestBtn.classList.toggle(
-      "hidden",
-      !this.userScrolledUp,
-    );
+    this.elements.scrollToLatestBtn.classList.toggle('hidden', !this.userScrolledUp);
   }
 
   safeJsonStringify(value) {
     try {
-      if (value === undefined) return "";
+      if (value === undefined) return '';
       return JSON.stringify(value, null, 2);
     } catch (error) {
       return String(value);
@@ -3691,39 +3270,35 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   truncateText(text, limit = 1200) {
-    if (!text) return "";
+    if (!text) return '';
     if (text.length <= limit) return text;
     return `${text.slice(0, limit)}...`;
   }
 
   escapeHtmlBasic(text) {
-    const div = document.createElement("div");
-    div.textContent = text == null ? "" : text;
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : text;
     return div.innerHTML;
   }
 
   escapeHtml(text) {
-    return this.escapeHtmlBasic(text).replace(/\n/g, "<br>");
+    return this.escapeHtmlBasic(text).replace(/\n/g, '<br>');
   }
 
   escapeAttribute(value) {
-    return this.escapeHtmlBasic(value).replace(/"/g, "&quot;");
+    return this.escapeHtmlBasic(value).replace(/"/g, '&quot;');
   }
 
   async persistHistory() {
-    if (
-      !this.elements.saveHistory ||
-      this.elements.saveHistory.value !== "true"
-    )
-      return;
+    if (!this.elements.saveHistory || this.elements.saveHistory.value !== 'true') return;
     const entry = {
       id: this.sessionId,
       startedAt: this.sessionStartedAt,
       updatedAt: Date.now(),
-      title: this.firstUserMessage || "Session",
+      title: this.firstUserMessage || 'Session',
       transcript: this.displayHistory.slice(-200),
     };
-    const existing = await chrome.storage.local.get(["chatSessions"]);
+    const existing = await chrome.storage.local.get(['chatSessions']);
     const sessions = existing.chatSessions || [];
     const filtered = sessions.filter((s) => s.id !== entry.id);
     filtered.unshift(entry);
@@ -3738,39 +3313,36 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     if (actualTokens !== null && actualTokens > 0) {
       // Track highest context seen in session (API input_tokens represents full context)
-      this.sessionTokensUsed = Math.max(
-        this.sessionTokensUsed || 0,
-        actualTokens,
-      );
+      this.sessionTokensUsed = Math.max(this.sessionTokensUsed || 0, actualTokens);
       approxTokens = this.sessionTokensUsed;
     } else {
       // Estimate tokens from conversation history
       const joined = this.contextHistory
         .map((msg) => {
-          if (!msg) return "";
-          if (typeof msg.content === "string") return msg.content;
+          if (!msg) return '';
+          if (typeof msg.content === 'string') return msg.content;
           if (Array.isArray(msg.content)) {
             return msg.content
               .map((p) => {
-                if (typeof p === "string") return p;
+                if (typeof p === 'string') return p;
                 if (p?.text) return p.text;
                 if (p?.content) return JSON.stringify(p.content);
                 if (p?.output) {
                   const output = p.output?.value ?? p.output;
-                  if (typeof output === "string") return output;
+                  if (typeof output === 'string') return output;
                   try {
                     return JSON.stringify(output);
                   } catch {
                     return String(output);
                   }
                 }
-                return "";
+                return '';
               })
-              .join("");
+              .join('');
           }
-          return "";
+          return '';
         })
-        .join("\n");
+        .join('\n');
       const chars = joined.length;
       const baseTokens = this.estimateBaseContextTokens();
       const estimated = baseTokens + Math.ceil(chars / 4);
@@ -3780,10 +3352,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
     // Get context limit from settings (user-configured)
     const maxContextTokens = this.getConfiguredContextLimit();
-    const percent = Math.min(
-      100,
-      Math.round((approxTokens / maxContextTokens) * 100),
-    );
+    const percent = Math.min(100, Math.round((approxTokens / maxContextTokens) * 100));
     this.contextUsage = { approxTokens, maxContextTokens, percent };
     this.updateActivityState();
   }
@@ -3791,10 +3360,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   getConfiguredContextLimit() {
     // Use configured value from settings
     const active = this.configs[this.currentConfig] || {};
-    const configured =
-      active.contextLimit ||
-      Number.parseInt(this.elements.contextLimit?.value) ||
-      200000;
+    const configured = active.contextLimit || Number.parseInt(this.elements.contextLimit?.value) || 200000;
     return configured;
   }
 
@@ -3808,36 +3374,29 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   async loadHistoryList() {
     if (!this.elements.historyItems) return;
-    const { chatSessions = [] } = await chrome.storage.local.get([
-      "chatSessions",
-    ]);
-    this.elements.historyItems.innerHTML = "";
+    const { chatSessions = [] } = await chrome.storage.local.get(['chatSessions']);
+    this.elements.historyItems.innerHTML = '';
     if (!chatSessions.length) {
-      this.elements.historyItems.innerHTML =
-        '<div class="history-empty">No saved chats yet.</div>';
+      this.elements.historyItems.innerHTML = '<div class="history-empty">No saved chats yet.</div>';
       return;
     }
     chatSessions.forEach((session) => {
-      const item = document.createElement("div");
-      item.className = "history-item";
-      const date = new Date(
-        session.updatedAt || session.startedAt || Date.now(),
-      );
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      const date = new Date(session.updatedAt || session.startedAt || Date.now());
       item.innerHTML = `
-        <div class="history-title">${this.escapeHtml(session.title || "Session")}</div>
+        <div class="history-title">${this.escapeHtml(session.title || 'Session')}</div>
         <div class="history-meta">${date.toLocaleString()}</div>
       `;
-      item.addEventListener("click", () => {
-        this.switchView("chat");
+      item.addEventListener('click', () => {
+        this.switchView('chat');
         if (Array.isArray(session.transcript)) {
           this.recordScrollPosition();
-          const normalized = normalizeConversationHistory(
-            session.transcript || [],
-          );
+          const normalized = normalizeConversationHistory(session.transcript || []);
           this.displayHistory = normalized;
           this.contextHistory = normalized;
           this.sessionId = session.id || `session-${Date.now()}`;
-          this.firstUserMessage = session.title || "";
+          this.firstUserMessage = session.title || '';
           this.renderConversationHistory();
           this.updateContextUsage();
         }
@@ -3847,34 +3406,31 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   renderConversationHistory() {
-    this.elements.chatMessages.innerHTML = "";
+    this.elements.chatMessages.innerHTML = '';
     this.toolCallViews.clear();
     this.lastChatTurn = null;
     this.resetActivityPanel();
 
     this.displayHistory.forEach((msg) => {
-      if (msg.role === "system" || msg.meta?.kind === "summary") {
+      if (msg.role === 'system' || msg.meta?.kind === 'summary') {
         this.displaySummaryMessage(msg);
         return;
       }
-      if (msg.role === "user") {
-        const messageDiv = document.createElement("div");
-        messageDiv.className = "message user";
+      if (msg.role === 'user') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message user';
         messageDiv.innerHTML = `
           <div class="message-header">You</div>
-          <div class="message-content">${this.escapeHtml(msg.content || "")}</div>
+          <div class="message-content">${this.escapeHtml(msg.content || '')}</div>
         `;
         this.elements.chatMessages.appendChild(messageDiv);
-      } else if (msg.role === "assistant") {
-        const rawContent =
-          typeof msg.content === "string"
-            ? msg.content
-            : this.safeJsonStringify(msg.content);
+      } else if (msg.role === 'assistant') {
+        const rawContent = typeof msg.content === 'string' ? msg.content : this.safeJsonStringify(msg.content);
         const parsed = extractThinking(rawContent, msg.thinking || null);
-        const messageDiv = document.createElement("div");
-        messageDiv.className = "message assistant";
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
         let html = `<div class="message-header">Assistant</div>`;
-        const showThinking = this.elements.showThinking.value === "true";
+        const showThinking = this.elements.showThinking.value === 'true';
         if (parsed.thinking && showThinking) {
           const cleanedThinking = dedupeThinking(parsed.thinking);
           html += `
@@ -3889,23 +3445,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
             </div>
           `;
         }
-        if (parsed.content && parsed.content.trim() !== "") {
+        if (parsed.content && parsed.content.trim() !== '') {
           html += `<div class="message-content markdown-body">${this.renderMarkdown(parsed.content)}</div>`;
         }
         messageDiv.innerHTML = html;
 
         // Add click handler for collapsible thinking blocks
-        const thinkingHeader = messageDiv.querySelector(".thinking-header");
+        const thinkingHeader = messageDiv.querySelector('.thinking-header');
         if (thinkingHeader) {
-          thinkingHeader.addEventListener("click", () => {
-            const block = thinkingHeader.closest(".thinking-block");
-            if (!block || block.classList.contains("thinking-hidden")) return;
-            block.classList.toggle("collapsed");
-            const expanded = !block.classList.contains("collapsed");
-            thinkingHeader.setAttribute(
-              "aria-expanded",
-              expanded ? "true" : "false",
-            );
+          thinkingHeader.addEventListener('click', () => {
+            const block = thinkingHeader.closest('.thinking-block');
+            if (!block || block.classList.contains('thinking-hidden')) return;
+            block.classList.toggle('collapsed');
+            const expanded = !block.classList.contains('collapsed');
+            thinkingHeader.setAttribute('aria-expanded', expanded ? 'true' : 'false');
           });
         }
 
@@ -3922,56 +3475,53 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
     this.currentView = view;
     if (!this.elements.chatInterface || !this.elements.historyPanel) return;
-    if (view === "history") {
+    if (view === 'history') {
       this.recordScrollPosition();
-      this.elements.chatInterface.classList.add("hidden");
-      this.elements.historyPanel.classList.remove("hidden");
-      this.elements.viewHistoryBtn?.classList.add("active");
-      this.elements.viewChatBtn?.classList.remove("active", "live-active");
+      this.elements.chatInterface.classList.add('hidden');
+      this.elements.historyPanel.classList.remove('hidden');
+      this.elements.viewHistoryBtn?.classList.add('active');
+      this.elements.viewChatBtn?.classList.remove('active', 'live-active');
     } else {
-      this.elements.chatInterface.classList.remove("hidden");
-      this.elements.historyPanel.classList.add("hidden");
-      this.elements.viewChatBtn?.classList.add("active", "live-active");
-      this.elements.viewHistoryBtn?.classList.remove("active");
+      this.elements.chatInterface.classList.remove('hidden');
+      this.elements.historyPanel.classList.add('hidden');
+      this.elements.viewChatBtn?.classList.add('active', 'live-active');
+      this.elements.viewHistoryBtn?.classList.remove('active');
       this.restoreScrollPosition();
     }
   }
 
   showSidebarPanel(panelName: string | null) {
     // Hide all sidebar panels
-    const panels =
-      this.elements.sidebarPanels?.querySelectorAll(".sidebar-panel");
-    panels?.forEach((panel) => panel.classList.add("hidden"));
+    const panels = this.elements.sidebarPanels?.querySelectorAll('.sidebar-panel');
+    panels?.forEach((panel) => panel.classList.add('hidden'));
 
     if (panelName) {
       // Show the selected panel
-      const targetPanel = this.elements.sidebarPanels?.querySelector(
-        `[data-panel="${panelName}"]`,
-      );
-      targetPanel?.classList.remove("hidden");
+      const targetPanel = this.elements.sidebarPanels?.querySelector(`[data-panel="${panelName}"]`);
+      targetPanel?.classList.remove('hidden');
     }
   }
 
   updateNavActive(navName: string) {
     // Remove active from all nav items
-    this.elements.navChatBtn?.classList.remove("active");
-    this.elements.navHistoryBtn?.classList.remove("active");
-    this.elements.navSettingsBtn?.classList.remove("active");
-    this.elements.navAccountBtn?.classList.remove("active");
+    this.elements.navChatBtn?.classList.remove('active');
+    this.elements.navHistoryBtn?.classList.remove('active');
+    this.elements.navSettingsBtn?.classList.remove('active');
+    this.elements.navAccountBtn?.classList.remove('active');
 
     // Add active to the selected nav
     switch (navName) {
-      case "chat":
-        this.elements.navChatBtn?.classList.add("active");
+      case 'chat':
+        this.elements.navChatBtn?.classList.add('active');
         break;
-      case "history":
-        this.elements.navHistoryBtn?.classList.add("active");
+      case 'history':
+        this.elements.navHistoryBtn?.classList.add('active');
         break;
-      case "settings":
-        this.elements.navSettingsBtn?.classList.add("active");
+      case 'settings':
+        this.elements.navSettingsBtn?.classList.add('active');
         break;
-      case "account":
-        this.elements.navAccountBtn?.classList.add("active");
+      case 'account':
+        this.elements.navAccountBtn?.classList.add('active');
         break;
     }
   }
@@ -3985,7 +3535,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.contextHistory = [];
     this.sessionId = `session-${Date.now()}`;
     this.sessionStartedAt = Date.now();
-    this.firstUserMessage = "";
+    this.firstUserMessage = '';
     this.sessionTokensUsed = 0; // Reset context tracking
     this.lastUsage = null;
     this.sessionTokenTotals = {
@@ -3995,13 +3545,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     };
     this.currentPlan = null;
     this.subagents.clear(); // Clear subagents
-    this.activeAgent = "main";
-    this.elements.chatMessages.innerHTML = "";
+    this.activeAgent = 'main';
+    this.elements.chatMessages.innerHTML = '';
     this.toolCallViews.clear();
     this.resetActivityPanel();
     this.hideAgentNav();
-    this.updateStatus("Ready for a new session", "success");
-    this.switchView("chat");
+    this.updateStatus('Ready for a new session', 'success');
+    this.switchView('chat');
     this.updateContextUsage();
     this.scrollToBottom({ force: true });
   }
@@ -4011,7 +3561,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.subagents.set(id, {
       name: name || `Sub-${this.subagents.size + 1}`,
       tasks,
-      status: "running",
+      status: 'running',
       messages: [],
     });
     this.renderAgentNav();
@@ -4034,25 +3584,20 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       return;
     }
 
-    this.elements.agentNav.classList.remove("hidden");
+    this.elements.agentNav.classList.remove('hidden');
 
     // Build nav items
     let html = `
-      <div class="agent-nav-item main-agent ${this.activeAgent === "main" ? "active" : ""}" data-agent="main">
+      <div class="agent-nav-item main-agent ${this.activeAgent === 'main' ? 'active' : ''}" data-agent="main">
         <span class="agent-status"></span>
         <span>Main</span>
       </div>
     `;
 
     this.subagents.forEach((agent, id) => {
-      const statusClass =
-        agent.status === "running"
-          ? "running"
-          : agent.status === "completed"
-            ? "completed"
-            : "error";
+      const statusClass = agent.status === 'running' ? 'running' : agent.status === 'completed' ? 'completed' : 'error';
       html += `
-        <div class="agent-nav-item sub-agent ${statusClass} ${this.activeAgent === id ? "active" : ""}" data-agent="${id}">
+        <div class="agent-nav-item sub-agent ${statusClass} ${this.activeAgent === id ? 'active' : ''}" data-agent="${id}">
           <span class="agent-status"></span>
           <span>${agent.name}</span>
         </div>
@@ -4062,14 +3607,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.elements.agentNav.innerHTML = html;
 
     // Add click handlers
-    this.elements.agentNav
-      .querySelectorAll(".agent-nav-item")
-      .forEach((item) => {
-        item.addEventListener("click", () => {
-          const agentId = item.dataset.agent;
-          this.switchAgent(agentId);
-        });
+    this.elements.agentNav.querySelectorAll('.agent-nav-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        const agentId = item.dataset.agent;
+        this.switchAgent(agentId);
       });
+    });
   }
 
   switchAgent(agentId) {
@@ -4080,30 +3623,24 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   hideAgentNav() {
     if (this.elements.agentNav) {
-      this.elements.agentNav.classList.add("hidden");
+      this.elements.agentNav.classList.add('hidden');
     }
   }
 
   updateScreenshotToggleState() {
     if (!this.elements.enableScreenshots) return;
-    const wantsScreens = this.elements.enableScreenshots.value === "true";
+    const wantsScreens = this.elements.enableScreenshots.value === 'true';
     const visionProfile = this.elements.visionProfile?.value;
     const provider = this.elements.provider?.value;
-    const hasVision = (provider && provider !== "custom") || visionProfile;
-    const controls = [
-      this.elements.sendScreenshotsAsImages,
-      this.elements.screenshotQuality,
-    ];
+    const hasVision = (provider && provider !== 'custom') || visionProfile;
+    const controls = [this.elements.sendScreenshotsAsImages, this.elements.screenshotQuality];
     controls.forEach((ctrl) => {
       if (!ctrl) return;
       ctrl.disabled = !wantsScreens;
-      ctrl.parentElement?.classList.toggle("disabled", !wantsScreens);
+      ctrl.parentElement?.classList.toggle('disabled', !wantsScreens);
     });
     if (wantsScreens && !hasVision) {
-      this.updateStatus(
-        "Enable a vision-capable profile before sending screenshots.",
-        "warning",
-      );
+      this.updateStatus('Enable a vision-capable profile before sending screenshots.', 'warning');
     }
   }
 
@@ -4117,47 +3654,41 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     for (const file of files) {
       try {
         const text = await file.text();
-        const trimmed =
-          text.length > maxPerFile
-            ? text.slice(0, maxPerFile) + "\n… (truncated)"
-            : text;
+        const trimmed = text.length > maxPerFile ? text.slice(0, maxPerFile) + '\n… (truncated)' : text;
         const prefix = `\n\n[File: ${file.name}]\n`;
         this.elements.userInput.value += prefix + trimmed;
       } catch (e) {
-        console.warn("Failed to read file", file.name, e);
+        console.warn('Failed to read file', file.name, e);
       }
     }
-    input.value = "";
+    input.value = '';
     this.elements.userInput.focus();
   }
 
   async toggleTabSelector() {
-    const isHidden = this.elements.tabSelector.classList.contains("hidden");
+    const isHidden = this.elements.tabSelector.classList.contains('hidden');
     if (isHidden) {
       await this.loadTabs();
-      this.elements.tabSelector.classList.remove("hidden");
+      this.elements.tabSelector.classList.remove('hidden');
     } else {
       this.closeTabSelector();
     }
   }
 
   closeTabSelector() {
-    this.elements.tabSelector.classList.add("hidden");
+    this.elements.tabSelector.classList.add('hidden');
   }
 
   async loadTabs() {
-    const [tabs, groups] = await Promise.all([
-      chrome.tabs.query({}),
-      chrome.tabGroups.query({}),
-    ]);
+    const [tabs, groups] = await Promise.all([chrome.tabs.query({}), chrome.tabGroups.query({})]);
     this.tabGroupInfo = new Map(groups.map((group) => [group.id, group]));
-    this.elements.tabList.innerHTML = "";
+    this.elements.tabList.innerHTML = '';
 
     const groupedTabs = new Map<number, chrome.tabs.Tab[]>();
     const ungroupedTabs: chrome.tabs.Tab[] = [];
 
     tabs
-      .filter((tab) => typeof tab.id === "number")
+      .filter((tab) => typeof tab.id === 'number')
       .forEach((tab) => {
         if (tab.groupId !== undefined && tab.groupId >= 0) {
           if (!groupedTabs.has(tab.groupId)) groupedTabs.set(tab.groupId, []);
@@ -4172,41 +3703,36 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       label: string,
       color: string,
       groupTabs: chrome.tabs.Tab[],
-      groupId: string | number = "ungrouped",
+      groupId: string | number = 'ungrouped',
     ) => {
       if (!groupTabs.length) return;
-      const section = document.createElement("div");
-      section.className = "tab-group";
-      const allSelected = groupTabs.every(
-        (tab) => typeof tab.id === "number" && this.selectedTabs.has(tab.id),
-      );
+      const section = document.createElement('div');
+      section.className = 'tab-group';
+      const allSelected = groupTabs.every((tab) => typeof tab.id === 'number' && this.selectedTabs.has(tab.id));
       section.innerHTML = `
         <div class="tab-group-header" style="--group-color: ${color}">
           <div class="tab-group-label">${this.escapeHtml(label)}</div>
-          <button class="tab-group-toggle" type="button">${allSelected ? "Clear" : "Add all"}</button>
+          <button class="tab-group-toggle" type="button">${allSelected ? 'Clear' : 'Add all'}</button>
         </div>
       `;
 
-      const toggleBtn = section.querySelector(".tab-group-toggle");
-      toggleBtn?.addEventListener("click", (event) => {
+      const toggleBtn = section.querySelector('.tab-group-toggle');
+      toggleBtn?.addEventListener('click', (event) => {
         event.stopPropagation();
         this.toggleGroupSelection(groupTabs, !allSelected);
       });
 
       groupTabs.forEach((tab) => {
         const tabId = tab.id;
-        const isSelected =
-          typeof tabId === "number" && this.selectedTabs.has(tabId);
-        const item = document.createElement("div");
-        item.className = `tab-item${isSelected ? " selected" : ""}`;
+        const isSelected = typeof tabId === 'number' && this.selectedTabs.has(tabId);
+        const item = document.createElement('div');
+        item.className = `tab-item${isSelected ? ' selected' : ''}`;
         item.innerHTML = `
           <div class="tab-item-checkbox"></div>
-          <img class="tab-item-favicon" src="${tab.favIconUrl || "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E"}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
-          <span class="tab-item-title">${this.escapeHtml(tab.title || "Untitled")}</span>
+          <img class="tab-item-favicon" src="${tab.favIconUrl || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
+          <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
         `;
-        item.addEventListener("click", () =>
-          this.toggleTabSelection(tab, item),
-        );
+        item.addEventListener('click', () => this.toggleTabSelection(tab, item));
         section.appendChild(item);
       });
 
@@ -4220,12 +3746,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       renderGroup(label, color, groupTabs, groupId);
     });
 
-    renderGroup("Ungrouped", "var(--text-tertiary)", ungroupedTabs);
+    renderGroup('Ungrouped', 'var(--text-tertiary)', ungroupedTabs);
   }
 
   toggleGroupSelection(groupTabs, shouldSelect) {
     groupTabs.forEach((tab) => {
-      if (typeof tab.id !== "number") return;
+      if (typeof tab.id !== 'number') return;
       if (shouldSelect) {
         this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
       } else {
@@ -4238,13 +3764,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   }
 
   toggleTabSelection(tab, itemElement) {
-    if (typeof tab.id !== "number") return;
+    if (typeof tab.id !== 'number') return;
     if (this.selectedTabs.has(tab.id)) {
       this.selectedTabs.delete(tab.id);
-      itemElement.classList.remove("selected");
+      itemElement.classList.remove('selected');
     } else {
       this.selectedTabs.set(tab.id, this.buildSelectedTab(tab));
-      itemElement.classList.add("selected");
+      itemElement.classList.add('selected');
     }
     this.updateSelectedTabsBar();
     this.updateTabSelectorButton();
@@ -4260,38 +3786,33 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       url: tab.url,
       windowId: tab.windowId,
       groupId: tab.groupId,
-      groupTitle: hasGroup
-        ? group?.title || `Group ${tab.groupId}`
-        : "Ungrouped",
-      groupColor: hasGroup
-        ? this.mapGroupColor(group?.color)
-        : "var(--text-tertiary)",
+      groupTitle: hasGroup ? group?.title || `Group ${tab.groupId}` : 'Ungrouped',
+      groupColor: hasGroup ? this.mapGroupColor(group?.color) : 'var(--text-tertiary)',
     };
   }
 
   updateSelectedTabsBar() {
     if (this.selectedTabs.size === 0) {
-      this.elements.selectedTabsBar.classList.add("hidden");
+      this.elements.selectedTabsBar.classList.add('hidden');
       return;
     }
 
-    this.elements.selectedTabsBar.classList.remove("hidden");
-    this.elements.selectedTabsBar.innerHTML = "";
+    this.elements.selectedTabsBar.classList.remove('hidden');
+    this.elements.selectedTabsBar.innerHTML = '';
     const grouped = new Map<string, Array<any>>();
     this.selectedTabs.forEach((tab) => {
-      const key =
-        tab.groupId && tab.groupId >= 0 ? `group-${tab.groupId}` : "ungrouped";
+      const key = tab.groupId && tab.groupId >= 0 ? `group-${tab.groupId}` : 'ungrouped';
       if (!grouped.has(key)) grouped.set(key, []);
       const bucket = grouped.get(key);
       if (bucket) bucket.push(tab);
     });
 
     grouped.forEach((tabs) => {
-      const groupTitle = tabs[0]?.groupTitle || "Ungrouped";
-      const groupLabel = this.truncateText(groupTitle, 18) || "Ungrouped";
-      const groupColor = tabs[0]?.groupColor || "var(--text-tertiary)";
-      const groupWrap = document.createElement("div");
-      groupWrap.className = "selected-tabs-group";
+      const groupTitle = tabs[0]?.groupTitle || 'Ungrouped';
+      const groupLabel = this.truncateText(groupTitle, 18) || 'Ungrouped';
+      const groupColor = tabs[0]?.groupColor || 'var(--text-tertiary)';
+      const groupWrap = document.createElement('div');
+      groupWrap.className = 'selected-tabs-group';
       groupWrap.innerHTML = `
         <div class="selected-group-label" style="--group-color: ${groupColor}">
           <span>${this.escapeHtml(groupLabel)}</span>
@@ -4300,16 +3821,16 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         <div class="selected-tabs-chips"></div>
       `;
 
-      const chipsRow = groupWrap.querySelector(".selected-tabs-chips");
+      const chipsRow = groupWrap.querySelector('.selected-tabs-chips');
       if (!chipsRow) {
         this.elements.selectedTabsBar.appendChild(groupWrap);
         return;
       }
       tabs.forEach((tab) => {
-        const chip = document.createElement("div");
-        chip.className = "selected-tab-chip";
+        const chip = document.createElement('div');
+        chip.className = 'selected-tab-chip';
         chip.innerHTML = `
-          <span>${this.escapeHtml(tab.title?.substring(0, 25) || "Tab")}${tab.title?.length > 25 ? "..." : ""}</span>
+          <span>${this.escapeHtml(tab.title?.substring(0, 25) || 'Tab')}${tab.title?.length > 25 ? '...' : ''}</span>
           <button title="Remove">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -4317,8 +3838,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
             </svg>
           </button>
         `;
-        const removeBtn = chip.querySelector("button");
-        removeBtn?.addEventListener("click", (e) => {
+        const removeBtn = chip.querySelector('button');
+        removeBtn?.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectedTabs.delete(tab.id);
           this.updateSelectedTabsBar();
@@ -4334,33 +3855,33 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   updateTabSelectorButton() {
     if (this.selectedTabs.size > 0) {
-      this.elements.tabSelectorBtn.classList.add("has-selection");
+      this.elements.tabSelectorBtn.classList.add('has-selection');
     } else {
-      this.elements.tabSelectorBtn.classList.remove("has-selection");
+      this.elements.tabSelectorBtn.classList.remove('has-selection');
     }
   }
 
   mapGroupColor(colorName) {
     const palette = {
-      grey: "#9aa0a6",
-      blue: "#4c8bf5",
-      red: "#ea4335",
-      yellow: "#fbbc04",
-      green: "#34a853",
-      pink: "#f06292",
-      purple: "#a142f4",
-      cyan: "#24c1e0",
-      orange: "#f29900",
+      grey: '#9aa0a6',
+      blue: '#4c8bf5',
+      red: '#ea4335',
+      yellow: '#fbbc04',
+      green: '#34a853',
+      pink: '#f06292',
+      purple: '#a142f4',
+      cyan: '#24c1e0',
+      orange: '#f29900',
     };
-    return palette[colorName] || "var(--text-tertiary)";
+    return palette[colorName] || 'var(--text-tertiary)';
   }
 
   getSelectedTabsContext() {
-    if (this.selectedTabs.size === 0) return "";
+    if (this.selectedTabs.size === 0) return '';
 
-    let context = "\n\n[Context from selected tabs:]\n";
+    let context = '\n\n[Context from selected tabs:]\n';
     this.selectedTabs.forEach((tab) => {
-      const tabTitle = tab.title || "Untitled";
+      const tabTitle = tab.title || 'Untitled';
       context += `- Tab [${tab.id}] "${tabTitle}": ${tab.url}\n`;
     });
     return context;

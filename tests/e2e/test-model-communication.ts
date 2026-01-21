@@ -66,39 +66,42 @@ async function getExtensionId(context: import('playwright').BrowserContext): Pro
 }
 
 async function setupTestSettings(worker: import('playwright').Worker, endpoint: string, apiKey: string, model: string) {
-  await worker.evaluate(async (settings) => {
-    await chrome.storage.local.set({
-      provider: settings.provider,
-      apiKey: settings.apiKey,
-      model: settings.model,
-      customEndpoint: settings.customEndpoint,
-      systemPrompt: 'You are a helpful assistant.',
-      sendScreenshotsAsImages: false,
-      screenshotQuality: 'medium',
-      showThinking: true,
-      streamResponses: true,
-      temperature: 0.7,
-      maxTokens: 2048,
-      timeout: 60000,
-      enableScreenshots: false,
-      toolPermissions: {
-        read: true,
-        interact: true,
-        navigate: true,
-        tabs: true,
-        screenshots: false,
-      },
-      allowedDomains: '',
-      configs: {},
-      activeConfig: 'default',
-      useOrchestrator: false,
-      orchestratorProfile: 'default',
-      visionProfile: 'default',
-      visionBridge: false,
-      contextLimit: 200000,
-      auxAgentProfiles: [],
-    });
-  }, { provider: 'custom', apiKey, model, customEndpoint: endpoint });
+  await worker.evaluate(
+    async (settings) => {
+      await chrome.storage.local.set({
+        provider: settings.provider,
+        apiKey: settings.apiKey,
+        model: settings.model,
+        customEndpoint: settings.customEndpoint,
+        systemPrompt: 'You are a helpful assistant.',
+        sendScreenshotsAsImages: false,
+        screenshotQuality: 'medium',
+        showThinking: true,
+        streamResponses: true,
+        temperature: 0.7,
+        maxTokens: 2048,
+        timeout: 60000,
+        enableScreenshots: false,
+        toolPermissions: {
+          read: true,
+          interact: true,
+          navigate: true,
+          tabs: true,
+          screenshots: false,
+        },
+        allowedDomains: '',
+        configs: {},
+        activeConfig: 'default',
+        useOrchestrator: false,
+        orchestratorProfile: 'default',
+        visionProfile: 'default',
+        visionBridge: false,
+        contextLimit: 200000,
+        auxAgentProfiles: [],
+      });
+    },
+    { provider: 'custom', apiKey, model, customEndpoint: endpoint },
+  );
 }
 
 test('Custom endpoint configuration is saved and retrieved', async ({ panel, worker }) => {
@@ -131,7 +134,7 @@ test('Background script handles user_message', async ({ panel, worker }) => {
 
   // Listen for console messages from background
   const consoleMessages: string[] = [];
-  worker.on('console', msg => {
+  worker.on('console', (msg) => {
     const text = msg.text();
     consoleMessages.push(text);
     log(`[Background Console] ${text}`, 'info');
@@ -150,8 +153,8 @@ test('Background script handles user_message', async ({ panel, worker }) => {
   // Send message and wait for response
   const responsePromise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Timeout waiting for response')), 15000);
-    
-    worker.on('console', msg => {
+
+    worker.on('console', (msg) => {
       const text = msg.text();
       if (text.includes('run_error') || text.includes('Error processing user message')) {
         clearTimeout(timeout);
@@ -182,7 +185,7 @@ test('Background script handles user_message', async ({ panel, worker }) => {
   }, messagePayload);
 
   // Wait a bit to see if any errors occur
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  await new Promise((resolve) => setTimeout(resolve, 3000));
 
   log('✓ Message sent without immediate errors', 'success');
 });
@@ -218,10 +221,10 @@ test('Model resolution with custom endpoint', async ({ panel, worker }) => {
 
   const endpoint = settings.customEndpoint;
   assert(endpoint === testEndpoint, `Endpoint should be ${testEndpoint}`);
-  
+
   // Check that endpoint doesn't have trailing slashes in unexpected places
   assert(!endpoint.endsWith('/chat/completions'), 'Endpoint should not include /chat/completions path');
-  
+
   log('✓ Custom endpoint is properly formatted', 'success');
 });
 
@@ -274,9 +277,9 @@ async function run() {
     log(`Extension ID: ${extensionId}`, 'info');
 
     const worker = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker', { timeout: timeoutMs }));
-    
+
     // Listen to all console messages from service worker
-    worker.on('console', msg => {
+    worker.on('console', (msg) => {
       const type = msg.type();
       const text = msg.text();
       if (type === 'error') {
@@ -294,7 +297,7 @@ async function run() {
     });
 
     // Listen to panel console messages
-    panel.on('console', msg => {
+    panel.on('console', (msg) => {
       const type = msg.type();
       const text = msg.text();
       if (type === 'error') {
@@ -305,14 +308,14 @@ async function run() {
     });
 
     // Also listen to network requests
-    panel.on('request', request => {
+    panel.on('request', (request) => {
       const url = request.url();
       if (url.includes('homelabai') || url.includes('api')) {
         log(`[Network Request] ${request.method()} ${url}`, 'info');
       }
     });
 
-    panel.on('response', response => {
+    panel.on('response', (response) => {
       const url = response.url();
       if (url.includes('homelabai') || url.includes('api')) {
         log(`[Network Response] ${response.status()} ${url}`, response.status() >= 400 ? 'error' : 'success');

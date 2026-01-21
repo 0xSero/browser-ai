@@ -385,10 +385,10 @@ test('Tool calls appear in collapsible Tools section', async ({ panel, worker })
   });
 
   // Verify tool shows success status
-  await panel.waitForSelector(
-    `.run-container[data-run-id="${runId}"] details.tool-event.success`,
-    { state: 'attached', timeout: timeoutMs },
-  );
+  await panel.waitForSelector(`.run-container[data-run-id="${runId}"] details.tool-event.success`, {
+    state: 'attached',
+    timeout: timeoutMs,
+  });
 });
 
 test('Color scheme uses neutral grays', async ({ panel }) => {

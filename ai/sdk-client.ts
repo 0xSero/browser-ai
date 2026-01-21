@@ -1,7 +1,7 @@
-import { generateText, jsonSchema, tool } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText, jsonSchema, tool } from 'ai';
 
 export type SDKModelSettings = {
   provider: string;
@@ -14,39 +14,37 @@ export type ToolDefinition = {
   name: string;
   description?: string;
   input_schema?: {
-    type: "object";
+    type: 'object';
     properties: Record<string, unknown>;
     required?: string[];
   };
 };
 
 export function resolveLanguageModel(settings: SDKModelSettings) {
-  const provider = settings.provider || "openai";
-  const modelId = settings.model || "gpt-4o";
-  const apiKey = settings.apiKey || "";
+  const provider = settings.provider || 'openai';
+  const modelId = settings.model || 'gpt-4o';
+  const apiKey = settings.apiKey || '';
 
-  if (provider === "anthropic") {
+  if (provider === 'anthropic') {
     const providerInstance = createAnthropic({ apiKey });
     return providerInstance(modelId);
   }
 
-  if (provider === "custom") {
+  if (provider === 'custom') {
     // Normalize the base URL
     // - Remove /chat/completions suffix if present (SDK will add it)
     // - Keep /v1 or other path prefixes intact
     // - Remove trailing slashes
     const baseURL = settings.customEndpoint
-      ? settings.customEndpoint
-          .replace(/\/chat\/completions\/?$/i, "")
-          .replace(/\/+$/, "")
-      : "";
+      ? settings.customEndpoint.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '')
+      : '';
 
     if (!baseURL) {
-      throw new Error("Custom provider requires a customEndpoint to be configured");
+      throw new Error('Custom provider requires a customEndpoint to be configured');
     }
 
     const customProvider = createOpenAICompatible({
-      name: "custom",
+      name: 'custom',
       apiKey,
       baseURL,
     });
@@ -59,15 +57,11 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
 
 export function buildToolSet(
   tools: ToolDefinition[],
-  execute: (
-    toolName: string,
-    args: Record<string, unknown>,
-    options: { toolCallId: string },
-  ) => Promise<unknown>,
+  execute: (toolName: string, args: Record<string, unknown>, options: { toolCallId: string }) => Promise<unknown>,
 ) {
   const entries = tools.map((definition) => {
     const schema = definition.input_schema || {
-      type: "object",
+      type: 'object',
       properties: {},
     };
     return [
@@ -102,10 +96,10 @@ export async function describeImageWithModel({
     maxOutputTokens: maxTokens,
     messages: [
       {
-        role: "user",
+        role: 'user',
         content: [
-          { type: "text", text: prompt },
-          { type: "image", image: dataUrl },
+          { type: 'text', text: prompt },
+          { type: 'image', image: dataUrl },
         ],
       },
     ],

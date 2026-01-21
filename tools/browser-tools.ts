@@ -307,11 +307,7 @@ export class BrowserTools {
     return active?.id ?? null;
   }
 
-  private async runInTab(
-    tabId: number,
-    func: (...args: any[]) => unknown,
-    args: any[] = [],
-  ): Promise<any> {
+  private async runInTab(tabId: number, func: (...args: any[]) => unknown, args: any[] = []): Promise<any> {
     const results = await chrome.scripting.executeScript({
       target: { tabId },
       func,
@@ -369,12 +365,16 @@ export class BrowserTools {
     const tabId = await this.resolveTabId(args);
     if (!tabId) return { success: false, error: 'No active tab.' };
     const selector = String(args.selector || '');
-    const result = await this.runInTab(tabId, (sel) => {
-      const el = document.querySelector<HTMLElement>(sel);
-      if (!el) return { success: false, error: 'Element not found.' };
-      el.click();
-      return { success: true };
-    }, [selector]);
+    const result = await this.runInTab(
+      tabId,
+      (sel) => {
+        const el = document.querySelector<HTMLElement>(sel);
+        if (!el) return { success: false, error: 'Element not found.' };
+        el.click();
+        return { success: true };
+      },
+      [selector],
+    );
     return result || { success: false, error: 'Script execution failed.' };
   }
 
@@ -383,15 +383,19 @@ export class BrowserTools {
     if (!tabId) return { success: false, error: 'No active tab.' };
     const selector = String(args.selector || '');
     const text = String(args.text ?? '');
-    const result = await this.runInTab(tabId, (sel, value) => {
-      const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(sel);
-      if (!el) return { success: false, error: 'Element not found.' };
-      el.focus();
-      el.value = value;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      return { success: true };
-    }, [selector, text]);
+    const result = await this.runInTab(
+      tabId,
+      (sel, value) => {
+        const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(sel);
+        if (!el) return { success: false, error: 'Element not found.' };
+        el.focus();
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true };
+      },
+      [selector, text],
+    );
     return result || { success: false, error: 'Script execution failed.' };
   }
 
@@ -400,13 +404,17 @@ export class BrowserTools {
     if (!tabId) return { success: false, error: 'No active tab.' };
     const key = String(args.key || '');
     const selector = args.selector ? String(args.selector) : '';
-    const result = await this.runInTab(tabId, (k, sel) => {
-      const target = sel ? document.querySelector<HTMLElement>(sel) : document.body;
-      if (!target) return { success: false, error: 'Target not found.' };
-      target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
-      target.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true }));
-      return { success: true };
-    }, [key, selector]);
+    const result = await this.runInTab(
+      tabId,
+      (k, sel) => {
+        const target = sel ? document.querySelector<HTMLElement>(sel) : document.body;
+        if (!target) return { success: false, error: 'Target not found.' };
+        target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+        target.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true }));
+        return { success: true };
+      },
+      [key, selector],
+    );
     return result || { success: false, error: 'Script execution failed.' };
   }
 
@@ -415,18 +423,22 @@ export class BrowserTools {
     if (!tabId) return { success: false, error: 'No active tab.' };
     const direction = String(args.direction || 'down');
     const amount = typeof args.amount === 'number' ? args.amount : 600;
-    const result = await this.runInTab(tabId, (dir, amt) => {
-      if (dir === 'top') {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      } else if (dir === 'bottom') {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
-      } else if (dir === 'up') {
-        window.scrollBy({ top: -amt, behavior: 'instant' });
-      } else {
-        window.scrollBy({ top: amt, behavior: 'instant' });
-      }
-      return { success: true };
-    }, [direction, amount]);
+    const result = await this.runInTab(
+      tabId,
+      (dir, amt) => {
+        if (dir === 'top') {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        } else if (dir === 'bottom') {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+        } else if (dir === 'up') {
+          window.scrollBy({ top: -amt, behavior: 'instant' });
+        } else {
+          window.scrollBy({ top: amt, behavior: 'instant' });
+        }
+        return { success: true };
+      },
+      [direction, amount],
+    );
     return result || { success: false, error: 'Script execution failed.' };
   }
 
@@ -435,21 +447,25 @@ export class BrowserTools {
     if (!tabId) return { success: false, error: 'No active tab.' };
     const type = String(args.type || 'text');
     const selector = args.selector ? String(args.selector) : '';
-    const result = await this.runInTab(tabId, (t, sel) => {
-      const base = sel ? document.querySelector<HTMLElement>(sel) : document.body;
-      if (!base) return { success: false, error: 'Target not found.' };
-      if (t === 'html') return { success: true, content: base.innerHTML };
-      if (t === 'title') return { success: true, content: document.title };
-      if (t === 'url') return { success: true, content: window.location.href };
-      if (t === 'links') {
-        const links = Array.from(base.querySelectorAll('a')).map((link) => ({
-          text: link.textContent || '',
-          href: link.href,
-        }));
-        return { success: true, content: JSON.stringify(links) };
-      }
-      return { success: true, content: base.innerText };
-    }, [type, selector]);
+    const result = await this.runInTab(
+      tabId,
+      (t, sel) => {
+        const base = sel ? document.querySelector<HTMLElement>(sel) : document.body;
+        if (!base) return { success: false, error: 'Target not found.' };
+        if (t === 'html') return { success: true, content: base.innerHTML };
+        if (t === 'title') return { success: true, content: document.title };
+        if (t === 'url') return { success: true, content: window.location.href };
+        if (t === 'links') {
+          const links = Array.from(base.querySelectorAll('a')).map((link) => ({
+            text: link.textContent || '',
+            href: link.href,
+          }));
+          return { success: true, content: JSON.stringify(links) };
+        }
+        return { success: true, content: base.innerText };
+      },
+      [type, selector],
+    );
     return result || { success: false, error: 'Script execution failed.' };
   }
 

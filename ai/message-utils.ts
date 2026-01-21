@@ -27,12 +27,12 @@ export function extractThinking(content: string | null | undefined, existingThin
 
 export function dedupeThinking(thinking: string | null) {
   if (!thinking) return '';
-  
+
   // First, split into paragraphs and dedupe whole paragraphs
   const paragraphs = thinking.split(/\n\n+/);
   const seenParagraphs = new Set<string>();
   const dedupedParagraphs: string[] = [];
-  
+
   for (const para of paragraphs) {
     const normalized = para.trim().toLowerCase();
     if (normalized && !seenParagraphs.has(normalized)) {
@@ -40,7 +40,7 @@ export function dedupeThinking(thinking: string | null) {
       dedupedParagraphs.push(para.trim());
     }
   }
-  
+
   // Then dedupe consecutive identical lines within each paragraph
   const result = dedupedParagraphs.join('\n\n');
   const lines = result.split('\n');
@@ -54,7 +54,6 @@ export function dedupeThinking(thinking: string | null) {
       repeatCount++;
       if (repeatCount >= 2) {
         // Skip repeated lines after 2nd occurrence
-        continue;
       }
     } else {
       deduplicated.push(line);
