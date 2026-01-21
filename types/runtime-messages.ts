@@ -88,12 +88,14 @@ export type AssistantResponse = RuntimeMessageBase & {
   type: "assistant_response";
   content: string;
   thinking?: string | null;
+  model?: string;
 };
 
 export type AssistantFinal = RuntimeMessageBase & {
   type: "assistant_final";
   content: string;
   thinking?: string | null;
+  model?: string;
   usage?: {
     inputTokens?: number;
     outputTokens?: number;

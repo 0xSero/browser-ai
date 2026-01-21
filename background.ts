@@ -14,6 +14,8 @@ import {
 } from "./ai/sdk-client.js";
 import { isValidFinalResponse } from "./ai/retry-engine.js";
 import { BrowserTools } from "./tools/browser-tools.js";
+import { buildRunPlan } from "./types/plan.js";
+import type { RunPlan } from "./types/plan.js";
 import { RUNTIME_MESSAGE_SCHEMA_VERSION } from "./types/runtime-messages.js";
 
 type RunMeta = {
@@ -25,12 +27,14 @@ type RunMeta = {
 class BackgroundService {
   browserTools: BrowserTools;
   currentSettings: Record<string, any> | null;
+  currentPlan: RunPlan | null;
   subAgentCount: number;
   subAgentProfileCursor: number;
 
   constructor() {
     this.browserTools = new BrowserTools();
     this.currentSettings = null;
+    this.currentPlan = null;
     this.subAgentCount = 0;
     this.subAgentProfileCursor = 0;
     this.init();
@@ -146,6 +150,7 @@ class BackgroundService {
       }
 
       this.currentSettings = settings;
+      this.currentPlan = null;
       this.subAgentCount = 0;
       this.subAgentProfileCursor = 0;
 
@@ -241,7 +246,7 @@ class BackgroundService {
         tools: toolSet,
         temperature: orchestratorProfile.temperature ?? 0.7,
         maxOutputTokens: orchestratorProfile.maxTokens ?? 2048,
-        stopWhen: stepCountIs(8),
+        stopWhen: stepCountIs(48),
         onChunk: ({ chunk }) => {
           if (chunk.type === "reasoning-delta") {
             this.sendRuntime(runMeta, {
@@ -281,8 +286,11 @@ class BackgroundService {
       
       // Allow empty text if tools were called (model communicated through actions)
       // But encourage actual summaries via system prompt
-      const finalText = isValidFinalResponse(text, { allowEmpty: hadToolCalls })
-        ? (text || (hadToolCalls ? "" : "Done."))
+      const fallbackText = hadToolCalls
+        ? "Task completed. See tool results above for details."
+        : "Done.";
+      const finalText = isValidFinalResponse(text, { allowEmpty: false })
+        ? (text || fallbackText)
         : "I completed the requested actions but could not produce a final summary. Please try again.";
       const responseMessages: Message[] = [
         {
@@ -310,6 +318,7 @@ class BackgroundService {
         type: "assistant_final",
         content: finalText,
         thinking: reasoningText || null,
+        model: orchestratorProfile.model || settings.model || "",
         usage: {
           inputTokens: totalUsage.inputTokens || 0,
           outputTokens: totalUsage.outputTokens || 0,
@@ -409,6 +418,23 @@ class BackgroundService {
 
     sendStart();
 
+    if (toolName === "set_plan") {
+      const plan = this.buildPlanFromArgs(args);
+      if (!plan) {
+        const errorResult = {
+          success: false,
+          error: "Plan must include steps or a plan string.",
+        };
+        sendResult(errorResult);
+        return errorResult;
+      }
+      this.currentPlan = plan;
+      this.sendRuntime(options.runMeta, { type: "plan_update", plan });
+      const result = { success: true, plan };
+      sendResult(result);
+      return result;
+    }
+
     if (toolName === "spawn_subagent") {
       const result = await this.handleSpawnSubagent(options.runMeta, args);
       sendResult(result);
@@ -500,8 +526,42 @@ class BackgroundService {
       }
     }
 
-    sendResult(finalResult);
-    return finalResult;
+    const enrichedResult = this.attachPlanToResult(finalResult, toolName);
+    sendResult(enrichedResult);
+    return enrichedResult;
+  }
+
+  attachPlanToResult(result: unknown, toolName: string) {
+    if (!this.currentPlan || toolName === "set_plan") return result;
+    if (result && typeof result === "object" && !Array.isArray(result)) {
+      return { ...(result as Record<string, unknown>), plan: this.currentPlan };
+    }
+    return { result, plan: this.currentPlan };
+  }
+
+  parsePlanSteps(text: string) {
+    if (!text) return [];
+    return text
+      .split("\n")
+      .map((line) =>
+        line
+          .replace(/^\s*[-*]\s*/, "")
+          .replace(/^\s*\d+[.)]\s*/, "")
+          .trim(),
+      )
+      .filter(Boolean);
+  }
+
+  buildPlanFromArgs(args: Record<string, any>) {
+    const stepInput = Array.isArray(args?.steps) ? args.steps : null;
+    const planText = typeof args?.plan === "string" ? args.plan : "";
+    const parsedSteps = planText ? this.parsePlanSteps(planText) : [];
+    const combined = stepInput && stepInput.length ? stepInput : parsedSteps;
+    if (!combined || combined.length === 0) return null;
+    return buildRunPlan(combined, {
+      existingPlan: this.currentPlan,
+      maxSteps: 12,
+    });
   }
 
   getToolPermissionCategory(toolName) {
@@ -726,6 +786,28 @@ Base every answer strictly on real tool output.`;
     if (settings && settings.enableScreenshots === false) {
       tools = tools.filter((tool) => tool.name !== "screenshot");
     }
+    tools = tools.concat([
+      {
+        name: "set_plan",
+        description:
+          "Define or update a short ordered plan before executing tools.",
+        input_schema: {
+          type: "object",
+          properties: {
+            plan: {
+              type: "string",
+              description: "Plan text as a bullet list or numbered list",
+            },
+            steps: {
+              type: "array",
+              items: { type: "string" },
+              description: "Ordered list of plan steps",
+            },
+          },
+        },
+      },
+    ]);
+
     if (includeOrchestrator) {
       const teamNames = Array.isArray(teamProfiles)
         ? teamProfiles.map((profile) => profile.name).filter(Boolean)
@@ -866,7 +948,7 @@ Always cite evidence from tools. Finish by calling subagent_complete with a shor
       tools: toolSet,
       temperature: profileSettings.temperature ?? 0.4,
       maxOutputTokens: profileSettings.maxTokens ?? 1024,
-      stopWhen: stepCountIs(6),
+      stopWhen: stepCountIs(24),
     });
 
     const summary =

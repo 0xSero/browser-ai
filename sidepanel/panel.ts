@@ -4,6 +4,7 @@ import {
 } from "../ai/message-schema.js";
 import type { Message } from "../ai/message-schema.js";
 import { dedupeThinking, extractThinking } from "../ai/message-utils.js";
+import type { RunPlan } from "../types/plan.js";
 import { isRuntimeMessage } from "../types/runtime-messages.js";
 import { AccountClient } from "./account-client.js";
 
@@ -43,6 +44,18 @@ type BillingOverview = {
   }>;
 };
 
+type UsagePayload = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+};
+
+type UsageStats = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+
 // Side Panel UI Controller
 class SidePanelUI {
   elements: Record<string, any>;
@@ -63,11 +76,14 @@ class SidePanelUI {
   streamingState: {
     container: HTMLElement;
     eventsEl: HTMLElement | null;
-    lastEventType?: "text" | "reasoning" | "tool";
+    lastEventType?: "text" | "reasoning" | "tool" | "plan";
     textEventEl?: HTMLElement | null;
     reasoningEventEl?: HTMLElement | null;
     textBuffer?: string;
     reasoningBuffer?: string;
+    planEl?: HTMLElement | null;
+    planListEl?: HTMLOListElement | null;
+    planMetaEl?: HTMLElement | null;
   } | null;
   userScrolledUp: boolean;
   isNearBottom: boolean;
@@ -78,6 +94,8 @@ class SidePanelUI {
     percent: number;
   };
   sessionTokensUsed: number;
+  lastUsage: UsageStats | null;
+  sessionTokenTotals: UsageStats;
   auxAgentProfiles: string[];
   currentView: "chat" | "history";
   currentSettingsTab: "general" | "profiles";
@@ -97,6 +115,7 @@ class SidePanelUI {
   latestThinking: string | null;
   activeToolName: string | null;
   streamingReasoning: string;
+  currentPlan: RunPlan | null;
 
   constructor() {
     this.elements = {
@@ -303,6 +322,12 @@ class SidePanelUI {
       percent: 0,
     };
     this.sessionTokensUsed = 0; // Track highest context seen in session
+    this.lastUsage = null;
+    this.sessionTokenTotals = {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    };
     this.auxAgentProfiles = [];
     this.currentView = "chat";
     this.currentSettingsTab = "general";
@@ -323,6 +348,7 @@ class SidePanelUI {
     this.latestThinking = null;
     this.activeToolName = null;
     this.streamingReasoning = "";
+    this.currentPlan = null;
     this.init();
   }
 
@@ -355,6 +381,14 @@ class SidePanelUI {
       this.showSidebarPanel(null);
       this.switchView("chat");
       this.updateNavActive("chat");
+    });
+
+    // Activity panel toggle via status area
+    this.elements.statusText?.addEventListener("click", () => {
+      this.toggleActivityPanel();
+    });
+    this.elements.statusMeta?.addEventListener("click", () => {
+      this.toggleActivityPanel();
     });
     this.elements.navHistoryBtn?.addEventListener("click", () => {
       this.showSidebarPanel("history");
@@ -632,7 +666,12 @@ class SidePanelUI {
         message.type === "assistant_response" ||
         message.type === "assistant_final"
       ) {
-        this.displayAssistantMessage(message.content, message.thinking);
+        this.displayAssistantMessage(
+          message.content,
+          message.thinking,
+          message.usage,
+          message.model,
+        );
         if (message.usage?.inputTokens) {
           this.updateContextUsage(message.usage.inputTokens);
         } else {
@@ -697,6 +736,16 @@ class SidePanelUI {
       return;
     }
 
+    if (message.type === "plan_update") {
+      this.applyPlanUpdate(message.plan);
+      return;
+    }
+
+    if (message.type === "manual_plan_update") {
+      this.applyManualPlanUpdate(message.steps);
+      return;
+    }
+
     if (message.type === "tool_execution_start") {
       this.pendingToolCount += 1;
       this.clearErrorBanner();
@@ -719,7 +768,12 @@ class SidePanelUI {
     }
 
     if (message.type === "assistant_final") {
-      this.displayAssistantMessage(message.content, message.thinking);
+      this.displayAssistantMessage(
+        message.content,
+        message.thinking,
+        message.usage,
+        message.model,
+      );
       this.appendContextMessages(
         message.responseMessages,
         message.content,
@@ -1488,6 +1542,85 @@ class SidePanelUI {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return date.toLocaleDateString();
+  }
+
+  formatTokenCount(value: number) {
+    if (!value || value <= 0) return "0";
+    if (value >= 1000) {
+      const precision = value >= 10000 ? 0 : 1;
+      return `${(value / 1000).toFixed(precision)}k`;
+    }
+    return `${Math.round(value)}`;
+  }
+
+  normalizeUsage(usage: UsagePayload | null) {
+    if (!usage) return null;
+    const inputTokens = Math.max(0, usage.inputTokens || 0);
+    const outputTokens = Math.max(0, usage.outputTokens || 0);
+    const totalTokens = Math.max(
+      0,
+      usage.totalTokens || inputTokens + outputTokens,
+    );
+    if (!inputTokens && !outputTokens && !totalTokens) return null;
+    return { inputTokens, outputTokens, totalTokens };
+  }
+
+  buildUsageLabel(usage: UsageStats | null) {
+    if (!usage) return "";
+    const parts: string[] = [];
+    if (usage.inputTokens) {
+      parts.push(`${this.formatTokenCount(usage.inputTokens)} in`);
+    }
+    if (usage.outputTokens) {
+      parts.push(`${this.formatTokenCount(usage.outputTokens)} out`);
+    }
+    if (!parts.length && usage.totalTokens) {
+      parts.push(`${this.formatTokenCount(usage.totalTokens)} total`);
+    }
+    return parts.length ? `Tokens ${parts.join(" / ")}` : "";
+  }
+
+  buildMessageMeta(usage: UsageStats | null, modelLabel?: string | null) {
+    const segments: string[] = [];
+    const model = modelLabel?.trim();
+    if (model) {
+      segments.push(model);
+    }
+    const usageLabel = this.buildUsageLabel(usage);
+    if (usageLabel) {
+      segments.push(usageLabel);
+    }
+    return segments.join(" · ");
+  }
+
+  estimateUsageFromContent(content: string) {
+    if (!content) return null;
+    const tokens = Math.ceil(content.length / 4);
+    if (!tokens) return null;
+    return {
+      inputTokens: 0,
+      outputTokens: tokens,
+      totalTokens: tokens,
+    } as UsageStats;
+  }
+
+  getActiveModelLabel() {
+    return (
+      this.elements.modelSelect?.value ||
+      this.configs[this.currentConfig]?.model ||
+      ""
+    );
+  }
+
+  updateUsageStats(usage: UsageStats | null) {
+    if (!usage) return;
+    this.lastUsage = usage;
+    this.sessionTokenTotals = {
+      inputTokens: this.sessionTokenTotals.inputTokens + usage.inputTokens,
+      outputTokens: this.sessionTokenTotals.outputTokens + usage.outputTokens,
+      totalTokens: this.sessionTokenTotals.totalTokens + usage.totalTokens,
+    };
+    this.updateActivityState();
   }
 
   renderAccountPanel() {
@@ -2272,6 +2405,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const tabsContext = this.getSelectedTabsContext();
     const fullMessage = userMessage + tabsContext;
 
+    this.currentPlan = null;
+
     // Display user message (show original without context)
     this.displayUserMessage(userMessage);
 
@@ -2339,7 +2474,12 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.scrollToBottom();
   }
 
-  displayAssistantMessage(content: string, thinking: string | null = null) {
+  displayAssistantMessage(
+    content: string,
+    thinking: string | null = null,
+    usage: UsagePayload | null = null,
+    model: string | null = null,
+  ) {
     const streamResult = this.finishStreamingMessage();
     const streamedContainer = streamResult?.container;
     const streamEventsEl = streamedContainer?.querySelector(
@@ -2348,6 +2488,8 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const hasStreamEvents = Boolean(
       streamEventsEl && streamEventsEl.children.length > 0,
     );
+    let normalizedUsage = this.normalizeUsage(usage);
+    const modelLabel = model || this.getActiveModelLabel();
     const combinedThinking =
       [streamResult?.thinking, thinking].filter(Boolean).join("\n\n") || null;
 
@@ -2367,6 +2509,14 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     thinking = parsed.thinking;
     this.updateThinkingPanel(thinking, false);
 
+    if (!normalizedUsage) {
+      normalizedUsage = this.estimateUsageFromContent(content);
+    }
+    if (normalizedUsage) {
+      this.updateUsageStats(normalizedUsage);
+    }
+    const messageMeta = this.buildMessageMeta(normalizedUsage, modelLabel);
+
     // Add to conversation history
     const assistantEntry = createMessage({
       role: "assistant",
@@ -2383,6 +2533,23 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         header.className = "message-header";
         header.textContent = "Assistant";
         streamedContainer.prepend(header);
+      }
+
+      if (messageMeta) {
+        let metaEl = streamedContainer.querySelector(
+          ".message-meta",
+        ) as HTMLElement | null;
+        if (!metaEl) {
+          metaEl = document.createElement("div");
+          metaEl.className = "message-meta";
+          const header = streamedContainer.querySelector(".message-header");
+          if (header) {
+            header.insertAdjacentElement("afterend", metaEl);
+          } else {
+            streamedContainer.prepend(metaEl);
+          }
+        }
+        metaEl.textContent = messageMeta;
       }
 
       if (content && content.trim() !== "" && streamEventsEl) {
@@ -2410,6 +2577,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     messageDiv.className = "message assistant";
 
     let html = `<div class="message-header">Assistant</div>`;
+    if (messageMeta) {
+      html += `<div class="message-meta">${this.escapeHtml(messageMeta)}</div>`;
+    }
 
     const showThinking = this.elements.showThinking.value === "true";
     if (thinking && showThinking) {
@@ -2653,6 +2823,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       reasoningEventEl: null,
       textBuffer: "",
       reasoningBuffer: "",
+      planEl: null,
+      planListEl: null,
+      planMetaEl: null,
     };
     this.updateThinkingPanel(null, true);
     this.scrollToBottom();
@@ -2726,6 +2899,110 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.scrollToBottom();
   }
 
+  applyPlanUpdate(plan: RunPlan) {
+    if (!plan) return;
+    this.currentPlan = plan;
+    this.renderPlanBlock(plan);
+  }
+
+  applyManualPlanUpdate(
+    steps: Array<{ title: string; status?: string; notes?: string }> = [],
+  ) {
+    if (!steps || steps.length === 0) return;
+    const now = Date.now();
+    const normalizedSteps = steps
+      .map((step, index) => {
+        const status =
+          step.status === "running" ||
+          step.status === "done" ||
+          step.status === "blocked"
+            ? step.status
+            : "pending";
+        return {
+          id: `step-${index + 1}`,
+          title: step.title,
+          status: status as RunPlan["steps"][number]["status"],
+          notes: step.notes,
+        };
+      })
+      .filter((step) => step.title);
+    if (!normalizedSteps.length) return;
+    this.currentPlan = {
+      steps: normalizedSteps,
+      createdAt: this.currentPlan?.createdAt || now,
+      updatedAt: now,
+    };
+    if (this.currentPlan) {
+      this.renderPlanBlock(this.currentPlan);
+    }
+  }
+
+  renderPlanBlock(plan: RunPlan) {
+    if (!this.streamingState) {
+      this.startStreamingMessage();
+    }
+    const planEl = this.ensurePlanBlock();
+    if (!planEl || !this.streamingState) return;
+
+    const steps = Array.isArray(plan.steps) ? plan.steps : [];
+    if (this.streamingState.planMetaEl) {
+      this.streamingState.planMetaEl.textContent =
+        steps.length === 1 ? "1 step" : `${steps.length} steps`;
+    }
+    if (this.streamingState.planListEl) {
+      this.streamingState.planListEl.innerHTML = steps
+        .map((step) => {
+          const status = step.status || "pending";
+          const statusClass = `plan-step-${status}`;
+          const notes = step.notes
+            ? `<div class="plan-step-notes">${this.escapeHtml(step.notes)}</div>`
+            : "";
+          return `
+            <li class="plan-step ${statusClass}">
+              <span class="plan-step-dot"></span>
+              <div class="plan-step-content">
+                <span class="plan-step-title">${this.escapeHtml(step.title)}</span>
+                ${notes}
+              </div>
+            </li>
+          `;
+        })
+        .join("");
+    }
+    this.scrollToBottom();
+  }
+
+  ensurePlanBlock() {
+    if (!this.streamingState?.eventsEl) return null;
+    if (this.streamingState.planEl) return this.streamingState.planEl;
+
+    const container = document.createElement("div");
+    container.className = "plan-block";
+    container.innerHTML = `
+      <div class="plan-header">
+        <span class="plan-title">Plan</span>
+        <span class="plan-meta"></span>
+      </div>
+      <ol class="plan-steps"></ol>
+    `;
+
+    const firstChild = this.streamingState.eventsEl.firstChild;
+    if (firstChild) {
+      this.streamingState.eventsEl.insertBefore(container, firstChild);
+    } else {
+      this.streamingState.eventsEl.appendChild(container);
+    }
+
+    this.streamingState.planEl = container;
+    this.streamingState.planListEl = container.querySelector(
+      ".plan-steps",
+    ) as HTMLOListElement | null;
+    this.streamingState.planMetaEl = container.querySelector(
+      ".plan-meta",
+    ) as HTMLElement | null;
+    return container;
+  }
+
   finishStreamingMessage() {
     if (!this.streamingState) return null;
     // Preserve thinking before clearing state
@@ -2753,6 +3030,9 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
       // Inline tools inside the streaming message (ordered)
       if (this.streamingState?.eventsEl) {
+        if (this.currentPlan) {
+          this.ensurePlanBlock();
+        }
         const inlineEntry = this.createToolTreeItem(entryId, toolName, args);
         entry.inline = inlineEntry;
         this.streamingState.eventsEl.appendChild(inlineEntry.container);
@@ -3248,9 +3528,18 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       labels.push("Streaming response");
     }
     if (this.contextUsage && this.contextUsage.maxContextTokens) {
-      const usedK = (this.contextUsage.approxTokens / 1000).toFixed(1);
-      const maxK = (this.contextUsage.maxContextTokens / 1000).toFixed(0);
-      labels.push(`Context ~ ${usedK}k / ${maxK}k`);
+      const used = Math.max(0, this.contextUsage.approxTokens || 0);
+      const max = Math.max(1, this.contextUsage.maxContextTokens || 0);
+      const usedLabel =
+        used >= 10000
+          ? `${(used / 1000).toFixed(1)}k`
+          : `${used}`;
+      const maxLabel = max >= 10000 ? `${(max / 1000).toFixed(0)}k` : `${max}`;
+      labels.push(`Context ~ ${usedLabel} / ${maxLabel}`);
+    }
+    const usageLabel = this.buildUsageLabel(this.lastUsage);
+    if (usageLabel) {
+      labels.push(usageLabel);
     }
     if (labels.length > 0) {
       this.elements.statusMeta.textContent = labels.join(" · ");
@@ -3473,6 +3762,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
                 if (typeof p === "string") return p;
                 if (p?.text) return p.text;
                 if (p?.content) return JSON.stringify(p.content);
+                if (p?.output) {
+                  const output = p.output?.value ?? p.output;
+                  if (typeof output === "string") return output;
+                  try {
+                    return JSON.stringify(output);
+                  } catch {
+                    return String(output);
+                  }
+                }
                 return "";
               })
               .join("");
@@ -3696,6 +3994,13 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     this.sessionStartedAt = Date.now();
     this.firstUserMessage = "";
     this.sessionTokensUsed = 0; // Reset context tracking
+    this.lastUsage = null;
+    this.sessionTokenTotals = {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    };
+    this.currentPlan = null;
     this.subagents.clear(); // Clear subagents
     this.activeAgent = "main";
     this.elements.chatMessages.innerHTML = "";
