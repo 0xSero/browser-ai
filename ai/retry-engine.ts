@@ -50,10 +50,11 @@ export function createExponentialBackoff(options: BackoffOptions = {}) {
   };
 }
 
-export function isValidFinalResponse(text: unknown, options: { quitPhrases?: string[] } = {}): text is string {
+export function isValidFinalResponse(text: unknown, options: { quitPhrases?: string[]; allowEmpty?: boolean } = {}): text is string {
   if (typeof text !== 'string') return false;
   const trimmed = text.trim();
-  if (!trimmed) return false;
+  // Allow empty responses if tool calls were made (model communicated through actions)
+  if (!trimmed) return options.allowEmpty === true;
   const lowered = trimmed.toLowerCase();
   const phrases = options.quitPhrases || DEFAULT_QUIT_PHRASES;
   return !phrases.some((phrase) => lowered.includes(phrase));

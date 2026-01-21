@@ -27,19 +27,34 @@ export function extractThinking(content: string | null | undefined, existingThin
 
 export function dedupeThinking(thinking: string | null) {
   if (!thinking) return '';
-  const lines = thinking.split('\n');
+  
+  // First, split into paragraphs and dedupe whole paragraphs
+  const paragraphs = thinking.split(/\n\n+/);
+  const seenParagraphs = new Set<string>();
+  const dedupedParagraphs: string[] = [];
+  
+  for (const para of paragraphs) {
+    const normalized = para.trim().toLowerCase();
+    if (normalized && !seenParagraphs.has(normalized)) {
+      seenParagraphs.add(normalized);
+      dedupedParagraphs.push(para.trim());
+    }
+  }
+  
+  // Then dedupe consecutive identical lines within each paragraph
+  const result = dedupedParagraphs.join('\n\n');
+  const lines = result.split('\n');
   const deduplicated: string[] = [];
   let lastLine: string | null = null;
   let repeatCount = 0;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed === lastLine) {
+    if (trimmed === lastLine && trimmed !== '') {
       repeatCount++;
-      if (repeatCount === 3) {
-        deduplicated.push(`... (repeated ${repeatCount + 1} times)`);
-      } else if (repeatCount > 3) {
-        deduplicated[deduplicated.length - 1] = `... (repeated ${repeatCount + 1} times)`;
+      if (repeatCount >= 2) {
+        // Skip repeated lines after 2nd occurrence
+        continue;
       }
     } else {
       deduplicated.push(line);
@@ -48,7 +63,7 @@ export function dedupeThinking(thinking: string | null) {
     }
   }
 
-  return deduplicated.join('\n');
+  return deduplicated.join('\n').trim();
 }
 
 export function estimateTokensFromContent(content: MessageContent): number {

@@ -276,11 +276,14 @@ class BackgroundService {
         result.steps,
       ]);
 
-      const finalText = isValidFinalResponse(text)
-        ? text
-        : "I completed the requested actions but could not produce a final summary. Please try again.";
-
       const toolResults = steps.flatMap((step) => step.toolResults || []);
+      const hadToolCalls = toolResults.length > 0;
+      
+      // Allow empty text if tools were called (model communicated through actions)
+      // But encourage actual summaries via system prompt
+      const finalText = isValidFinalResponse(text, { allowEmpty: hadToolCalls })
+        ? (text || (hadToolCalls ? "" : "Done."))
+        : "I completed the requested actions but could not produce a final summary. Please try again.";
       const responseMessages: Message[] = [
         {
           role: "assistant",
@@ -453,7 +456,18 @@ class BackgroundService {
       return blocked;
     }
 
-    const result = await this.browserTools.executeTool(toolName, args);
+    let result: any;
+    try {
+      result = await this.browserTools.executeTool(toolName, args);
+    } catch (error) {
+      const errorResult = {
+        success: false,
+        error: error?.message || String(error) || "Tool execution failed",
+      };
+      sendResult(errorResult);
+      return errorResult;
+    }
+
     const finalResult = result || { error: "No result returned" };
 
     if (
@@ -651,6 +665,14 @@ Safety:
 - Avoid destructive actions (deleting history, logging out, posting messages) unless the user explicitly asked.
 - Stay within the provided tabs; do not open unknown or suspicious URLs.
 - Prefer gentle edits: use type/focus tools instead of wholesale replacements when editing text areas.
+
+Response format:
+When you complete a task, ALWAYS provide a brief summary report with:
+1. **Task**: What the user asked for (1 line)
+2. **Actions**: Key steps you took (bullet points)
+3. **Result**: What you found or accomplished
+
+Keep it concise but informative. Never respond with just "Done." - the user needs to know what happened.
 
 Base every answer strictly on real tool output.`;
   }

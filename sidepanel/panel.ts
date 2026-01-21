@@ -54,7 +54,6 @@ class SidePanelUI {
   currentConfig: string;
   configs: Record<string, any>;
   toolCallViews: Map<string, any>;
-  toolTreeViews: Map<string, any>;
   lastChatTurn: HTMLElement | null;
   selectedTabs: Map<number, any>;
   tabGroupInfo: Map<number, chrome.tabGroups.TabGroup>;
@@ -63,8 +62,12 @@ class SidePanelUI {
   isStreaming: boolean;
   streamingState: {
     container: HTMLElement;
-    textEl: HTMLElement | null;
-    thinking?: string | null;
+    eventsEl: HTMLElement | null;
+    lastEventType?: "text" | "reasoning" | "tool";
+    textEventEl?: HTMLElement | null;
+    reasoningEventEl?: HTMLElement | null;
+    textBuffer?: string;
+    reasoningBuffer?: string;
   } | null;
   userScrolledUp: boolean;
   isNearBottom: boolean;
@@ -284,7 +287,6 @@ class SidePanelUI {
     this.currentConfig = "default";
     this.configs = { default: {} };
     this.toolCallViews = new Map();
-    this.toolTreeViews = new Map();
     this.lastChatTurn = null;
     this.selectedTabs = new Map();
     this.tabGroupInfo = new Map();
@@ -681,8 +683,10 @@ class SidePanelUI {
     }
     if (message.type === "assistant_stream_delta") {
       if (message.channel === "reasoning") {
-        this.streamingReasoning = `${this.streamingReasoning}${message.content || ""}`;
+        const delta = message.content || "";
+        this.streamingReasoning = `${this.streamingReasoning}${delta}`;
         this.updateThinkingPanel(this.streamingReasoning, true);
+        this.updateStreamReasoning(delta);
         return;
       }
       this.handleAssistantStream({ status: "delta", content: message.content });
@@ -2338,10 +2342,16 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   displayAssistantMessage(content: string, thinking: string | null = null) {
     const streamResult = this.finishStreamingMessage();
     const streamedContainer = streamResult?.container;
+    const streamEventsEl = streamedContainer?.querySelector(
+      ".stream-events",
+    ) as HTMLElement | null;
+    const hasStreamEvents = Boolean(
+      streamEventsEl && streamEventsEl.children.length > 0,
+    );
     const combinedThinking =
       [streamResult?.thinking, thinking].filter(Boolean).join("\n\n") || null;
 
-    if ((!content || content.trim() === "") && !combinedThinking) {
+    if ((!content || content.trim() === "") && !combinedThinking && !hasStreamEvents) {
       if (streamedContainer) {
         streamedContainer.remove();
       }
@@ -2357,11 +2367,6 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     thinking = parsed.thinking;
     this.updateThinkingPanel(thinking, false);
 
-    // If we are about to render a new message, remove the temporary streamed one
-    if (streamedContainer) {
-      streamedContainer.remove();
-    }
-
     // Add to conversation history
     const assistantEntry = createMessage({
       role: "assistant",
@@ -2372,29 +2377,52 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.displayHistory.push(assistantEntry);
     }
 
+    if (streamedContainer) {
+      if (!streamedContainer.querySelector(".message-header")) {
+        const header = document.createElement("div");
+        header.className = "message-header";
+        header.textContent = "Assistant";
+        streamedContainer.prepend(header);
+      }
+
+      if (content && content.trim() !== "" && streamEventsEl) {
+        const hasTextEvent = streamEventsEl.querySelector(
+          ".stream-event-text",
+        );
+        if (!hasTextEvent) {
+          const textEvent = document.createElement("div");
+          textEvent.className = "stream-event stream-event-text";
+          textEvent.innerHTML = this.renderMarkdown(content);
+          streamEventsEl.appendChild(textEvent);
+        }
+      }
+
+      this.scrollToBottom();
+      this.updateStatus("Ready", "success");
+      this.elements.composer?.classList.remove("running");
+      this.pendingToolCount = 0;
+      this.updateActivityState();
+      this.persistHistory();
+      return;
+    }
+
     const messageDiv = document.createElement("div");
     messageDiv.className = "message assistant";
 
     let html = `<div class="message-header">Assistant</div>`;
 
     const showThinking = this.elements.showThinking.value === "true";
-    if (thinking) {
+    if (thinking && showThinking) {
       const cleanedThinking = dedupeThinking(thinking);
       html += `
-        <div class="thinking-block${showThinking ? "" : " thinking-hidden"}">
-          <button class="thinking-header" type="button" ${showThinking ? 'aria-expanded="true"' : 'aria-disabled="true" tabindex="-1"'}>
-            ${
-              showThinking
-                ? `
-              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            `
-                : ""
-            }
-            ${showThinking ? "Thinking" : "Thinking available"}
+        <div class="thinking-block collapsed">
+          <button class="thinking-header" type="button" aria-expanded="false">
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            Thinking
           </button>
-          ${showThinking ? `<div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>` : ""}
+          <div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>
         </div>
       `;
     }
@@ -2612,13 +2640,19 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     container.innerHTML = `
       <div class="message-content streaming-content markdown-body">
         <div class="typing-indicator"><span></span><span></span><span></span></div>
-        <div class="streaming-text markdown-body"></div>
+        <div class="stream-events"></div>
       </div>
     `;
+
     this.elements.chatMessages.appendChild(container);
     this.streamingState = {
       container,
-      textEl: container.querySelector(".streaming-text"),
+      eventsEl: container.querySelector(".stream-events") as HTMLElement | null,
+      lastEventType: undefined,
+      textEventEl: null,
+      reasoningEventEl: null,
+      textBuffer: "",
+      reasoningBuffer: "",
     };
     this.updateThinkingPanel(null, true);
     this.scrollToBottom();
@@ -2628,19 +2662,25 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     if (!this.streamingState) {
       this.startStreamingMessage();
     }
-    if (this.streamingState?.textEl) {
-      // Extract and hide thinking content during streaming
-      const cleaned = extractThinking(content || "");
-      // Store thinking for later use
-      this.streamingState.thinking = cleaned.thinking;
-      if (cleaned.thinking) {
-        this.updateThinkingPanel(cleaned.thinking, true);
-      }
-      // Only show non-thinking content
-      const displayContent = cleaned.content || "";
-      this.streamingState.textEl.innerHTML =
-        this.renderMarkdown(displayContent);
+    if (!this.streamingState?.eventsEl) return;
+
+    // Start a new text event block if needed
+    if (this.streamingState.lastEventType !== "text") {
+      const textEvent = document.createElement("div");
+      textEvent.className = "stream-event stream-event-text";
+      this.streamingState.eventsEl.appendChild(textEvent);
+      this.streamingState.textEventEl = textEvent;
+      this.streamingState.textBuffer = "";
+      this.streamingState.lastEventType = "text";
     }
+
+    this.streamingState.textBuffer = `${this.streamingState.textBuffer || ""}${content || ""}`;
+    if (this.streamingState.textEventEl) {
+      this.streamingState.textEventEl.innerHTML = this.renderMarkdown(
+        this.streamingState.textBuffer || "",
+      );
+    }
+
     this.scrollToBottom();
   }
 
@@ -2650,17 +2690,46 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       this.streamingState.container.querySelector(".typing-indicator");
     if (indicator) indicator.remove();
     this.streamingState.container.classList.remove("streaming");
-    if (this.streamingState.thinking) {
-      this.updateThinkingPanel(this.streamingState.thinking, false);
+    if (this.streamingReasoning) {
+      this.updateThinkingPanel(this.streamingReasoning, false);
     } else {
       this.updateThinkingPanel(null, false);
     }
   }
 
+  updateStreamReasoning(delta: string | null) {
+    if (!this.streamingState?.eventsEl) return;
+    if (delta === null || delta === undefined) return;
+    if (!delta.trim() && !this.streamingState.reasoningBuffer) return;
+
+    if (this.streamingState.lastEventType !== "reasoning") {
+      const reasoningEvent = document.createElement("div");
+      reasoningEvent.className = "stream-event stream-event-reasoning";
+      reasoningEvent.innerHTML = `
+        <div class="stream-reasoning-label">Reasoning</div>
+        <div class="stream-reasoning-content"></div>
+      `;
+      this.streamingState.eventsEl.appendChild(reasoningEvent);
+      this.streamingState.reasoningEventEl = reasoningEvent.querySelector(
+        ".stream-reasoning-content",
+      ) as HTMLElement | null;
+      this.streamingState.reasoningBuffer = "";
+      this.streamingState.lastEventType = "reasoning";
+    }
+
+    const nextBuffer = `${this.streamingState.reasoningBuffer || ""}${delta}`;
+    this.streamingState.reasoningBuffer = nextBuffer;
+    const cleaned = dedupeThinking(nextBuffer);
+    if (this.streamingState.reasoningEventEl) {
+      this.streamingState.reasoningEventEl.textContent = cleaned;
+    }
+    this.scrollToBottom();
+  }
+
   finishStreamingMessage() {
     if (!this.streamingState) return null;
     // Preserve thinking before clearing state
-    const streamingThinking = this.streamingState.thinking;
+    const streamingThinking = this.streamingReasoning;
     const container = this.streamingState.container;
 
     this.completeStreamingMessage();
@@ -2679,29 +2748,29 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     let entry = this.toolCallViews.get(entryId);
 
     if (!entry) {
-      entry = this.createToolMessage(entryId, toolName, args);
+      entry = { inline: null, log: null };
       this.toolCallViews.set(entryId, entry);
-      const logContainer = this.elements.toolLog || this.elements.chatMessages;
-      if (!logContainer) return;
-      logContainer.appendChild(entry.container);
-      if (logContainer === this.elements.chatMessages) {
-        this.scrollToBottom();
-      } else {
-        this.scrollToolLogToBottom();
+
+      // Inline tools inside the streaming message (ordered)
+      if (this.streamingState?.eventsEl) {
+        const inlineEntry = this.createToolTreeItem(entryId, toolName, args);
+        entry.inline = inlineEntry;
+        this.streamingState.eventsEl.appendChild(inlineEntry.container);
+        this.streamingState.lastEventType = "tool";
       }
 
-      const treeEntry = this.createToolTreeItem(entryId, toolName, args);
-      this.toolTreeViews.set(entryId, treeEntry);
-      const tree = this.ensureToolTree();
-      tree.appendChild(treeEntry.container);
+      // Activity panel log (right sidebar)
+      if (this.elements.toolLog) {
+        const logEntry = this.createToolTreeItem(entryId, toolName, args);
+        entry.log = logEntry;
+        this.elements.toolLog.appendChild(logEntry.container);
+      }
+
+      this.scrollToBottom();
     }
 
     if (result !== null && result !== undefined) {
       this.updateToolMessage(entry, result);
-      const treeEntry = this.toolTreeViews.get(entryId);
-      if (treeEntry) {
-        this.updateToolTreeItem(treeEntry, result);
-      }
       const isError = result && (result.error || result.success === false);
       if (isError) {
         this.showErrorBanner(
@@ -2790,6 +2859,30 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
 
   updateToolMessage(entry, result) {
     if (!entry) return;
+
+    // Combined entry (inline + log)
+    if (entry.inline || entry.log) {
+      if (entry.inline) {
+        this.updateToolTreeItem(entry.inline, result);
+      }
+      if (entry.log) {
+        const isTreeItem =
+          entry.log.container?.classList?.contains("tool-tree-item");
+        if (isTreeItem) {
+          this.updateToolTreeItem(entry.log, result);
+        } else {
+          this.updateToolLogEntry(entry.log, result);
+        }
+      }
+      return;
+    }
+
+    // Backwards compatibility for single entry
+    this.updateToolLogEntry(entry, result);
+  }
+
+  updateToolLogEntry(entry, result) {
+    if (!entry) return;
     const isError = result && (result.error || result.success === false);
 
     if (entry.details) {
@@ -2867,7 +2960,7 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const banner = document.createElement("div");
     banner.className = "error-banner";
     banner.innerHTML = `
-      <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -2950,37 +3043,21 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     const argsPreview = this.getArgsPreview(args);
     const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
 
+    // Compact single-line design
     container.innerHTML = `
       <span class="tool-tree-status"></span>
       <div class="tool-tree-content">
         <div class="tool-tree-header">
-          <div class="tool-tree-title">
-            <span class="tool-tree-icon"></span>
-            <span class="tool-tree-name">${this.escapeHtml(toolName || "tool")}</span>
-          </div>
-          <span class="tool-tree-meta">Running</span>
+          <span class="tool-tree-name">${this.escapeHtml(toolName || "tool")}</span>
+          <span class="tool-tree-args">${this.escapeHtml(argsPreview || "")}</span>
         </div>
-        ${argsPreview ? `<div class="tool-tree-args">${this.escapeHtml(argsPreview)}</div>` : ""}
-        <div class="tool-tree-body">
-          <pre>${this.escapeHtml(argsText || "No args")}</pre>
-          <pre class="tool-tree-result">Waiting...</pre>
-        </div>
-        <button class="tool-tree-toggle" type="button">Details</button>
+        <span class="tool-tree-meta">Running</span>
       </div>
     `;
-
-    const toggleBtn = container.querySelector(".tool-tree-toggle");
-    toggleBtn?.addEventListener("click", () => {
-      container.classList.toggle("expanded");
-      const expanded = container.classList.contains("expanded");
-      toggleBtn.textContent = expanded ? "Hide" : "Details";
-    });
 
     return {
       container,
       statusEl: container.querySelector(".tool-tree-meta"),
-      resultEl: container.querySelector(".tool-tree-result"),
-      toggleBtn,
     };
   }
 
@@ -2990,30 +3067,15 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     entry.container.classList.remove("running", "success", "error");
     entry.container.classList.add(isError ? "error" : "success");
 
-    if (entry.statusEl) {
-      entry.statusEl.textContent = isError ? "Error" : "Done";
-    }
-
-    if (entry.resultEl) {
-      const resultText = this.truncateText(
-        this.safeJsonStringify(result),
-        2000,
-      );
-      entry.resultEl.textContent =
-        resultText || (isError ? "Tool failed" : "Done");
-    }
-
-    if (isError && entry.container) {
-      entry.container.classList.add("expanded");
-      if (entry.toggleBtn) {
-        entry.toggleBtn.textContent = "Hide";
-      }
-    }
-
     const start = Number.parseInt(entry.container.dataset.start || "0", 10);
     const dur = start ? Date.now() - start : 0;
-    if (entry.statusEl && !isError) {
-      entry.statusEl.textContent = `Done · ${dur}ms`;
+    
+    if (entry.statusEl) {
+      if (isError) {
+        entry.statusEl.textContent = "Error";
+      } else {
+        entry.statusEl.textContent = dur > 0 ? `${dur}ms` : "Done";
+      }
     }
   }
 
@@ -3269,7 +3331,6 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
       const tree = this.elements.chatMessages.querySelector(".tool-tree");
       if (tree) tree.remove();
     }
-    this.toolTreeViews.clear();
     this.latestThinking = null;
     this.activeToolName = null;
     this.updateThinkingPanel(null, false);
@@ -3497,7 +3558,6 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
   renderConversationHistory() {
     this.elements.chatMessages.innerHTML = "";
     this.toolCallViews.clear();
-    this.toolTreeViews.clear();
     this.lastChatTurn = null;
     this.resetActivityPanel();
 
@@ -3524,23 +3584,17 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
         messageDiv.className = "message assistant";
         let html = `<div class="message-header">Assistant</div>`;
         const showThinking = this.elements.showThinking.value === "true";
-        if (parsed.thinking) {
+        if (parsed.thinking && showThinking) {
           const cleanedThinking = dedupeThinking(parsed.thinking);
           html += `
-            <div class="thinking-block${showThinking ? "" : " thinking-hidden"}">
-              <button class="thinking-header" type="button" ${showThinking ? 'aria-expanded="true"' : 'aria-disabled="true" tabindex="-1"'}>
-                ${
-                  showThinking
-                    ? `
-                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                `
-                    : ""
-                }
-                ${showThinking ? "Thinking" : "Thinking available"}
+            <div class="thinking-block collapsed">
+              <button class="thinking-header" type="button" aria-expanded="false">
+                <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                Thinking
               </button>
-              ${showThinking ? `<div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>` : ""}
+              <div class="thinking-content">${this.escapeHtml(cleanedThinking)}</div>
             </div>
           `;
         }

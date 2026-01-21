@@ -31,12 +31,20 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
   }
 
   if (provider === "custom") {
+    // Normalize the base URL
+    // - Remove /chat/completions suffix if present (SDK will add it)
+    // - Keep /v1 or other path prefixes intact
+    // - Remove trailing slashes
     const baseURL = settings.customEndpoint
       ? settings.customEndpoint
           .replace(/\/chat\/completions\/?$/i, "")
-          .replace(/\/v1\/?$/i, "")
           .replace(/\/+$/, "")
       : "";
+
+    if (!baseURL) {
+      throw new Error("Custom provider requires a customEndpoint to be configured");
+    }
+
     const customProvider = createOpenAICompatible({
       name: "custom",
       apiKey,
