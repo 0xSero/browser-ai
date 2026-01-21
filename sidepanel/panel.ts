@@ -368,12 +368,12 @@ class SidePanelUI {
   }
 
   setupEventListeners() {
-    // Sidebar toggle (wired to activity panel)
+    // Sidebar toggle
     this.elements.openSidebarBtn?.addEventListener("click", () => {
-      this.toggleActivityPanel();
+      this.elements.sidebar?.classList.remove("closed");
     });
     this.elements.closeSidebarBtn?.addEventListener("click", () => {
-      this.toggleActivityPanel(false);
+      this.elements.sidebar?.classList.add("closed");
     });
 
     // Sidebar navigation
@@ -383,13 +383,6 @@ class SidePanelUI {
       this.updateNavActive("chat");
     });
 
-    // Activity panel toggle via status area
-    this.elements.statusText?.addEventListener("click", () => {
-      this.toggleActivityPanel();
-    });
-    this.elements.statusMeta?.addEventListener("click", () => {
-      this.toggleActivityPanel();
-    });
     this.elements.navHistoryBtn?.addEventListener("click", () => {
       this.showSidebarPanel("history");
       this.updateNavActive("history");
