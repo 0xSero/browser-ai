@@ -1,0 +1,178 @@
+type NullableElement<T extends Element> = T | null;
+
+const byId = <T extends HTMLElement>(id: string): NullableElement<T> =>
+  document.getElementById(id) as NullableElement<T>;
+const bySelector = <T extends Element>(selector: string): NullableElement<T> =>
+  document.querySelector(selector) as NullableElement<T>;
+
+export type SidePanelElements = Record<string, any>;
+
+export const getSidePanelElements = (): SidePanelElements => ({
+  // Sidebar elements
+  sidebar: byId<HTMLElement>('sidebar'),
+  openSidebarBtn: byId<HTMLButtonElement>('openSidebarBtn'),
+  closeSidebarBtn: byId<HTMLButtonElement>('closeSidebarBtn'),
+  navChatBtn: byId<HTMLButtonElement>('navChatBtn'),
+  navHistoryBtn: byId<HTMLButtonElement>('navHistoryBtn'),
+  navSettingsBtn: byId<HTMLButtonElement>('navSettingsBtn'),
+  navAccountBtn: byId<HTMLButtonElement>('navAccountBtn'),
+  accountNavLabel: byId<HTMLElement>('accountNavLabel'),
+  rightPanel: byId<HTMLElement>('rightPanel'),
+  rightPanelPanels: byId<HTMLElement>('rightPanelPanels') ?? bySelector<HTMLElement>('.right-panel-panels'),
+
+  // Legacy references (kept for compatibility)
+  settingsBtn: byId<HTMLButtonElement>('settingsBtn'),
+  accountBtn: byId<HTMLButtonElement>('accountBtn'),
+  settingsPanel: byId<HTMLElement>('settingsPanel'),
+  chatInterface: byId<HTMLElement>('chatInterface'),
+  accessPanel: byId<HTMLElement>('accessPanel'),
+  authPanel: byId<HTMLElement>('authPanel'),
+  billingPanel: byId<HTMLElement>('billingPanel'),
+  accountPanel: byId<HTMLElement>('accountPanel'),
+  authSubtitle: byId<HTMLElement>('authSubtitle'),
+  accessConfigPrompt: byId<HTMLElement>('accessConfigPrompt'),
+  authForm: byId<HTMLFormElement>('authForm'),
+  authEmail: byId<HTMLInputElement>('authEmail'),
+  authStartBtn: byId<HTMLButtonElement>('authStartBtn'),
+  authOpenBtn: byId<HTMLButtonElement>('authOpenBtn'),
+  authOpenSettingsBtn: byId<HTMLButtonElement>('authOpenSettingsBtn'),
+  authTokenInput: byId<HTMLInputElement>('authTokenInput'),
+  authTokenSaveBtn: byId<HTMLButtonElement>('authTokenSaveBtn'),
+  billingStartBtn: byId<HTMLButtonElement>('billingStartBtn'),
+  billingManageBtn: byId<HTMLButtonElement>('billingManageBtn'),
+  authLogoutBtn: byId<HTMLButtonElement>('authLogoutBtn'),
+  accountGreeting: byId<HTMLElement>('accountGreeting'),
+  accountSubtext: byId<HTMLElement>('accountSubtext'),
+  accountRefreshBtn: byId<HTMLButtonElement>('accountRefreshBtn'),
+  statusBar: byId<HTMLElement>('statusBar'),
+  statusText: byId<HTMLElement>('statusText'),
+  statusMeta: byId<HTMLElement>('statusMeta'),
+  activityPanel: byId<HTMLElement>('activityPanel'),
+  activityCloseBtn: byId<HTMLButtonElement>('activityCloseBtn'),
+  activityToggleBtn: byId<HTMLButtonElement>('activityToggleBtn'),
+  toolLog: byId<HTMLElement>('toolLog'),
+  thinkingPanel: byId<HTMLElement>('thinkingPanel'),
+  agentNav: byId<HTMLElement>('agentNav'),
+
+  tabSelectorBtn: byId<HTMLButtonElement>('tabSelectorBtn'),
+  tabSelector: byId<HTMLElement>('tabSelector'),
+  tabList: byId<HTMLElement>('tabList'),
+  closeTabSelector: byId<HTMLButtonElement>('closeTabSelector'),
+  selectedTabsBar: byId<HTMLElement>('selectedTabsBar'),
+  scrollToLatestBtn: byId<HTMLButtonElement>('scrollToLatestBtn'),
+  viewChatBtn: byId<HTMLButtonElement>('viewChatBtn'),
+  viewHistoryBtn: byId<HTMLButtonElement>('viewHistoryBtn'),
+  historyPanel: byId<HTMLElement>('historyPanel'),
+  historyItems: byId<HTMLElement>('historyItems'),
+  startNewSessionBtn: byId<HTMLButtonElement>('startNewSessionBtn'),
+  settingsTabGeneralBtn: byId<HTMLButtonElement>('settingsTabGeneralBtn'),
+  settingsTabProfilesBtn: byId<HTMLButtonElement>('settingsTabProfilesBtn'),
+  settingsTabGeneral: byId<HTMLElement>('settingsTabGeneral'),
+  settingsTabProfiles: byId<HTMLElement>('settingsTabProfiles'),
+  newProfileNameInput: byId<HTMLInputElement>('newProfileNameInput'),
+  createProfileBtn: byId<HTMLButtonElement>('createProfileBtn'),
+  openGeneralBtn: byId<HTMLButtonElement>('openGeneralBtn'),
+  openProfilesBtn: byId<HTMLButtonElement>('openProfilesBtn'),
+  generalProfileSelect: byId<HTMLSelectElement>('generalProfileSelect'),
+  profileEditorTitle: byId<HTMLElement>('profileEditorTitle'),
+  profileEditorName: byId<HTMLInputElement>('profileEditorName'),
+  profileEditorProvider: byId<HTMLSelectElement>('profileEditorProvider'),
+  profileEditorApiKey: byId<HTMLInputElement>('profileEditorApiKey'),
+  profileEditorModel: byId<HTMLInputElement>('profileEditorModel'),
+  profileEditorEndpoint: byId<HTMLInputElement>('profileEditorEndpoint'),
+  profileEditorEndpointGroup: byId<HTMLElement>('profileEditorEndpointGroup'),
+  profileEditorTemperature: byId<HTMLInputElement>('profileEditorTemperature'),
+  profileEditorTemperatureValue: byId<HTMLElement>('profileEditorTemperatureValue'),
+  profileEditorMaxTokens: byId<HTMLInputElement>('profileEditorMaxTokens'),
+  profileEditorTimeout: byId<HTMLInputElement>('profileEditorTimeout'),
+  profileEditorEnableScreenshots: byId<HTMLInputElement>('profileEditorEnableScreenshots'),
+  profileEditorSendScreenshots: byId<HTMLInputElement>('profileEditorSendScreenshots'),
+  profileEditorScreenshotQuality: byId<HTMLSelectElement>('profileEditorScreenshotQuality'),
+  profileEditorPrompt: byId<HTMLTextAreaElement>('profileEditorPrompt'),
+  saveProfileBtn: byId<HTMLButtonElement>('saveProfileBtn'),
+  permissionRead: byId<HTMLInputElement>('permissionRead'),
+  permissionInteract: byId<HTMLInputElement>('permissionInteract'),
+  permissionNavigate: byId<HTMLInputElement>('permissionNavigate'),
+  permissionTabs: byId<HTMLInputElement>('permissionTabs'),
+  permissionScreenshots: byId<HTMLInputElement>('permissionScreenshots'),
+  allowedDomains: byId<HTMLTextAreaElement>('allowedDomains'),
+  accountSettingsSection: byId<HTMLDetailsElement>('accountSettingsSection'),
+  accountApiBaseGroup: byId<HTMLElement>('accountApiBaseGroup'),
+  accountApiBase: byId<HTMLInputElement>('accountApiBase'),
+  exportSettingsBtn: byId<HTMLButtonElement>('exportSettingsBtn'),
+  importSettingsBtn: byId<HTMLButtonElement>('importSettingsBtn'),
+  importSettingsInput: byId<HTMLInputElement>('importSettingsInput'),
+  accessStatus: byId<HTMLElement>('accessStatus'),
+
+  // Form elements - Provider & model
+  provider: byId<HTMLSelectElement>('provider'),
+  apiKey: byId<HTMLInputElement>('apiKey'),
+  model: byId<HTMLInputElement>('model'),
+  customEndpoint: byId<HTMLInputElement>('customEndpoint'),
+  customEndpointGroup: byId<HTMLElement>('customEndpointGroup'),
+
+  // Form elements - Model parameters
+  temperature: byId<HTMLInputElement>('temperature'),
+  temperatureValue: byId<HTMLElement>('temperatureValue'),
+  maxTokens: byId<HTMLInputElement>('maxTokens'),
+  contextLimit: byId<HTMLInputElement>('contextLimit'),
+  timeout: byId<HTMLInputElement>('timeout'),
+
+  // Form elements - Screenshots & vision
+  enableScreenshots: byId<HTMLInputElement>('enableScreenshots'),
+  sendScreenshotsAsImages: byId<HTMLInputElement>('sendScreenshotsAsImages'),
+  screenshotQuality: byId<HTMLSelectElement>('screenshotQuality'),
+  visionBridge: byId<HTMLInputElement>('visionBridge'),
+  visionProfile: byId<HTMLSelectElement>('visionProfile'),
+
+  // Form elements - Behavior
+  showThinking: byId<HTMLInputElement>('showThinking'),
+  streamResponses: byId<HTMLInputElement>('streamResponses'),
+  autoScroll: byId<HTMLSelectElement>('autoScroll'),
+  confirmActions: byId<HTMLInputElement>('confirmActions'),
+  saveHistory: byId<HTMLInputElement>('saveHistory'),
+
+  // Form elements - Orchestrator
+  orchestratorToggle: byId<HTMLInputElement>('orchestratorToggle'),
+  orchestratorProfile: byId<HTMLSelectElement>('orchestratorProfile'),
+
+  // Form elements - System prompt
+  systemPrompt: byId<HTMLTextAreaElement>('systemPrompt'),
+
+  // Settings actions
+  saveSettingsBtn: byId<HTMLButtonElement>('saveSettingsBtn'),
+  cancelSettingsBtn: byId<HTMLButtonElement>('cancelSettingsBtn'),
+
+  // Profile management
+  activeConfig: byId<HTMLSelectElement>('activeConfig'),
+  newConfigBtn: byId<HTMLButtonElement>('newConfigBtn'),
+  deleteConfigBtn: byId<HTMLButtonElement>('deleteConfigBtn'),
+  refreshProfilesBtn: byId<HTMLButtonElement>('refreshProfilesBtn'),
+  agentGrid: byId<HTMLElement>('agentGrid'),
+
+  // Chat interface
+  chatMessages: byId<HTMLElement>('chatMessages'),
+  userInput: byId<HTMLTextAreaElement>('userInput'),
+  sendBtn: byId<HTMLButtonElement>('sendBtn'),
+  composer: byId<HTMLElement>('composer'),
+  modelSelect: byId<HTMLSelectElement>('modelSelect'),
+  fileBtn: byId<HTMLButtonElement>('fileBtn'),
+  fileInput: byId<HTMLInputElement>('fileInput'),
+  planStatus: byId<HTMLElement>('planStatus'),
+
+  // Account panel elements
+  accountCheckoutBtn: byId<HTMLButtonElement>('accountCheckoutBtn'),
+  accountPortalBtn: byId<HTMLButtonElement>('accountPortalBtn'),
+  accountLogoutBtn: byId<HTMLButtonElement>('accountLogoutBtn'),
+  accountOpenSettingsBtn: byId<HTMLButtonElement>('accountOpenSettingsBtn'),
+  accountOpenProfilesBtn: byId<HTMLButtonElement>('accountOpenProfilesBtn'),
+  accountOpenHistoryBtn: byId<HTMLButtonElement>('accountOpenHistoryBtn'),
+  accountPlanStatus: byId<HTMLElement>('accountPlanStatus'),
+  accountPlanBadge: byId<HTMLElement>('accountPlanBadge'),
+  accountPlanDetails: byId<HTMLElement>('accountPlanDetails'),
+  accountBillingSummary: byId<HTMLElement>('accountBillingSummary'),
+  accountSettingsSummary: byId<HTMLElement>('accountSettingsSummary'),
+  accountConfigs: byId<HTMLElement>('accountConfigs'),
+  accountHistory: byId<HTMLElement>('accountHistory'),
+  accountInvoices: byId<HTMLElement>('accountInvoices'),
+});

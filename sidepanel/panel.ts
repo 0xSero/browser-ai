@@ -4,6 +4,14 @@ import { dedupeThinking, extractThinking } from '../ai/message-utils.js';
 import type { RunPlan } from '../types/plan.js';
 import { isRuntimeMessage } from '../types/runtime-messages.js';
 import { AccountClient } from './account-client.js';
+import { getSidePanelElements } from './panel-elements.js';
+import {
+  type RightPanelName,
+  bindSidebarNavigation,
+  setSidebarOpen,
+  showRightPanel as showRightPanelContent,
+  updateNavActive,
+} from './panel-navigation.js';
 
 type AuthState = {
   status: 'signed_out' | 'device_code' | 'signed_in';
@@ -112,171 +120,7 @@ class SidePanelUI {
   currentPlan: RunPlan | null;
 
   constructor() {
-    this.elements = {
-      // Sidebar elements
-      sidebar: document.getElementById('sidebar'),
-      openSidebarBtn: document.getElementById('openSidebarBtn'),
-      closeSidebarBtn: document.getElementById('closeSidebarBtn'),
-      navChatBtn: document.getElementById('navChatBtn'),
-      navHistoryBtn: document.getElementById('navHistoryBtn'),
-      navSettingsBtn: document.getElementById('navSettingsBtn'),
-      navAccountBtn: document.getElementById('navAccountBtn'),
-      accountNavLabel: document.getElementById('accountNavLabel'),
-      sidebarPanels: document.getElementById('sidebarPanels'),
-      // Legacy references (kept for compatibility)
-      settingsBtn: document.getElementById('settingsBtn'),
-      accountBtn: document.getElementById('accountBtn'),
-      settingsPanel: document.getElementById('settingsPanel'),
-      chatInterface: document.getElementById('chatInterface'),
-      accessPanel: document.getElementById('accessPanel'),
-      authPanel: document.getElementById('authPanel'),
-      billingPanel: document.getElementById('billingPanel'),
-      accountPanel: document.getElementById('accountPanel'),
-      authSubtitle: document.getElementById('authSubtitle'),
-      accessConfigPrompt: document.getElementById('accessConfigPrompt'),
-      authForm: document.getElementById('authForm'),
-      authEmail: document.getElementById('authEmail'),
-      authStartBtn: document.getElementById('authStartBtn'),
-      authOpenBtn: document.getElementById('authOpenBtn'),
-      authOpenSettingsBtn: document.getElementById('authOpenSettingsBtn'),
-      authTokenInput: document.getElementById('authTokenInput'),
-      authTokenSaveBtn: document.getElementById('authTokenSaveBtn'),
-      billingStartBtn: document.getElementById('billingStartBtn'),
-      billingManageBtn: document.getElementById('billingManageBtn'),
-      authLogoutBtn: document.getElementById('authLogoutBtn'),
-      accountGreeting: document.getElementById('accountGreeting'),
-      accountSubtext: document.getElementById('accountSubtext'),
-      accountRefreshBtn: document.getElementById('accountRefreshBtn'),
-      statusText: document.getElementById('statusText'),
-      statusMeta: document.getElementById('statusMeta'),
-      activityPanel: document.getElementById('activityPanel'),
-      activityCloseBtn: document.getElementById('activityCloseBtn'),
-      toolLog: document.getElementById('toolLog'),
-      thinkingPanel: document.getElementById('thinkingPanel'),
-      agentNav: document.getElementById('agentNav'),
-
-      tabSelectorBtn: document.getElementById('tabSelectorBtn'),
-      tabSelector: document.getElementById('tabSelector'),
-      tabList: document.getElementById('tabList'),
-      closeTabSelector: document.getElementById('closeTabSelector'),
-      selectedTabsBar: document.getElementById('selectedTabsBar'),
-      scrollToLatestBtn: document.getElementById('scrollToLatestBtn'),
-      viewChatBtn: document.getElementById('viewChatBtn'),
-      viewHistoryBtn: document.getElementById('viewHistoryBtn'),
-      historyPanel: document.getElementById('historyPanel'),
-      historyItems: document.getElementById('historyItems'),
-      startNewSessionBtn: document.getElementById('startNewSessionBtn'),
-      settingsTabGeneralBtn: document.getElementById('settingsTabGeneralBtn'),
-      settingsTabProfilesBtn: document.getElementById('settingsTabProfilesBtn'),
-      settingsTabGeneral: document.getElementById('settingsTabGeneral'),
-      settingsTabProfiles: document.getElementById('settingsTabProfiles'),
-      newProfileNameInput: document.getElementById('newProfileNameInput'),
-      createProfileBtn: document.getElementById('createProfileBtn'),
-      openGeneralBtn: document.getElementById('openGeneralBtn'),
-      openProfilesBtn: document.getElementById('openProfilesBtn'),
-      generalProfileSelect: document.getElementById('generalProfileSelect'),
-      profileEditorTitle: document.getElementById('profileEditorTitle'),
-      profileEditorName: document.getElementById('profileEditorName'),
-      profileEditorProvider: document.getElementById('profileEditorProvider'),
-      profileEditorApiKey: document.getElementById('profileEditorApiKey'),
-      profileEditorModel: document.getElementById('profileEditorModel'),
-      profileEditorEndpoint: document.getElementById('profileEditorEndpoint'),
-      profileEditorEndpointGroup: document.getElementById('profileEditorEndpointGroup'),
-      profileEditorTemperature: document.getElementById('profileEditorTemperature'),
-      profileEditorTemperatureValue: document.getElementById('profileEditorTemperatureValue'),
-      profileEditorMaxTokens: document.getElementById('profileEditorMaxTokens'),
-      profileEditorTimeout: document.getElementById('profileEditorTimeout'),
-      profileEditorEnableScreenshots: document.getElementById('profileEditorEnableScreenshots'),
-      profileEditorSendScreenshots: document.getElementById('profileEditorSendScreenshots'),
-      profileEditorScreenshotQuality: document.getElementById('profileEditorScreenshotQuality'),
-      profileEditorPrompt: document.getElementById('profileEditorPrompt'),
-      saveProfileBtn: document.getElementById('saveProfileBtn'),
-      permissionRead: document.getElementById('permissionRead'),
-      permissionInteract: document.getElementById('permissionInteract'),
-      permissionNavigate: document.getElementById('permissionNavigate'),
-      permissionTabs: document.getElementById('permissionTabs'),
-      permissionScreenshots: document.getElementById('permissionScreenshots'),
-      allowedDomains: document.getElementById('allowedDomains'),
-      accountSettingsSection: document.getElementById('accountSettingsSection'),
-      accountApiBaseGroup: document.getElementById('accountApiBaseGroup'),
-      accountApiBase: document.getElementById('accountApiBase'),
-      exportSettingsBtn: document.getElementById('exportSettingsBtn'),
-      importSettingsBtn: document.getElementById('importSettingsBtn'),
-      importSettingsInput: document.getElementById('importSettingsInput'),
-      accessStatus: document.getElementById('accessStatus'),
-
-      // Form elements - Provider & model
-      provider: document.getElementById('provider'),
-      apiKey: document.getElementById('apiKey'),
-      model: document.getElementById('model'),
-      customEndpoint: document.getElementById('customEndpoint'),
-      customEndpointGroup: document.getElementById('customEndpointGroup'),
-
-      // Form elements - Model parameters
-      temperature: document.getElementById('temperature'),
-      temperatureValue: document.getElementById('temperatureValue'),
-      maxTokens: document.getElementById('maxTokens'),
-      contextLimit: document.getElementById('contextLimit'),
-      timeout: document.getElementById('timeout'),
-
-      // Form elements - Screenshots & vision
-      enableScreenshots: document.getElementById('enableScreenshots'),
-      sendScreenshotsAsImages: document.getElementById('sendScreenshotsAsImages'),
-      screenshotQuality: document.getElementById('screenshotQuality'),
-      visionBridge: document.getElementById('visionBridge'),
-      visionProfile: document.getElementById('visionProfile'),
-
-      // Form elements - Behavior
-      showThinking: document.getElementById('showThinking'),
-      streamResponses: document.getElementById('streamResponses'),
-      autoScroll: document.getElementById('autoScroll'),
-      confirmActions: document.getElementById('confirmActions'),
-      saveHistory: document.getElementById('saveHistory'),
-
-      // Form elements - Orchestrator
-      orchestratorToggle: document.getElementById('orchestratorToggle'),
-      orchestratorProfile: document.getElementById('orchestratorProfile'),
-
-      // Form elements - System prompt
-      systemPrompt: document.getElementById('systemPrompt'),
-
-      // Settings actions
-      saveSettingsBtn: document.getElementById('saveSettingsBtn'),
-      cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
-
-      // Profile management
-      activeConfig: document.getElementById('activeConfig'),
-      newConfigBtn: document.getElementById('newConfigBtn'),
-      deleteConfigBtn: document.getElementById('deleteConfigBtn'),
-      refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
-      agentGrid: document.getElementById('agentGrid'),
-
-      // Chat interface
-      chatMessages: document.getElementById('chatMessages'),
-      userInput: document.getElementById('userInput'),
-      sendBtn: document.getElementById('sendBtn'),
-      composer: document.getElementById('composer'),
-      modelSelect: document.getElementById('modelSelect'),
-      fileBtn: document.getElementById('fileBtn'),
-      fileInput: document.getElementById('fileInput'),
-      planStatus: document.getElementById('planStatus'),
-
-      // Account panel elements
-      accountCheckoutBtn: document.getElementById('accountCheckoutBtn'),
-      accountPortalBtn: document.getElementById('accountPortalBtn'),
-      accountLogoutBtn: document.getElementById('accountLogoutBtn'),
-      accountOpenSettingsBtn: document.getElementById('accountOpenSettingsBtn'),
-      accountOpenProfilesBtn: document.getElementById('accountOpenProfilesBtn'),
-      accountOpenHistoryBtn: document.getElementById('accountOpenHistoryBtn'),
-      accountPlanStatus: document.getElementById('accountPlanStatus'),
-      accountPlanBadge: document.getElementById('accountPlanBadge'),
-      accountPlanDetails: document.getElementById('accountPlanDetails'),
-      accountBillingSummary: document.getElementById('accountBillingSummary'),
-      accountSettingsSummary: document.getElementById('accountSettingsSummary'),
-      accountConfigs: document.getElementById('accountConfigs'),
-      accountHistory: document.getElementById('accountHistory'),
-      accountInvoices: document.getElementById('accountInvoices'),
-    };
+    this.elements = getSidePanelElements();
 
     this.displayHistory = [];
     this.contextHistory = [];
@@ -348,32 +192,13 @@ class SidePanelUI {
   }
 
   setupEventListeners() {
-    // Sidebar toggle
-    this.elements.openSidebarBtn?.addEventListener('click', () => {
-      this.elements.sidebar?.classList.remove('closed');
-    });
-    this.elements.closeSidebarBtn?.addEventListener('click', () => {
-      this.elements.sidebar?.classList.add('closed');
-    });
-
-    // Sidebar navigation
-    this.elements.navChatBtn?.addEventListener('click', () => {
-      this.showSidebarPanel(null);
-      this.switchView('chat');
-      this.updateNavActive('chat');
-    });
-
-    this.elements.navHistoryBtn?.addEventListener('click', () => {
-      this.showSidebarPanel('history');
-      this.updateNavActive('history');
-    });
-    this.elements.navSettingsBtn?.addEventListener('click', () => {
-      this.showSidebarPanel('settings');
-      this.updateNavActive('settings');
-    });
-    this.elements.navAccountBtn?.addEventListener('click', () => {
-      this.showSidebarPanel('account');
-      this.updateNavActive('account');
+    bindSidebarNavigation(this.elements, {
+      onOpen: () => this.openSidebar(),
+      onClose: () => this.closeSidebar(),
+      onChat: () => this.openChatView(),
+      onHistory: () => this.openHistoryPanel(),
+      onSettings: () => this.openSettingsPanel(),
+      onAccount: () => this.openAccountPanel(),
     });
 
     // Legacy settings toggle (if old button exists)
@@ -718,23 +543,25 @@ class SidePanelUI {
   }
 
   async toggleSettings(saveOnClose = true) {
-    const isOpen = !this.elements.settingsPanel.classList.contains('hidden');
+    const isOpen = this.elements.settingsPanel ? !this.elements.settingsPanel.classList.contains('hidden') : false;
     if (isOpen) {
       if (saveOnClose) {
         this.configs[this.currentConfig] = this.collectCurrentFormProfile();
         await this.persistAllSettings({ silent: true });
       }
-      this.elements.settingsPanel.classList.add('hidden');
       this.settingsOpen = false;
+      this.showRightPanel(null);
+      this.setNavActive('chat');
       this.updateAccessUI();
       return;
     }
-    this.elements.settingsPanel.classList.remove('hidden');
     this.settingsOpen = true;
-    this.elements.accessPanel?.classList.add('hidden');
-    this.elements.chatInterface?.classList.add('hidden');
-    this.elements.historyPanel?.classList.add('hidden');
+    this.accessPanelVisible = false;
+    this.openSidebar();
+    this.showRightPanel('settings');
     this.switchSettingsTab(this.currentSettingsTab || 'general');
+    this.setNavActive('settings');
+    this.updateAccessUI();
   }
 
   async cancelSettings() {
@@ -1037,8 +864,14 @@ class SidePanelUI {
   }
 
   toggleAccessPanel() {
-    this.accessPanelVisible = !this.accessPanelVisible;
-    this.updateAccessUI();
+    if (this.accessPanelVisible) {
+      this.accessPanelVisible = false;
+      this.showRightPanel(null);
+      this.setNavActive('chat');
+      this.updateAccessUI();
+      return;
+    }
+    this.openAccountPanel();
   }
 
   openExternalUrl(url) {
@@ -1097,11 +930,7 @@ class SidePanelUI {
   }
 
   openAccountSettings({ focusAccountApi = false } = {}) {
-    this.accessPanelVisible = false;
-    this.updateAccessUI();
-    if (this.elements.settingsPanel?.classList.contains('hidden')) {
-      void this.toggleSettings();
-    }
+    this.openSettingsPanel();
     this.switchSettingsTab('general');
     const accountSection = this.elements.accountSettingsSection;
     if (accountSection && accountSection instanceof HTMLDetailsElement) {
@@ -1127,18 +956,12 @@ class SidePanelUI {
   }
 
   openProfilesFromAccount() {
-    this.accessPanelVisible = false;
-    this.updateAccessUI();
-    if (this.elements.settingsPanel?.classList.contains('hidden')) {
-      void this.toggleSettings();
-    }
+    this.openSettingsPanel();
     this.switchSettingsTab('profiles');
   }
 
   openHistoryFromAccount() {
-    this.accessPanelVisible = false;
-    this.updateAccessUI();
-    this.switchView('history');
+    this.openHistoryPanel();
   }
 
   async startEmailAuth() {
@@ -3490,40 +3313,57 @@ Do NOT auto-spawn sub-agents. Let the user decide when orchestration is needed.
     }
   }
 
-  showSidebarPanel(panelName: string | null) {
-    // Hide all sidebar panels
-    const panels = this.elements.sidebarPanels?.querySelectorAll('.sidebar-panel');
-    panels?.forEach((panel) => panel.classList.add('hidden'));
-
-    if (panelName) {
-      // Show the selected panel
-      const targetPanel = this.elements.sidebarPanels?.querySelector(`[data-panel="${panelName}"]`);
-      targetPanel?.classList.remove('hidden');
-    }
+  openSidebar() {
+    setSidebarOpen(this.elements, true);
   }
 
-  updateNavActive(navName: string) {
-    // Remove active from all nav items
-    this.elements.navChatBtn?.classList.remove('active');
-    this.elements.navHistoryBtn?.classList.remove('active');
-    this.elements.navSettingsBtn?.classList.remove('active');
-    this.elements.navAccountBtn?.classList.remove('active');
+  closeSidebar() {
+    setSidebarOpen(this.elements, false);
+  }
 
-    // Add active to the selected nav
-    switch (navName) {
-      case 'chat':
-        this.elements.navChatBtn?.classList.add('active');
-        break;
-      case 'history':
-        this.elements.navHistoryBtn?.classList.add('active');
-        break;
-      case 'settings':
-        this.elements.navSettingsBtn?.classList.add('active');
-        break;
-      case 'account':
-        this.elements.navAccountBtn?.classList.add('active');
-        break;
-    }
+  showRightPanel(panelName: RightPanelName) {
+    showRightPanelContent(this.elements, panelName);
+  }
+
+  setNavActive(navName: 'chat' | 'history' | 'settings' | 'account') {
+    updateNavActive(this.elements, navName);
+  }
+
+  openChatView() {
+    this.settingsOpen = false;
+    this.accessPanelVisible = false;
+    this.showRightPanel(null);
+    this.switchView('chat');
+    this.setNavActive('chat');
+    this.updateAccessUI();
+  }
+
+  openHistoryPanel() {
+    this.settingsOpen = false;
+    this.accessPanelVisible = false;
+    this.openSidebar();
+    this.showRightPanel('history');
+    this.setNavActive('history');
+    this.updateAccessUI();
+  }
+
+  openSettingsPanel() {
+    this.settingsOpen = true;
+    this.accessPanelVisible = false;
+    this.openSidebar();
+    this.showRightPanel('settings');
+    this.switchSettingsTab(this.currentSettingsTab || 'general');
+    this.setNavActive('settings');
+    this.updateAccessUI();
+  }
+
+  openAccountPanel() {
+    this.settingsOpen = false;
+    this.accessPanelVisible = true;
+    this.openSidebar();
+    this.showRightPanel('account');
+    this.setNavActive('account');
+    this.updateAccessUI();
   }
 
   startNewSession() {
