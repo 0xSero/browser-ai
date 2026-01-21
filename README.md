@@ -5,7 +5,7 @@ Parchi is a browser sidepanel extension for AI-powered browsing assistance. It p
 ## What it does
 
 - Chat-driven browser automation with tool execution
-- Activity drawer for tool calls + model thinking
+- Inline tool-call timeline + reasoning during streaming
 - Session history and profile-driven settings
 
 ## Architecture
@@ -34,6 +34,14 @@ sequenceDiagram
   LLM-->>BG: final response
   BG-->>UI: assistant_response
 ```
+
+## Quality
+
+Last verified: 2026-01-21
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Unit tests | `npm run test:unit` | 31/31 passing |
 
 ## Development
 
