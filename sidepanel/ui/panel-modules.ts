@@ -7,6 +7,7 @@ import './panel-core.js';
 import './panel-helpers.js';
 import './panel-history.js';
 import './panel-markdown.js';
+import './panel-plan.js';
 import './panel-profiles.js';
 import './panel-scroll.js';
 import './panel-settings.js';

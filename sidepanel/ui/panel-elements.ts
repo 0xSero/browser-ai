@@ -159,6 +159,12 @@ export const getSidePanelElements = (): SidePanelElements => ({
   fileBtn: byId<HTMLButtonElement>('fileBtn'),
   fileInput: byId<HTMLInputElement>('fileInput'),
   planStatus: byId<HTMLElement>('planStatus'),
+  planDrawer: byId<HTMLElement>('planDrawer'),
+  planDrawerToggle: byId<HTMLButtonElement>('planDrawerToggle'),
+  planDrawerContent: byId<HTMLElement>('planDrawerContent'),
+  planChecklist: byId<HTMLOListElement>('planChecklist'),
+  planStepCount: byId<HTMLElement>('planStepCount'),
+  planClearBtn: byId<HTMLButtonElement>('planClearBtn'),
 
   // Account panel elements
   accountCheckoutBtn: byId<HTMLButtonElement>('accountCheckoutBtn'),

@@ -4,7 +4,9 @@ import { SidePanelUI } from './ui/panel-ui.js';
 
 const init = async () => {
   await loadPanelLayout();
-  new SidePanelUI();
+  const ui = new SidePanelUI();
+  // Expose for debugging
+  (window as any).sidePanelUI = ui;
 };
 
 void init();

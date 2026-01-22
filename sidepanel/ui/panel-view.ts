@@ -98,6 +98,7 @@ import { SidePanelUI } from './panel-ui.js';
     totalTokens: 0,
   };
   this.currentPlan = null;
+  this.hidePlanDrawer();
   this.subagents.clear();
   this.activeAgent = 'main';
   this.elements.chatMessages.innerHTML = '';

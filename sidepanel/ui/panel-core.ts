@@ -6,6 +6,7 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).init = async function init() {
   this.setupEventListeners();
+  this.setupPlanDrawer();
   this.setupResizeObserver();
   // Start with sidebar closed by default
   this.elements.sidebar?.classList.add('closed');

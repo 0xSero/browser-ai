@@ -45,6 +45,30 @@
                         Jump to latest
                     </button>
 
+                    <!-- Plan Drawer (above composer) -->
+                    <div id="planDrawer" class="plan-drawer hidden">
+                        <div class="plan-drawer-header" id="planDrawerToggle">
+                            <div class="plan-drawer-title">
+                                <svg class="plan-drawer-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <span>Plan</span>
+                                <span class="plan-drawer-count" id="planStepCount">0 steps</span>
+                            </div>
+                            <div class="plan-drawer-actions">
+                                <button class="plan-drawer-btn" id="planClearBtn" title="Clear plan">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="plan-drawer-content" id="planDrawerContent">
+                            <ol class="plan-checklist" id="planChecklist"></ol>
+                        </div>
+                    </div>
+
                     <!-- Composer -->
                     <div class="composer-wrapper">
                         <div

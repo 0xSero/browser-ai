@@ -113,7 +113,7 @@ import { SidePanelUI } from './panel-ui.js';
 (SidePanelUI.prototype as any).applyPlanUpdate = function applyPlanUpdate(plan: RunPlan) {
   if (!plan) return;
   this.currentPlan = plan;
-  this.renderPlanBlock(plan);
+  this.renderPlanDrawer(plan);
 };
 
 (SidePanelUI.prototype as any).applyManualPlanUpdate = function applyManualPlanUpdate(
@@ -140,7 +140,7 @@ import { SidePanelUI } from './panel-ui.js';
     updatedAt: now,
   };
   if (this.currentPlan) {
-    this.renderPlanBlock(this.currentPlan);
+    this.renderPlanDrawer(this.currentPlan);
   }
 };
 
