@@ -659,9 +659,32 @@ class BackgroundService {
       : '';
     const orchestratorSection = context.orchestratorEnabled ? 'Orchestrator mode is enabled.' : '';
 
-    return `${basePrompt}
+    // Build plan section showing current state
+    let planSection = '';
+    if (this.currentPlan && this.currentPlan.steps.length > 0) {
+      const steps = this.currentPlan.steps;
+      const doneCount = steps.filter((s) => s.status === 'done').length;
+      const currentIndex = steps.findIndex((s) => s.status !== 'done');
+      const planLines = steps.map((step, i) => {
+        const marker = step.status === 'done' ? '✓' : i === currentIndex ? '→' : '○';
+        return `  ${marker} [${i}] ${step.title}`;
+      });
+      planSection = `
+## ACTIVE PLAN (${doneCount}/${steps.length} complete)
+${planLines.join('\n')}
 
-Context:
+IMPORTANT: You MUST call update_plan(step_index=${currentIndex}, status="done") after completing step ${currentIndex}.
+Do NOT skip steps. Do NOT proceed to the next step until you mark the current one done.`;
+    } else {
+      planSection = `
+## NO ACTIVE PLAN
+You should call set_plan with 3-6 concrete action steps before starting work.`;
+    }
+
+    return `${basePrompt}
+${planSection}
+
+## Current Context
 - URL: ${context.currentUrl}
 - Title: ${context.currentTitle}
 - Tab ID: ${context.tabId}
@@ -669,25 +692,23 @@ ${tabsSection ? `- ${tabsSection}` : ''}
 ${orchestratorSection ? `\n${orchestratorSection}` : ''}
 ${teamSection ? `\n${teamSection}` : ''}
 
-Tool discipline:
+## Tool Discipline
 1. Never invent or summarize page content you did not fetch with getContent.
 2. After every scroll, navigation, or tab switch, run getContent for the new region before replying.
 3. Chain tools until you have concrete evidence you can cite.
 4. With multiple tabs, announce the active tab via focusTab/switchTab and use describeSessionTabs to recall IDs.
 
-Safety:
+## Safety
 - Do not install software, extensions, or change browser/system settings.
 - Avoid destructive actions (deleting history, logging out, posting messages) unless the user explicitly asked.
 - Stay within the provided tabs; do not open unknown or suspicious URLs.
 - Prefer gentle edits: use type/focus tools instead of wholesale replacements when editing text areas.
 
-Response format:
-When you complete a task, ALWAYS provide a brief summary report with:
+## Response Format
+When you complete ALL plan steps, provide a brief summary:
 1. **Task**: What the user asked for (1 line)
 2. **Actions**: Key steps you took (bullet points)
 3. **Result**: What you found or accomplished
-
-Keep it concise but informative. Never respond with just "Done." - the user needs to know what happened.
 
 Base every answer strictly on real tool output.`;
   }
