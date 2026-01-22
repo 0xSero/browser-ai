@@ -65,7 +65,7 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.startNewSessionBtn?.addEventListener('click', () => this.startNewSession());
 
   // Provider change
-  this.elements.provider.addEventListener('change', () => {
+  this.elements.provider?.addEventListener('change', () => {
     this.toggleCustomEndpoint();
     this.updateScreenshotToggleState();
   });
@@ -74,14 +74,16 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.customEndpoint?.addEventListener('input', () => this.validateCustomEndpoint());
 
   // Temperature slider
-  this.elements.temperature.addEventListener('input', () => {
-    this.elements.temperatureValue.textContent = this.elements.temperature.value;
+  this.elements.temperature?.addEventListener('input', () => {
+    if (this.elements.temperatureValue) {
+      this.elements.temperatureValue.textContent = this.elements.temperature.value;
+    }
   });
 
   // Configuration management
-  this.elements.newConfigBtn.addEventListener('click', () => this.createNewConfig());
-  this.elements.deleteConfigBtn.addEventListener('click', () => this.deleteConfig());
-  this.elements.activeConfig.addEventListener('change', () => this.switchConfig());
+  this.elements.newConfigBtn?.addEventListener('click', () => this.createNewConfig());
+  this.elements.deleteConfigBtn?.addEventListener('click', () => this.deleteConfig());
+  this.elements.activeConfig?.addEventListener('change', () => this.switchConfig());
 
   this.elements.settingsTabGeneralBtn?.addEventListener('click', () => this.switchSettingsTab('general'));
   this.elements.settingsTabProfilesBtn?.addEventListener('click', () => this.switchSettingsTab('profiles'));
@@ -128,12 +130,12 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.sendScreenshotsAsImages?.addEventListener('change', () => this.updateScreenshotToggleState());
 
   // Save settings
-  this.elements.saveSettingsBtn.addEventListener('click', () => {
+  this.elements.saveSettingsBtn?.addEventListener('click', () => {
     void this.saveSettings();
   });
 
   // Cancel settings
-  this.elements.cancelSettingsBtn.addEventListener('click', () => {
+  this.elements.cancelSettingsBtn?.addEventListener('click', () => {
     void this.cancelSettings();
   });
 
@@ -144,12 +146,12 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.importSettingsInput?.addEventListener('change', (event) => this.importSettings(event));
 
   // Send message
-  this.elements.sendBtn.addEventListener('click', () => {
+  this.elements.sendBtn?.addEventListener('click', () => {
     this.sendMessage();
   });
 
   // Enter to send (Shift+Enter for newline)
-  this.elements.userInput.addEventListener('keydown', (event) => {
+  this.elements.userInput?.addEventListener('keydown', (event: KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
@@ -166,8 +168,8 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.fileInput?.addEventListener('change', (event) => this.handleFileSelection(event));
 
   // Tab selector
-  this.elements.tabSelectorBtn.addEventListener('click', () => this.toggleTabSelector());
-  this.elements.closeTabSelector.addEventListener('click', () => this.closeTabSelector());
+  this.elements.tabSelectorBtn?.addEventListener('click', () => this.toggleTabSelector());
+  this.elements.closeTabSelector?.addEventListener('click', () => this.closeTabSelector());
 
   this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
   this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));

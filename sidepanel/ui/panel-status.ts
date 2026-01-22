@@ -95,9 +95,23 @@ import { SidePanelUI } from './panel-ui.js';
   const config = this.configs[this.currentConfig] || {};
   const currentModel = config.model || '';
 
+  const normalizedModels = models.filter((model) => Boolean(model && model.trim?.())) as string[];
+  const fallbackModel = currentModel || 'gpt-4o';
+  const finalModels = normalizedModels.length > 0 ? normalizedModels : [fallbackModel];
+
   select.innerHTML = '';
 
-  for (const model of models) {
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select model';
+  placeholder.disabled = true;
+  placeholder.hidden = true;
+  if (!currentModel) {
+    placeholder.selected = true;
+  }
+  select.appendChild(placeholder);
+
+  for (const model of finalModels) {
     const option = document.createElement('option');
     option.value = model;
     option.textContent = model;
@@ -107,12 +121,12 @@ import { SidePanelUI } from './panel-ui.js';
     select.appendChild(option);
   }
 
-  if (currentModel && !models.includes(currentModel)) {
+  if (currentModel && !finalModels.includes(currentModel)) {
     const option = document.createElement('option');
     option.value = currentModel;
     option.textContent = currentModel;
     option.selected = true;
-    select.insertBefore(option, select.firstChild);
+    select.insertBefore(option, select.firstChild?.nextSibling ?? null);
   }
 };
 

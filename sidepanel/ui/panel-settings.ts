@@ -28,14 +28,17 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).toggleCustomEndpoint = function toggleCustomEndpoint() {
-  const isCustom = this.elements.provider.value === 'custom';
-  this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
-  if (isCustom && !this.elements.customEndpoint.value) {
+  const isCustom = this.elements.provider?.value === 'custom';
+  if (this.elements.customEndpointGroup) {
+    this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
+  }
+  if (isCustom && this.elements.customEndpoint && !this.elements.customEndpoint.value) {
     this.elements.customEndpoint.placeholder = 'https://api.example.com/v1/chat/completions';
   }
 };
 
 (SidePanelUI.prototype as any).validateCustomEndpoint = function validateCustomEndpoint() {
+  if (!this.elements.customEndpoint) return true;
   const url = this.elements.customEndpoint.value.trim();
   if (!url) return true;
   try {
@@ -49,8 +52,8 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).toggleProfileEditorEndpoint = function toggleProfileEditorEndpoint() {
-  const provider = this.elements.profileEditorProvider?.value;
   if (!this.elements.profileEditorEndpointGroup) return;
+  const provider = this.elements.profileEditorProvider?.value;
   this.elements.profileEditorEndpointGroup.style.display = provider === 'custom' ? 'block' : 'none';
 };
 
@@ -80,7 +83,7 @@ import { SidePanelUI } from './panel-ui.js';
     this.updateStatus('Profile already exists', 'warning');
     return;
   }
-  this.elements.newProfileNameInput.value = '';
+  if (this.elements.newProfileNameInput) this.elements.newProfileNameInput.value = '';
   this.createNewConfig(name);
   this.editProfile(name, true);
 };
@@ -132,17 +135,25 @@ import { SidePanelUI } from './panel-ui.js';
   this.currentConfig = this.configs[settings.activeConfig] ? settings.activeConfig : 'default';
   this.auxAgentProfiles = settings.auxAgentProfiles || [];
 
-  this.elements.visionBridge.value = settings.visionBridge !== undefined ? String(settings.visionBridge) : 'true';
-  this.elements.visionProfile.value = settings.visionProfile || '';
-  this.elements.orchestratorToggle.value =
-    settings.useOrchestrator !== undefined ? String(settings.useOrchestrator) : 'false';
-  this.elements.orchestratorProfile.value = settings.orchestratorProfile || '';
-  this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
-  this.elements.streamResponses.value =
-    settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
-  this.elements.autoScroll.value = settings.autoScroll !== undefined ? String(settings.autoScroll) : 'true';
-  this.elements.confirmActions.value = settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
-  this.elements.saveHistory.value = settings.saveHistory !== undefined ? String(settings.saveHistory) : 'true';
+  if (this.elements.visionBridge)
+    this.elements.visionBridge.value = settings.visionBridge !== undefined ? String(settings.visionBridge) : 'true';
+  if (this.elements.visionProfile) this.elements.visionProfile.value = settings.visionProfile || '';
+  if (this.elements.orchestratorToggle)
+    this.elements.orchestratorToggle.value =
+      settings.useOrchestrator !== undefined ? String(settings.useOrchestrator) : 'false';
+  if (this.elements.orchestratorProfile) this.elements.orchestratorProfile.value = settings.orchestratorProfile || '';
+  if (this.elements.showThinking)
+    this.elements.showThinking.value = settings.showThinking !== undefined ? String(settings.showThinking) : 'true';
+  if (this.elements.streamResponses)
+    this.elements.streamResponses.value =
+      settings.streamResponses !== undefined ? String(settings.streamResponses) : 'true';
+  if (this.elements.autoScroll)
+    this.elements.autoScroll.value = settings.autoScroll !== undefined ? String(settings.autoScroll) : 'true';
+  if (this.elements.confirmActions)
+    this.elements.confirmActions.value =
+      settings.confirmActions !== undefined ? String(settings.confirmActions) : 'true';
+  if (this.elements.saveHistory)
+    this.elements.saveHistory.value = settings.saveHistory !== undefined ? String(settings.saveHistory) : 'true';
 
   const defaultPermissions = {
     read: true,
@@ -181,7 +192,7 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).saveSettings = async function saveSettings() {
-  if (this.elements.provider.value === 'custom' && !this.validateCustomEndpoint()) {
+  if (this.elements.provider?.value === 'custom' && !this.validateCustomEndpoint()) {
     this.updateStatus('Invalid custom endpoint URL', 'error');
     return;
   }

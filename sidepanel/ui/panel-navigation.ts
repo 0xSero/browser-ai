@@ -52,7 +52,18 @@ type NavigationHandlers = {
 };
 
 export const bindSidebarNavigation = (elements: SidePanelElements, handlers: NavigationHandlers) => {
-  elements.openSidebarBtn?.addEventListener('click', handlers.onOpen);
+  elements.openSidebarBtn?.addEventListener('click', () => {
+    const sidebar = elements.sidebar;
+    if (!sidebar) {
+      handlers.onOpen();
+      return;
+    }
+    if (sidebar.classList.contains('closed')) {
+      handlers.onOpen();
+    } else {
+      handlers.onClose();
+    }
+  });
   elements.closeSidebarBtn?.addEventListener('click', handlers.onClose);
   elements.navChatBtn?.addEventListener('click', handlers.onChat);
   elements.navHistoryBtn?.addEventListener('click', handlers.onHistory);

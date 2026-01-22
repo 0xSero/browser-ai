@@ -61,7 +61,8 @@ export class SidePanelUI {
   streamingReasoning: string;
   currentPlan: RunPlan | null;
 
-  init!: () => Promise<void>;
+  // Methods attached via prototype in panel-modules
+  declare init: () => Promise<void>;
 
   constructor() {
     this.elements = getSidePanelElements();

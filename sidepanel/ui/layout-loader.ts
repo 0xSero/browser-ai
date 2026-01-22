@@ -48,15 +48,15 @@ export const loadPanelLayout = async () => {
     loadTemplate('tab-selector.html'),
   ]);
 
-  appRoot.innerHTML = '<div class="app-container"></div>';
-  const appContainer = appRoot.querySelector('.app-container') as HTMLElement | null;
-  if (!appContainer) return;
+  appRoot.className = 'app-container';
+  appRoot.innerHTML = '';
+  const appContainer = appRoot as HTMLElement;
 
-  appContainer.insertAdjacentHTML('beforeend', sidebarShell);
-  appContainer.insertAdjacentHTML('beforeend', mainContent);
+  appContainer.insertAdjacentHTML('beforeend', sidebarShell.trim());
+  appContainer.insertAdjacentHTML('beforeend', mainContent.trim());
 
   const rightPanels = appContainer.querySelector('#rightPanelPanels') as HTMLElement | null;
-  rightPanels?.insertAdjacentHTML('beforeend', historyPanel + settingsPanel + accountPanel);
+  rightPanels?.insertAdjacentHTML('beforeend', (historyPanel + settingsPanel + accountPanel).trim());
 
   replaceWithHtml(appContainer, '#settingsTabGeneral', settingsGeneral);
   replaceWithHtml(appContainer, '#settingsTabProfiles', settingsProfiles);
