@@ -659,58 +659,69 @@ class BackgroundService {
       : '';
     const orchestratorSection = context.orchestratorEnabled ? 'Orchestrator mode is enabled.' : '';
 
-    // Build plan section showing current state
+    // Build plan section showing current state - HIGHLY DIRECTIVE
     let planSection = '';
     if (this.currentPlan && this.currentPlan.steps.length > 0) {
       const steps = this.currentPlan.steps;
       const doneCount = steps.filter((s) => s.status === 'done').length;
       const currentIndex = steps.findIndex((s) => s.status !== 'done');
       const planLines = steps.map((step, i) => {
-        const marker = step.status === 'done' ? '✓' : i === currentIndex ? '→' : '○';
-        return `  ${marker} [${i}] ${step.title}`;
+        const marker = step.status === 'done' ? '[✓]' : i === currentIndex ? '[→]' : '[ ]';
+        return `${marker} step_index=${i}: ${step.title}`;
       });
-      planSection = `
-## ACTIVE PLAN (${doneCount}/${steps.length} complete)
+
+      if (currentIndex === -1) {
+        // All steps done
+        planSection = `
+<plan_status>
+ALL STEPS COMPLETE (${doneCount}/${steps.length})
 ${planLines.join('\n')}
 
-IMPORTANT: You MUST call update_plan(step_index=${currentIndex}, status="done") after completing step ${currentIndex}.
-Do NOT skip steps. Do NOT proceed to the next step until you mark the current one done.`;
+ACTION REQUIRED: Provide your final summary now.
+</plan_status>`;
+      } else {
+        planSection = `
+<plan_status>
+PROGRESS: ${doneCount}/${steps.length} steps complete
+${planLines.join('\n')}
+
+CURRENT TASK: "${steps[currentIndex].title}"
+NEXT REQUIRED CALL: update_plan({ step_index: ${currentIndex}, status: "done" })
+
+⚠️ You MUST call update_plan(step_index=${currentIndex}, status="done") after completing this step.
+⚠️ Do NOT take actions for step ${currentIndex + 1} until step ${currentIndex} is marked done.
+</plan_status>`;
+      }
     } else {
       planSection = `
-## NO ACTIVE PLAN
-You should call set_plan with 3-6 concrete action steps before starting work.`;
+<plan_status>
+⛔ NO ACTIVE PLAN
+
+STOP. You cannot proceed without a plan.
+Your FIRST action must be: set_plan({ steps: [...] })
+
+Do not call navigate, click, type, or any browser tool until you have called set_plan.
+</plan_status>`;
     }
 
     return `${basePrompt}
 ${planSection}
 
-## Current Context
-- URL: ${context.currentUrl}
-- Title: ${context.currentTitle}
-- Tab ID: ${context.tabId}
-${tabsSection ? `- ${tabsSection}` : ''}
+<browser_context>
+URL: ${context.currentUrl}
+Title: ${context.currentTitle}
+Tab: ${context.tabId}
+${tabsSection}
+</browser_context>
 ${orchestratorSection ? `\n${orchestratorSection}` : ''}
 ${teamSection ? `\n${teamSection}` : ''}
 
-## Tool Discipline
-1. Never invent or summarize page content you did not fetch with getContent.
-2. After every scroll, navigation, or tab switch, run getContent for the new region before replying.
-3. Chain tools until you have concrete evidence you can cite.
-4. With multiple tabs, announce the active tab via focusTab/switchTab and use describeSessionTabs to recall IDs.
-
-## Safety
-- Do not install software, extensions, or change browser/system settings.
-- Avoid destructive actions (deleting history, logging out, posting messages) unless the user explicitly asked.
-- Stay within the provided tabs; do not open unknown or suspicious URLs.
-- Prefer gentle edits: use type/focus tools instead of wholesale replacements when editing text areas.
-
-## Response Format
-When you complete ALL plan steps, provide a brief summary:
-1. **Task**: What the user asked for (1 line)
-2. **Actions**: Key steps you took (bullet points)
-3. **Result**: What you found or accomplished
-
-Base every answer strictly on real tool output.`;
+<reminders>
+• getContent is REQUIRED after every browser action
+• update_plan is REQUIRED after completing each step
+• Never fabricate page content - only report what getContent returns
+• If stuck, call getContent to see current state before trying alternatives
+</reminders>`;
   }
 
   resolveProfile(settings: Record<string, any>, name = 'default') {
