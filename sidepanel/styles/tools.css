@@ -192,13 +192,27 @@
 .plan-drawer {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  margin: 0 12px 8px;
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  margin: 0 auto;
+  width: min(860px, calc(100% - 32px));
   overflow: hidden;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .plan-drawer.hidden {
   display: none;
+}
+
+/* When plan drawer is visible, connect to composer */
+.plan-drawer:not(.hidden) + .composer-wrapper {
+  padding-top: 0;
+}
+
+.plan-drawer:not(.hidden) + .composer-wrapper .composer {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
 }
 
 .plan-drawer-header {
@@ -206,7 +220,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -221,8 +235,8 @@
 .plan-drawer-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -236,7 +250,7 @@
 }
 
 .plan-drawer-count {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
   color: var(--muted);
   font-family: var(--font-mono);
@@ -267,8 +281,8 @@
 }
 
 .plan-drawer-content {
-  padding: 0 12px 12px;
-  max-height: 200px;
+  padding: 0 8px 8px;
+  max-height: 140px;
   overflow-y: auto;
 }
 
@@ -289,12 +303,12 @@
 .plan-checklist-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
   color: var(--foreground);
-  background: var(--background);
+  background: transparent;
   transition: background 0.15s ease;
 }
 
@@ -312,9 +326,9 @@
 }
 
 .plan-checklist-item.current {
-  background: hsla(var(--accent-hsl), 0.1);
+  background: hsla(var(--accent-hsl), 0.08);
   border-left: 2px solid var(--accent);
-  padding-left: 6px;
+  padding-left: 4px;
 }
 
 .plan-checklist-item.blocked {
@@ -323,11 +337,11 @@
 
 .plan-checklist-checkbox {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
   border: 1.5px solid var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
   cursor: pointer;
   display: flex;

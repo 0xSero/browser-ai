@@ -380,7 +380,7 @@ class BackgroundService {
       if (!plan) {
         const errorResult = {
           success: false,
-          error: 'Plan must include steps or a plan string.',
+          error: 'Plan must include steps array with title for each step.',
         };
         sendResult(errorResult);
         return errorResult;
@@ -388,6 +388,27 @@ class BackgroundService {
       this.currentPlan = plan;
       this.sendRuntime(options.runMeta, { type: 'plan_update', plan });
       const result = { success: true, plan };
+      sendResult(result);
+      return result;
+    }
+
+    if (toolName === 'update_plan') {
+      if (!this.currentPlan) {
+        const errorResult = { success: false, error: 'No active plan to update. Call set_plan first.' };
+        sendResult(errorResult);
+        return errorResult;
+      }
+      const stepIndex = typeof args.step_index === 'number' ? args.step_index : -1;
+      const status = args.status || 'done';
+      if (stepIndex < 0 || stepIndex >= this.currentPlan.steps.length) {
+        const errorResult = { success: false, error: `Invalid step_index: ${stepIndex}` };
+        sendResult(errorResult);
+        return errorResult;
+      }
+      this.currentPlan.steps[stepIndex].status = status;
+      this.currentPlan.updatedAt = Date.now();
+      this.sendRuntime(options.runMeta, { type: 'plan_update', plan: this.currentPlan });
+      const result = { success: true, step: stepIndex, status, plan: this.currentPlan };
       sendResult(result);
       return result;
     }
@@ -719,20 +740,51 @@ Base every answer strictly on real tool output.`;
     tools = tools.concat([
       {
         name: 'set_plan',
-        description: 'Define or update a short ordered plan before executing tools.',
+        description:
+          'Set a checklist of concrete action steps to complete the task. Each step should be a single specific action (e.g., "Navigate to example.com", "Click the login button", "Extract product prices"). Avoid headers, phases, or abstract descriptions. Keep to 3-6 actionable steps. Mark steps done via update_plan as you complete them.',
         input_schema: {
           type: 'object',
           properties: {
-            plan: {
-              type: 'string',
-              description: 'Plan text as a bullet list or numbered list',
-            },
             steps: {
               type: 'array',
-              items: { type: 'string' },
-              description: 'Ordered list of plan steps',
+              items: {
+                type: 'object',
+                properties: {
+                  title: {
+                    type: 'string',
+                    description: 'Short action description (e.g., "Search for user profile", "Extract contact info")',
+                  },
+                  status: {
+                    type: 'string',
+                    enum: ['pending', 'done'],
+                    description: 'Step status - pending or done',
+                  },
+                },
+                required: ['title'],
+              },
+              description: 'Ordered list of 3-6 concrete action steps. Each step = one tool call or logical action.',
             },
           },
+          required: ['steps'],
+        },
+      },
+      {
+        name: 'update_plan',
+        description: 'Mark a plan step as done after completing it. Call this after each step you finish.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            step_index: {
+              type: 'number',
+              description: 'Zero-based index of the step to mark done (0 = first step)',
+            },
+            status: {
+              type: 'string',
+              enum: ['done', 'pending', 'blocked'],
+              description: 'New status for the step',
+            },
+          },
+          required: ['step_index', 'status'],
         },
       },
     ]);
