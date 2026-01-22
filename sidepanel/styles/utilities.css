@@ -18,17 +18,45 @@
   background: var(--card-hover);
 }
 
-/* Error Banner */
-.error-banner {
+/* Error/Warning Banners - Toast style in corner */
+.error-banner,
+.run-incomplete-banner {
+  position: fixed;
+  bottom: 120px;
+  right: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  background: hsl(0, 40%, 12%);
-  border: 1px solid var(--error);
-  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   font-size: 12px;
-  margin: 8px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  max-width: 320px;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.error-banner {
+  border-color: var(--error);
+  background: hsl(0, 40%, 12%);
+}
+
+.run-incomplete-banner {
+  border-color: var(--warning, hsl(40, 80%, 50%));
+  background: hsl(40, 30%, 12%);
 }
 
 .error-banner .error-icon {
@@ -40,13 +68,30 @@
   flex: 1;
 }
 
-.error-banner .error-dismiss {
+.error-banner .error-dismiss,
+.run-incomplete-dismiss {
   flex-shrink: 0;
-  opacity: 0.7;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
 }
 
-.error-banner .error-dismiss:hover {
-  opacity: 1;
+.error-banner .error-dismiss:hover,
+.run-incomplete-dismiss:hover {
+  background: var(--card-hover);
+  color: var(--foreground);
+}
+
+.run-incomplete-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning, hsl(40, 80%, 50%));
+  flex-shrink: 0;
 }
 
 /* Text utilities */

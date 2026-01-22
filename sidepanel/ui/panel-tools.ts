@@ -202,8 +202,8 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).showErrorBanner = function showErrorBanner(message: string) {
-  const existing = this.elements.chatInterface?.querySelector('.error-banner');
-  if (existing) existing.remove();
+  // Remove any existing error banners to prevent stacking
+  document.querySelectorAll('.error-banner').forEach((el) => el.remove());
 
   const banner = document.createElement('div');
   banner.className = 'error-banner';
@@ -225,18 +225,17 @@ import { SidePanelUI } from './panel-ui.js';
   const dismissButton = banner.querySelector('.error-dismiss');
   dismissButton?.addEventListener('click', () => banner.remove());
 
-  const statusBar = this.elements.statusBar;
-  if (statusBar && statusBar.parentNode) {
-    statusBar.parentNode.insertBefore(banner, statusBar.nextSibling);
-  }
+  // Append to body for fixed positioning (toast style)
+  document.body.appendChild(banner);
 
   setTimeout(() => banner.remove(), 8000);
-  this.showRunIncompleteBanner();
 };
 
 (SidePanelUI.prototype as any).showRunIncompleteBanner = function showRunIncompleteBanner() {
-  const existing = this.elements.chatInterface?.querySelector('.run-incomplete-banner');
+  // Check globally for existing banner to prevent duplicates
+  const existing = document.querySelector('.run-incomplete-banner');
   if (existing) return;
+
   const banner = document.createElement('div');
   banner.className = 'run-incomplete-banner';
   banner.innerHTML = `
@@ -246,20 +245,22 @@ import { SidePanelUI } from './panel-ui.js';
     `;
   const dismiss = banner.querySelector('.run-incomplete-dismiss');
   dismiss?.addEventListener('click', () => banner.remove());
-  const statusBar = this.elements.statusBar;
-  if (statusBar && statusBar.parentNode) {
-    statusBar.parentNode.insertBefore(banner, statusBar.nextSibling);
-  }
+
+  // Append to body for fixed positioning (toast style)
+  document.body.appendChild(banner);
+
+  // Auto-dismiss after 10 seconds
+  setTimeout(() => banner.remove(), 10000);
 };
 
 (SidePanelUI.prototype as any).clearRunIncompleteBanner = function clearRunIncompleteBanner() {
-  const existing = this.elements.chatInterface?.querySelector('.run-incomplete-banner');
-  if (existing) existing.remove();
+  // Remove all run-incomplete banners globally
+  document.querySelectorAll('.run-incomplete-banner').forEach((el) => el.remove());
 };
 
 (SidePanelUI.prototype as any).clearErrorBanner = function clearErrorBanner() {
-  const existing = this.elements.chatInterface?.querySelector('.error-banner');
-  if (existing) existing.remove();
+  // Remove all error banners globally
+  document.querySelectorAll('.error-banner').forEach((el) => el.remove());
 };
 
 (SidePanelUI.prototype as any).getArgsPreview = function getArgsPreview(args: any) {
