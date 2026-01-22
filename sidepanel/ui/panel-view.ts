@@ -58,6 +58,7 @@ import { SidePanelUI } from './panel-ui.js';
   this.openSidebar();
   this.showRightPanel('history');
   this.setNavActive('history');
+  this.loadHistoryList(); // Refresh history when opening panel
   this.updateAccessUI();
 };
 

@@ -66,10 +66,20 @@
 .right-panel-panels {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.right-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.right-panel-content.hidden {
+  display: none;
 }
 
 .right-panel-activity {
