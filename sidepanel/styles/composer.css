@@ -16,6 +16,47 @@
   width: min(860px, 100%);
   overflow: hidden;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+}
+
+/* Running state - model is working */
+.composer.running {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.composer.running::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--accent) 50%, 
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.composer.running textarea {
+  color: var(--muted);
+}
+
+.composer.running .send-btn {
+  background: var(--error);
+}
+
+.composer.running .send-btn:hover {
+  background: hsl(0, 60%, 50%);
 }
 
 .composer textarea {

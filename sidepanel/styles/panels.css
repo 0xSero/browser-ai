@@ -255,30 +255,84 @@
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.history-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted-dim);
+  font-size: 13px;
 }
 
 .history-item {
-  padding: 10px;
-  background: var(--background);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   cursor: pointer;
+  transition: all 0.15s;
 }
 
 .history-item:hover {
   background: var(--card-hover);
+  border-color: var(--muted-dim);
 }
 
-.history-item h4 {
-  font-size: 12px;
+.history-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-title {
+  font-size: 13px;
   font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-bottom: 2px;
 }
 
 .history-meta {
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--muted-dim);
+}
+
+.history-meta-dot {
+  opacity: 0.5;
+}
+
+.history-delete {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted-dim);
+  opacity: 0;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.history-item:hover .history-delete {
+  opacity: 1;
+}
+
+.history-delete:hover {
+  background: hsl(0, 40%, 20%);
+  color: var(--error);
 }
 
 /* Access / Account */

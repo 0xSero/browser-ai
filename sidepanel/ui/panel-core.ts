@@ -64,6 +64,7 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.accountLogoutBtn?.addEventListener('click', () => this.signOut());
 
   this.elements.startNewSessionBtn?.addEventListener('click', () => this.startNewSession());
+  this.elements.clearHistoryBtn?.addEventListener('click', () => this.clearAllHistory());
 
   // Provider change
   this.elements.provider?.addEventListener('change', () => {

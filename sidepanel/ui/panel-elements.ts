@@ -64,6 +64,7 @@ export const getSidePanelElements = (): SidePanelElements => ({
   viewHistoryBtn: byId<HTMLButtonElement>('viewHistoryBtn'),
   historyPanel: byId<HTMLElement>('historyPanel'),
   historyItems: byId<HTMLElement>('historyItems'),
+  clearHistoryBtn: byId<HTMLButtonElement>('clearHistoryBtn'),
   startNewSessionBtn: byId<HTMLButtonElement>('startNewSessionBtn'),
   settingsTabGeneralBtn: byId<HTMLButtonElement>('settingsTabGeneralBtn'),
   settingsTabProfilesBtn: byId<HTMLButtonElement>('settingsTabProfilesBtn'),
