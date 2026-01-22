@@ -22,6 +22,10 @@ class BackgroundService {
   currentPlan: RunPlan | null;
   subAgentCount: number;
   subAgentProfileCursor: number;
+  // State tracking for enforcement
+  lastBrowserAction: string | null;
+  awaitingVerification: boolean;
+  currentStepVerified: boolean;
 
   constructor() {
     this.browserTools = new BrowserTools();
@@ -29,6 +33,10 @@ class BackgroundService {
     this.currentPlan = null;
     this.subAgentCount = 0;
     this.subAgentProfileCursor = 0;
+    // State tracking for enforcement
+    this.lastBrowserAction = null;
+    this.awaitingVerification = false;
+    this.currentStepVerified = false;
     this.init();
   }
 
@@ -137,6 +145,10 @@ class BackgroundService {
       this.currentPlan = null;
       this.subAgentCount = 0;
       this.subAgentProfileCursor = 0;
+      // Reset enforcement state
+      this.lastBrowserAction = null;
+      this.awaitingVerification = false;
+      this.currentStepVerified = false;
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
@@ -467,6 +479,16 @@ class BackgroundService {
       return errorResult;
     }
 
+    // Track state for enforcement
+    const browserActions = ['navigate', 'click', 'type', 'scroll', 'pressKey'];
+    if (browserActions.includes(toolName)) {
+      this.lastBrowserAction = toolName;
+      this.awaitingVerification = true;
+      this.currentStepVerified = false;
+    } else if (toolName === 'getContent') {
+      this.awaitingVerification = false;
+    }
+
     const finalResult = result || { error: 'No result returned' };
 
     if (
@@ -659,9 +681,23 @@ class BackgroundService {
       : '';
     const orchestratorSection = context.orchestratorEnabled ? 'Orchestrator mode is enabled.' : '';
 
-    // Build plan section showing current state - HIGHLY DIRECTIVE
-    let planSection = '';
-    if (this.currentPlan && this.currentPlan.steps.length > 0) {
+    // Build state section with enforcement - tracks exactly what model needs to do next
+    let stateSection = '';
+    let requiredNextCall = '';
+
+    if (!this.currentPlan || this.currentPlan.steps.length === 0) {
+      // No plan - MUST create one first
+      requiredNextCall = 'set_plan({ steps: [{ title: "..." }, ...] })';
+      stateSection = `
+<execution_state>
+⛔ NO ACTIVE PLAN
+
+REQUIRED NEXT CALL: ${requiredNextCall}
+
+You CANNOT call navigate, click, type, scroll, or pressKey until you call set_plan.
+Create 3-6 specific action steps, then proceed.
+</execution_state>`;
+    } else {
       const steps = this.currentPlan.steps;
       const doneCount = steps.filter((s) => s.status === 'done').length;
       const currentIndex = steps.findIndex((s) => s.status !== 'done');
@@ -671,41 +707,52 @@ class BackgroundService {
       });
 
       if (currentIndex === -1) {
-        // All steps done
-        planSection = `
-<plan_status>
-ALL STEPS COMPLETE (${doneCount}/${steps.length})
+        // All steps complete
+        requiredNextCall = 'Provide final summary with findings';
+        stateSection = `
+<execution_state>
+✅ ALL STEPS COMPLETE (${doneCount}/${steps.length})
 ${planLines.join('\n')}
 
-ACTION REQUIRED: Provide your final summary now.
-</plan_status>`;
-      } else {
-        planSection = `
-<plan_status>
+REQUIRED: Provide your final summary now with evidence from getContent.
+</execution_state>`;
+      } else if (this.awaitingVerification) {
+        // Browser action taken but getContent not called yet
+        requiredNextCall = 'getContent({ mode: "text" })';
+        stateSection = `
+<execution_state>
 PROGRESS: ${doneCount}/${steps.length} steps complete
 ${planLines.join('\n')}
 
-CURRENT TASK: "${steps[currentIndex].title}"
-NEXT REQUIRED CALL: update_plan({ step_index: ${currentIndex}, status: "done" })
+CURRENT STEP: "${steps[currentIndex].title}"
+LAST ACTION: ${this.lastBrowserAction || 'unknown'}
+VERIFICATION: ⚠️ PENDING - getContent NOT called
 
-⚠️ You MUST call update_plan(step_index=${currentIndex}, status="done") after completing this step.
-⚠️ Do NOT take actions for step ${currentIndex + 1} until step ${currentIndex} is marked done.
-</plan_status>`;
+⛔ REQUIRED NEXT CALL: ${requiredNextCall}
+
+You MUST call getContent to verify your action before proceeding.
+Do NOT call update_plan or any other tool until you call getContent.
+</execution_state>`;
+      } else {
+        // Ready to mark step done or execute next action
+        requiredNextCall = `update_plan({ step_index: ${currentIndex}, status: "done" })`;
+        stateSection = `
+<execution_state>
+PROGRESS: ${doneCount}/${steps.length} steps complete
+${planLines.join('\n')}
+
+CURRENT STEP: "${steps[currentIndex].title}"
+VERIFICATION: ✓ getContent was called
+
+⚠️ REQUIRED NEXT CALL: ${requiredNextCall}
+
+After marking step ${currentIndex} done, proceed to step ${currentIndex + 1}.
+</execution_state>`;
       }
-    } else {
-      planSection = `
-<plan_status>
-⛔ NO ACTIVE PLAN
-
-STOP. You cannot proceed without a plan.
-Your FIRST action must be: set_plan({ steps: [...] })
-
-Do not call navigate, click, type, or any browser tool until you have called set_plan.
-</plan_status>`;
     }
 
     return `${basePrompt}
-${planSection}
+${stateSection}
 
 <browser_context>
 URL: ${context.currentUrl}
@@ -716,12 +763,12 @@ ${tabsSection}
 ${orchestratorSection ? `\n${orchestratorSection}` : ''}
 ${teamSection ? `\n${teamSection}` : ''}
 
-<reminders>
-• getContent is REQUIRED after every browser action
-• update_plan is REQUIRED after completing each step
-• Never fabricate page content - only report what getContent returns
-• If stuck, call getContent to see current state before trying alternatives
-</reminders>`;
+<checkpoint>
+Before your next tool call, verify:
+□ Required next call shown above: ${requiredNextCall}
+□ If awaiting verification, call getContent first
+□ If step complete, call update_plan before next step
+</checkpoint>`;
   }
 
   resolveProfile(settings: Record<string, any>, name = 'default') {
