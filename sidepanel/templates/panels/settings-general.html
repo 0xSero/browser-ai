@@ -21,9 +21,10 @@
             <input type="text" id="model" placeholder="e.g., claude-sonnet-4-20250514" />
             <small id="modelHint">Recommended: claude-sonnet-4-20250514</small>
         </div>
-        <div class="form-group" id="customEndpointGroup" style="display: none">
-            <label for="customEndpoint">API Endpoint</label>
+        <div class="form-group" id="customEndpointGroup">
+            <label for="customEndpoint">API URL <span class="optional-badge">(optional)</span></label>
             <input type="text" id="customEndpoint" placeholder="https://openrouter.ai/api/v1" />
+            <small>Override the default API endpoint. Required for OpenRouter/custom providers.</small>
         </div>
         <button id="saveSettingsBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
             Save Settings

@@ -108,6 +108,21 @@
   box-shadow: 0 0 0 2px hsla(270, 50%, 50%, 0.2);
 }
 
+.settings-quick-setup .form-group.required label {
+  color: var(--accent);
+}
+
+.settings-quick-setup .form-group.required input {
+  border-color: var(--accent);
+}
+
+.optional-badge {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--muted-dim);
+  text-transform: uppercase;
+}
+
 /* Settings Sections */
 .settings-section {
   background: var(--background);

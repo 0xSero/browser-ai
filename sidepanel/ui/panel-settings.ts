@@ -28,12 +28,43 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).toggleCustomEndpoint = function toggleCustomEndpoint() {
-  const isCustom = this.elements.provider?.value === 'custom';
+  const provider = this.elements.provider?.value;
+  const isCustom = provider === 'custom';
+  
+  // Always show the endpoint field, but highlight when required
   if (this.elements.customEndpointGroup) {
-    this.elements.customEndpointGroup.style.display = isCustom ? 'block' : 'none';
+    // Add visual emphasis when custom provider selected
+    this.elements.customEndpointGroup.classList.toggle('required', isCustom);
   }
-  if (isCustom && this.elements.customEndpoint && !this.elements.customEndpoint.value) {
-    this.elements.customEndpoint.placeholder = 'https://api.example.com/v1/chat/completions';
+  
+  // Update placeholder based on provider
+  if (this.elements.customEndpoint) {
+    if (isCustom) {
+      this.elements.customEndpoint.placeholder = 'https://openrouter.ai/api/v1';
+    } else {
+      this.elements.customEndpoint.placeholder = 'Leave empty for default API URL';
+    }
+  }
+  
+  // Update model hint based on provider
+  const modelHint = document.getElementById('modelHint');
+  if (modelHint) {
+    switch (provider) {
+      case 'anthropic':
+        modelHint.textContent = 'Recommended: claude-sonnet-4-20250514';
+        break;
+      case 'openai':
+        modelHint.textContent = 'Recommended: gpt-4o or gpt-4-turbo';
+        break;
+      case 'google':
+        modelHint.textContent = 'Recommended: gemini-2.0-flash or gemini-1.5-pro';
+        break;
+      case 'custom':
+        modelHint.textContent = 'Enter the model ID from your provider';
+        break;
+      default:
+        modelHint.textContent = '';
+    }
   }
 };
 
