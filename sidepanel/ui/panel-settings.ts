@@ -229,7 +229,11 @@ import { SidePanelUI } from './panel-ui.js';
   }
   this.configs[this.currentConfig] = this.collectCurrentFormProfile();
   await this.persistAllSettings();
-  await this.toggleSettings(false);
+  
+  // Refresh models after saving settings
+  this.fetchAvailableModels();
+  
+  this.updateStatus('Settings saved successfully', 'success');
 };
 
 (SidePanelUI.prototype as any).exportSettings = async function exportSettings() {

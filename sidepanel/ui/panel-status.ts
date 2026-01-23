@@ -79,15 +79,18 @@ import { SidePanelUI } from './panel-ui.js';
   }
 
   // For custom providers, try to fetch from /v1/models
-  if (!apiKey) {
+  if (!apiKey && provider === 'custom') {
     this.populateModelSelect([config.model || 'gpt-4o'], config.model);
     return;
   }
 
   let baseUrl = '';
   if (customEndpoint) {
+    // Normalize the endpoint - strip trailing paths to get base URL
     baseUrl = customEndpoint
       .replace(/\/chat\/completions\/?$/i, '')
+      .replace(/\/completions\/?$/i, '')
+      .replace(/\/v1\/models\/?$/i, '')
       .replace(/\/v1\/?$/i, '')
       .replace(/\/+$/, '');
   } else if (provider === 'openai') {
@@ -99,25 +102,43 @@ import { SidePanelUI } from './panel-ui.js';
     return;
   }
 
+  const modelsUrl = `${baseUrl}/v1/models`;
+  console.log('[Parchi] Fetching models from:', modelsUrl);
+
   try {
-    const response = await fetch(`${baseUrl}/v1/models`, {
+    const response = await fetch(modelsUrl, {
+      method: 'GET',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      console.warn('Failed to fetch models:', response.status);
+      console.warn('[Parchi] Failed to fetch models:', response.status, response.statusText);
       this.populateModelSelect([config.model || 'gpt-4o'], config.model);
       return;
     }
 
     const data = await response.json();
-    const models = (data.data || [])
-      .map((m: { id: string }) => m.id)
-      .filter((id: string) => id && typeof id === 'string')
-      .sort((a: string, b: string) => a.localeCompare(b));
+    console.log('[Parchi] Models response:', data);
+    
+    // Extract models, prioritize active ones
+    const allModels = (data.data || []) as Array<{ id: string; active?: boolean }>;
+    const activeModels = allModels
+      .filter((m) => m.id && m.active === true)
+      .map((m) => m.id)
+      .sort((a, b) => a.localeCompare(b));
+    
+    const inactiveModels = allModels
+      .filter((m) => m.id && m.active !== true)
+      .map((m) => m.id)
+      .sort((a, b) => a.localeCompare(b));
+    
+    // Show active models first, then inactive
+    const models = [...activeModels, ...inactiveModels].filter(Boolean);
+    
+    console.log('[Parchi] Found models:', models.length, 'active:', activeModels.length);
 
     if (models.length > 0) {
       this.populateModelSelect(models, config.model);
@@ -125,7 +146,7 @@ import { SidePanelUI } from './panel-ui.js';
       this.populateModelSelect([config.model || 'gpt-4o'], config.model);
     }
   } catch (error) {
-    console.warn('Error fetching models:', error);
+    console.error('[Parchi] Error fetching models:', error);
     this.populateModelSelect([config.model || 'gpt-4o'], config.model);
   }
 };
