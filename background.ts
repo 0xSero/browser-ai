@@ -393,27 +393,43 @@ class BackgroundService {
         const errorResult = {
           success: false,
           error: 'Plan must include steps array with title for each step.',
+          hint: 'Example: set_plan({ steps: [{ title: "Navigate to site" }, { title: "Click login" }] })',
+          received: JSON.stringify(args).slice(0, 200),
         };
         sendResult(errorResult);
         return errorResult;
       }
       this.currentPlan = plan;
       this.sendRuntime(options.runMeta, { type: 'plan_update', plan });
-      const result = { success: true, plan };
+      const result = { 
+        success: true, 
+        plan,
+        message: `Plan created with ${plan.steps.length} steps. Use update_plan({ step_index: 0, status: "done" }) after completing each step.`,
+      };
       sendResult(result);
       return result;
     }
 
     if (toolName === 'update_plan') {
       if (!this.currentPlan) {
-        const errorResult = { success: false, error: 'No active plan to update. Call set_plan first.' };
+        const errorResult = { 
+          success: false, 
+          error: 'No active plan to update. Call set_plan first.',
+          hint: 'Create a plan with set_plan({ steps: [{ title: "..." }, ...] }) before updating.',
+        };
         sendResult(errorResult);
         return errorResult;
       }
       const stepIndex = typeof args.step_index === 'number' ? args.step_index : -1;
       const status = args.status || 'done';
-      if (stepIndex < 0 || stepIndex >= this.currentPlan.steps.length) {
-        const errorResult = { success: false, error: `Invalid step_index: ${stepIndex}` };
+      const maxIndex = this.currentPlan.steps.length - 1;
+      if (stepIndex < 0 || stepIndex > maxIndex) {
+        const errorResult = { 
+          success: false, 
+          error: `Invalid step_index: ${stepIndex}. Valid range is 0-${maxIndex}.`,
+          hint: `Plan has ${this.currentPlan.steps.length} steps (indices 0 to ${maxIndex}).`,
+          currentPlan: this.currentPlan.steps.map((s, i) => `${i}: ${s.title} [${s.status}]`),
+        };
         sendResult(errorResult);
         return errorResult;
       }
