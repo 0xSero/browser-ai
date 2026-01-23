@@ -24,36 +24,78 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).fetchAvailableModels = async function fetchAvailableModels() {
   const config = this.configs[this.currentConfig] || {};
-  const provider = config.provider || 'openai';
+  const provider = config.provider || 'anthropic';
   const apiKey = config.apiKey || '';
   const customEndpoint = config.customEndpoint || '';
 
+  // Hardcoded model lists for providers that don't support /v1/models
+  const ANTHROPIC_MODELS = [
+    'claude-sonnet-4-20250514',
+    'claude-opus-4-20250514',
+    'claude-3-7-sonnet-20250219',
+    'claude-3-5-sonnet-20241022',
+    'claude-3-5-haiku-20241022',
+  ];
+
+  const GOOGLE_MODELS = [
+    'gemini-2.5-flash-preview-05-20',
+    'gemini-2.5-pro-preview-05-06',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash',
+  ];
+
+  const OPENAI_MODELS = [
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4.1-nano',
+    'gpt-4o',
+    'gpt-4o-mini',
+    'gpt-4-turbo',
+    'o1',
+    'o1-mini',
+    'o1-pro',
+    'o3',
+    'o3-mini',
+    'o4-mini',
+  ];
+
+  // Use hardcoded lists for known providers (faster, no API call needed)
+  if (provider === 'anthropic') {
+    this.populateModelSelect(ANTHROPIC_MODELS, config.model);
+    return;
+  }
+
+  if (provider === 'google') {
+    this.populateModelSelect(GOOGLE_MODELS, config.model);
+    return;
+  }
+
+  if (provider === 'openai' && !customEndpoint) {
+    // Use hardcoded list for faster loading, but allow API fetch as fallback
+    this.populateModelSelect(OPENAI_MODELS, config.model);
+    return;
+  }
+
+  // For custom providers, try to fetch from /v1/models
   if (!apiKey) {
-    this.populateModelSelect([config.model || 'gpt-4o']);
+    this.populateModelSelect([config.model || 'gpt-4o'], config.model);
     return;
   }
 
   let baseUrl = '';
-  if (provider === 'custom' && customEndpoint) {
+  if (customEndpoint) {
     baseUrl = customEndpoint
       .replace(/\/chat\/completions\/?$/i, '')
       .replace(/\/v1\/?$/i, '')
       .replace(/\/+$/, '');
   } else if (provider === 'openai') {
     baseUrl = 'https://api.openai.com';
-  } else if (provider === 'anthropic') {
-    this.populateModelSelect([
-      'claude-opus-4-20250514',
-      'claude-sonnet-4-20250514',
-      'claude-3-7-sonnet-20250219',
-      'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022',
-    ]);
-    return;
   }
 
   if (!baseUrl) {
-    this.populateModelSelect([config.model || 'gpt-4o']);
+    this.populateModelSelect([config.model || 'gpt-4o'], config.model);
     return;
   }
 
@@ -67,7 +109,7 @@ import { SidePanelUI } from './panel-ui.js';
 
     if (!response.ok) {
       console.warn('Failed to fetch models:', response.status);
-      this.populateModelSelect([config.model || 'gpt-4o']);
+      this.populateModelSelect([config.model || 'gpt-4o'], config.model);
       return;
     }
 
@@ -78,44 +120,52 @@ import { SidePanelUI } from './panel-ui.js';
       .sort((a: string, b: string) => a.localeCompare(b));
 
     if (models.length > 0) {
-      this.populateModelSelect(models);
+      this.populateModelSelect(models, config.model);
     } else {
-      this.populateModelSelect([config.model || 'gpt-4o']);
+      this.populateModelSelect([config.model || 'gpt-4o'], config.model);
     }
   } catch (error) {
     console.warn('Error fetching models:', error);
-    this.populateModelSelect([config.model || 'gpt-4o']);
+    this.populateModelSelect([config.model || 'gpt-4o'], config.model);
   }
 };
 
-(SidePanelUI.prototype as any).populateModelSelect = function populateModelSelect(models: string[]) {
+(SidePanelUI.prototype as any).populateModelSelect = function populateModelSelect(
+  models: string[],
+  currentModel?: string,
+) {
   const select = this.elements.modelSelect;
   if (!select) return;
 
   const config = this.configs[this.currentConfig] || {};
-  const currentModel = config.model || '';
+  const selectedModel = currentModel || config.model || '';
 
   const normalizedModels = models.filter((model) => Boolean(model && model.trim?.())) as string[];
-  const fallbackModel = currentModel || 'gpt-4o';
-  const finalModels = normalizedModels.length > 0 ? normalizedModels : [fallbackModel];
+  const fallbackModel = selectedModel || 'gpt-4o';
+  
+  // Ensure current model is in the list
+  let finalModels = normalizedModels.length > 0 ? normalizedModels : [fallbackModel];
+  if (selectedModel && !finalModels.includes(selectedModel)) {
+    finalModels = [selectedModel, ...finalModels];
+  }
 
   select.innerHTML = '';
 
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = 'Select model';
-  placeholder.disabled = true;
-  placeholder.hidden = true;
-  if (!currentModel) {
+  // Add placeholder only if no model is selected
+  if (!selectedModel) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select model';
+    placeholder.disabled = true;
     placeholder.selected = true;
+    select.appendChild(placeholder);
   }
-  select.appendChild(placeholder);
 
   for (const model of finalModels) {
     const option = document.createElement('option');
     option.value = model;
     option.textContent = model;
-    if (model === currentModel) {
+    if (model === selectedModel) {
       option.selected = true;
     }
     select.appendChild(option);
