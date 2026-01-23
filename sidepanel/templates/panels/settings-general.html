@@ -1,485 +1,170 @@
-                                <div
-                                    id="settingsTabGeneral"
-                                    class="tab-panel"
-                                    data-tab="general"
-                                >
-                                    <details class="settings-section" open>
-                                        <summary>Profile</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="activeConfig"
-                                                    >Active profile</label
-                                                >
-                                                <div class="config-row">
-                                                    <select id="activeConfig">
-                                                        <option value="default">
-                                                            Default
-                                                        </option>
-                                                    </select>
-                                                    <button
-                                                        id="newConfigBtn"
-                                                        class="btn btn-secondary"
-                                                    >
-                                                        New
-                                                    </button>
-                                                    <button
-                                                        id="deleteConfigBtn"
-                                                        class="btn btn-secondary"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </details>
+<div id="settingsTabGeneral" class="tab-panel" data-tab="general">
+    <!-- Quick Setup - Always visible, most important -->
+    <div class="settings-quick-setup">
+        <h3 class="setup-title">🔑 Quick Setup</h3>
+        <div class="form-group">
+            <label for="provider">Provider</label>
+            <select id="provider">
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI</option>
+                <option value="google">Google (Gemini)</option>
+                <option value="custom">Custom / OpenRouter</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="apiKey">API Key</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key..." />
+            <small>Your key is stored locally and never sent to our servers.</small>
+        </div>
+        <div class="form-group">
+            <label for="model">Model</label>
+            <input type="text" id="model" placeholder="e.g., claude-sonnet-4-20250514" />
+            <small id="modelHint">Recommended: claude-sonnet-4-20250514</small>
+        </div>
+        <div class="form-group" id="customEndpointGroup" style="display: none">
+            <label for="customEndpoint">API Endpoint</label>
+            <input type="text" id="customEndpoint" placeholder="https://openrouter.ai/api/v1" />
+        </div>
+        <button id="saveSettingsBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+            Save Settings
+        </button>
+    </div>
 
-                                    <details class="settings-section">
-                                        <summary>Provider & Model</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="provider"
-                                                    >Provider</label
-                                                >
-                                                <select id="provider">
-                                                    <option value="openai">
-                                                        OpenAI
-                                                    </option>
-                                                    <option value="anthropic">
-                                                        Anthropic
-                                                    </option>
-                                                    <option value="custom">
-                                                        Custom
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="apiKey"
-                                                    >API Key</label
-                                                >
-                                                <input
-                                                    type="password"
-                                                    id="apiKey"
-                                                    placeholder="sk-..."
-                                                />
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="model">Model</label>
-                                                <input
-                                                    type="text"
-                                                    id="model"
-                                                    placeholder="gpt-4o"
-                                                />
-                                            </div>
-                                            <div
-                                                class="form-group"
-                                                id="customEndpointGroup"
-                                                style="display: none"
-                                            >
-                                                <label for="customEndpoint"
-                                                    >Custom URL</label
-                                                >
-                                                <input
-                                                    type="text"
-                                                    id="customEndpoint"
-                                                    placeholder="https://api.example.com/v1"
-                                                />
-                                            </div>
-                                        </div>
-                                    </details>
+    <!-- Profiles Section -->
+    <details class="settings-section">
+        <summary>📋 Profiles</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="activeConfig">Active Profile</label>
+                <div class="config-row">
+                    <select id="activeConfig">
+                        <option value="default">Default</option>
+                    </select>
+                    <button id="newConfigBtn" class="btn btn-secondary">+ New</button>
+                </div>
+            </div>
+            <button id="deleteConfigBtn" class="btn btn-secondary" style="width: 100%;">Delete Profile</button>
+        </div>
+    </details>
 
-                                    <details class="settings-section">
-                                        <summary>Parameters</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="temperature"
-                                                    >Temperature:
-                                                    <span id="temperatureValue"
-                                                        >0.7</span
-                                                    ></label
-                                                >
-                                                <input
-                                                    type="range"
-                                                    id="temperature"
-                                                    min="0"
-                                                    max="2"
-                                                    step="0.1"
-                                                    value="0.7"
-                                                />
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="maxTokens"
-                                                    >Max tokens</label
-                                                >
-                                                <input
-                                                    type="number"
-                                                    id="maxTokens"
-                                                    min="1"
-                                                    max="16384"
-                                                    value="4096"
-                                                />
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="contextLimit"
-                                                    >Context window</label
-                                                >
-                                                <input
-                                                    type="number"
-                                                    id="contextLimit"
-                                                    min="4000"
-                                                    max="1000000"
-                                                    value="200000"
-                                                />
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="timeout"
-                                                    >Timeout (ms)</label
-                                                >
-                                                <input
-                                                    type="number"
-                                                    id="timeout"
-                                                    min="5000"
-                                                    step="1000"
-                                                    value="30000"
-                                                />
-                                            </div>
-                                        </div>
-                                    </details>
+    <!-- Model Parameters -->
+    <details class="settings-section">
+        <summary>⚙️ Model Parameters</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" />
+                <small>Lower = more focused, Higher = more creative</small>
+            </div>
+            <div class="form-group">
+                <label for="maxTokens">Max Output Tokens</label>
+                <input type="number" id="maxTokens" value="4096" min="256" max="32000" />
+            </div>
+            <div class="form-group">
+                <label for="contextLimit">Context Limit</label>
+                <input type="number" id="contextLimit" value="200000" min="4000" max="2000000" />
+            </div>
+        </div>
+    </details>
 
-                                    <details class="settings-section">
-                                        <summary>Vision</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="enableScreenshots"
-                                                    >Screenshots</label
-                                                >
-                                                <select id="enableScreenshots">
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="visionBridge"
-                                                    >Vision relay</label
-                                                >
-                                                <select id="visionBridge">
-                                                    <option value="true">
-                                                        Use vision profile
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="visionProfile"
-                                                    >Vision profile</label
-                                                >
-                                                <select id="visionProfile">
-                                                    <option value="">
-                                                        Active profile
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label
-                                                    for="sendScreenshotsAsImages"
-                                                    >Send as</label
-                                                >
-                                                <select
-                                                    id="sendScreenshotsAsImages"
-                                                >
-                                                    <option value="true">
-                                                        Images
-                                                    </option>
-                                                    <option value="false">
-                                                        Text
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="screenshotQuality"
-                                                    >Quality</label
-                                                >
-                                                <select id="screenshotQuality">
-                                                    <option value="high">
-                                                        High
-                                                    </option>
-                                                    <option value="low">
-                                                        Low
-                                                    </option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </details>
+    <!-- Browser Settings -->
+    <details class="settings-section">
+        <summary>🌐 Browser Controls</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="enableScreenshots">Screenshots</label>
+                <select id="enableScreenshots">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sendScreenshotsAsImages">Send Screenshots as Images</label>
+                <select id="sendScreenshotsAsImages">
+                    <option value="true">Yes (for vision models)</option>
+                    <option value="false">No (text description only)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="allowedDomains">Allowed Domains</label>
+                <input type="text" id="allowedDomains" placeholder="Leave empty for all domains" />
+                <small>Comma-separated list, e.g.: google.com, github.com</small>
+            </div>
+        </div>
+    </details>
 
-                                    <details class="settings-section">
-                                        <summary>Behavior</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="showThinking"
-                                                    >Show thinking</label
-                                                >
-                                                <select id="showThinking">
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="streamResponses"
-                                                    >Streaming</label
-                                                >
-                                                <select id="streamResponses">
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="autoScroll"
-                                                    >Auto-scroll</label
-                                                >
-                                                <select id="autoScroll">
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="confirmActions"
-                                                    >Confirmations</label
-                                                >
-                                                <select id="confirmActions">
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="saveHistory"
-                                                    >Save history</label
-                                                >
-                                                <select id="saveHistory">
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </details>
+    <!-- Response Settings -->
+    <details class="settings-section">
+        <summary>💬 Response Settings</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="streamResponses">Stream Responses</label>
+                <select id="streamResponses">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="showThinking">Show Reasoning</label>
+                <select id="showThinking">
+                    <option value="true">Show</option>
+                    <option value="false">Hide</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="saveHistory">Save History</label>
+                <select id="saveHistory">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+        </div>
+    </details>
 
-                                    <details class="settings-section">
-                                        <summary>Permissions</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="permissionRead"
-                                                    >Read pages</label
-                                                >
-                                                <select id="permissionRead">
-                                                    <option value="true">
-                                                        Allow
-                                                    </option>
-                                                    <option value="false">
-                                                        Block
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="permissionInteract"
-                                                    >Interact</label
-                                                >
-                                                <select id="permissionInteract">
-                                                    <option value="true">
-                                                        Allow
-                                                    </option>
-                                                    <option value="false">
-                                                        Block
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="permissionNavigate"
-                                                    >Navigate</label
-                                                >
-                                                <select id="permissionNavigate">
-                                                    <option value="true">
-                                                        Allow
-                                                    </option>
-                                                    <option value="false">
-                                                        Block
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="permissionTabs"
-                                                    >Manage tabs</label
-                                                >
-                                                <select id="permissionTabs">
-                                                    <option value="true">
-                                                        Allow
-                                                    </option>
-                                                    <option value="false">
-                                                        Block
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label
-                                                    for="permissionScreenshots"
-                                                    >Screenshots</label
-                                                >
-                                                <select
-                                                    id="permissionScreenshots"
-                                                >
-                                                    <option value="false">
-                                                        Block
-                                                    </option>
-                                                    <option value="true">
-                                                        Allow
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="allowedDomains"
-                                                    >Allowed domains</label
-                                                >
-                                                <textarea
-                                                    id="allowedDomains"
-                                                    rows="2"
-                                                    placeholder="example.com"
-                                                ></textarea>
-                                            </div>
-                                        </div>
-                                    </details>
+    <!-- Advanced Settings -->
+    <details class="settings-section">
+        <summary>🔧 Advanced</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="useOrchestrator">Orchestrator Mode</label>
+                <select id="useOrchestrator">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                </select>
+                <small>Use a separate model for orchestration</small>
+            </div>
+            <div class="form-group">
+                <label for="orchestratorProfile">Orchestrator Profile</label>
+                <select id="orchestratorProfile">
+                    <option value="">Same as main</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visionProfile">Vision Profile</label>
+                <select id="visionProfile">
+                    <option value="">Same as main</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visionBridge">Vision Bridge</label>
+                <select id="visionBridge">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+                <small>Describe screenshots for non-vision models</small>
+            </div>
+        </div>
+    </details>
 
-                                    <details class="settings-section">
-                                        <summary>Orchestrator</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <label for="orchestratorToggle"
-                                                    >Mode</label
-                                                >
-                                                <select id="orchestratorToggle">
-                                                    <option value="false">
-                                                        Disabled
-                                                    </option>
-                                                    <option value="true">
-                                                        Enabled
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="orchestratorProfile"
-                                                    >Profile</label
-                                                >
-                                                <select
-                                                    id="orchestratorProfile"
-                                                >
-                                                    <option value="">
-                                                        Active profile
-                                                    </option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </details>
-
-                                    <details class="settings-section">
-                                        <summary>System prompt</summary>
-                                        <div class="settings-body">
-                                            <div class="form-group">
-                                                <textarea
-                                                    id="systemPrompt"
-                                                    rows="4"
-                                                    placeholder="You are a helpful assistant..."
-                                                ></textarea>
-                                            </div>
-                                        </div>
-                                    </details>
-
-                                    <details
-                                        class="settings-section"
-                                        id="accountSettingsSection"
-                                    >
-                                        <summary>Account API</summary>
-                                        <div
-                                            class="settings-body"
-                                            id="accountApiBaseGroup"
-                                        >
-                                            <div class="form-group">
-                                                <label for="accountApiBase"
-                                                    >Base URL</label
-                                                >
-                                                <input
-                                                    type="text"
-                                                    id="accountApiBase"
-                                                    placeholder="https://billing.example.com"
-                                                />
-                                                <small
-                                                    >For sign-in and
-                                                    billing.</small
-                                                >
-                                            </div>
-                                        </div>
-                                    </details>
-
-                                    <details class="settings-section">
-                                        <summary>Backup</summary>
-                                        <div class="settings-body">
-                                            <div class="settings-inline">
-                                                <button
-                                                    id="exportSettingsBtn"
-                                                    class="btn btn-secondary"
-                                                >
-                                                    Export
-                                                </button>
-                                                <button
-                                                    id="importSettingsBtn"
-                                                    class="btn btn-secondary"
-                                                >
-                                                    Import
-                                                </button>
-                                                <input
-                                                    id="importSettingsInput"
-                                                    type="file"
-                                                    accept="application/json"
-                                                    class="hidden"
-                                                />
-                                            </div>
-                                        </div>
-                                    </details>
-
-                                    <div class="settings-actions">
-                                        <button
-                                            id="saveSettingsBtn"
-                                            class="btn btn-primary"
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            id="cancelSettingsBtn"
-                                            class="btn btn-secondary"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-
+    <!-- System Prompt -->
+    <details class="settings-section">
+        <summary>📝 System Prompt</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="systemPrompt">Custom System Prompt</label>
+                <textarea id="systemPrompt" rows="6" placeholder="Leave empty for default..."></textarea>
+                <small>Override the default system prompt (advanced)</small>
+            </div>
+        </div>
+    </details>
+</div>

@@ -77,29 +77,73 @@
   color: var(--foreground);
 }
 
+/* Quick Setup - Prominent configuration */
+.settings-quick-setup {
+  background: linear-gradient(135deg, hsl(270, 30%, 15%) 0%, hsl(270, 20%, 12%) 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-quick-setup .setup-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 4px 0;
+}
+
+.settings-quick-setup .form-group input,
+.settings-quick-setup .form-group select {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.settings-quick-setup .form-group input:focus,
+.settings-quick-setup .form-group select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px hsla(270, 50%, 50%, 0.2);
+}
+
+/* Settings Sections */
 .settings-section {
   background: var(--background);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  margin-bottom: 6px;
 }
 
 .settings-section > summary {
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-section > summary:hover {
+  background: var(--card-hover);
 }
 
 .settings-section > summary::-webkit-details-marker {
   display: none;
 }
 
+.settings-section[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
 .settings-body {
-  padding: 0 10px 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .settings-actions {
