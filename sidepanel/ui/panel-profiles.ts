@@ -262,35 +262,40 @@ import { SidePanelUI } from './panel-ui.js';
 (SidePanelUI.prototype as any).populateFormFromConfig = function populateFormFromConfig(
   config: Record<string, any> = {},
 ) {
-  this.elements.provider.value = config.provider || 'openai';
-  this.elements.apiKey.value = config.apiKey || '';
-  this.elements.model.value = config.model || 'gpt-4o';
-  this.elements.customEndpoint.value = config.customEndpoint || '';
-  this.elements.systemPrompt.value = config.systemPrompt || this.getDefaultSystemPrompt();
-  this.elements.temperature.value = config.temperature !== undefined ? config.temperature : 0.7;
-  this.elements.temperatureValue.textContent = this.elements.temperature.value;
-  this.elements.maxTokens.value = config.maxTokens || 4096;
-  this.elements.contextLimit.value = config.contextLimit || 200000;
-  this.elements.timeout.value = config.timeout || 30000;
-  this.elements.enableScreenshots.value = config.enableScreenshots ? 'true' : 'false';
-  this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages ? 'true' : 'false';
-  this.elements.screenshotQuality.value = config.screenshotQuality || 'high';
-  this.elements.streamResponses.value = config.streamResponses !== false ? 'true' : 'true';
-  this.elements.showThinking.value = config.showThinking !== false ? 'true' : 'false';
-  this.elements.autoScroll.value = config.autoScroll !== false ? 'true' : 'false';
-  this.elements.confirmActions.value = config.confirmActions !== false ? 'true' : 'false';
-  this.elements.saveHistory.value = config.saveHistory !== false ? 'true' : 'false';
+  // Use optional chaining for all element accesses since settings UI may be simplified
+  if (this.elements.provider) this.elements.provider.value = config.provider || 'openai';
+  if (this.elements.apiKey) this.elements.apiKey.value = config.apiKey || '';
+  if (this.elements.model) this.elements.model.value = config.model || 'gpt-4o';
+  if (this.elements.customEndpoint) this.elements.customEndpoint.value = config.customEndpoint || '';
+  if (this.elements.systemPrompt) this.elements.systemPrompt.value = config.systemPrompt || this.getDefaultSystemPrompt();
+  if (this.elements.temperature) {
+    this.elements.temperature.value = config.temperature !== undefined ? config.temperature : 0.7;
+    if (this.elements.temperatureValue) {
+      this.elements.temperatureValue.textContent = this.elements.temperature.value;
+    }
+  }
+  if (this.elements.maxTokens) this.elements.maxTokens.value = config.maxTokens || 4096;
+  if (this.elements.contextLimit) this.elements.contextLimit.value = config.contextLimit || 200000;
+  if (this.elements.timeout) this.elements.timeout.value = config.timeout || 30000;
+  if (this.elements.enableScreenshots) this.elements.enableScreenshots.value = config.enableScreenshots ? 'true' : 'false';
+  if (this.elements.sendScreenshotsAsImages) this.elements.sendScreenshotsAsImages.value = config.sendScreenshotsAsImages ? 'true' : 'false';
+  if (this.elements.screenshotQuality) this.elements.screenshotQuality.value = config.screenshotQuality || 'high';
+  if (this.elements.streamResponses) this.elements.streamResponses.value = config.streamResponses !== false ? 'true' : 'true';
+  if (this.elements.showThinking) this.elements.showThinking.value = config.showThinking !== false ? 'true' : 'false';
+  if (this.elements.autoScroll) this.elements.autoScroll.value = config.autoScroll !== false ? 'true' : 'false';
+  if (this.elements.confirmActions) this.elements.confirmActions.value = config.confirmActions !== false ? 'true' : 'false';
+  if (this.elements.saveHistory) this.elements.saveHistory.value = config.saveHistory !== false ? 'true' : 'false';
 };
 
 (SidePanelUI.prototype as any).setActiveConfig = function setActiveConfig(name: string, quiet = false) {
   if (!this.configs[name]) return;
   this.currentConfig = name;
-  this.elements.activeConfig.value = name;
+  if (this.elements.activeConfig) this.elements.activeConfig.value = name;
   this.populateFormFromConfig(this.configs[name]);
   this.toggleCustomEndpoint();
-  this.renderProfileGrid();
-  this.updateScreenshotToggleState();
-  this.editProfile(name, true);
+  this.renderProfileGrid?.();
+  this.updateScreenshotToggleState?.();
+  this.editProfile?.(name, true);
   this.updateModelDisplay();
   this.fetchAvailableModels();
   if (!quiet) {

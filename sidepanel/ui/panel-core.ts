@@ -5,19 +5,25 @@ import { bindSidebarNavigation } from './panel-navigation.js';
 import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).init = async function init() {
+  console.log('[Parchi] init() starting...');
   this.setupEventListeners();
   this.setupPlanDrawer();
   this.setupResizeObserver();
   // Start with sidebar closed by default
   this.elements.sidebar?.classList.add('closed');
+  console.log('[Parchi] Calling loadSettings...');
   await this.loadSettings();
+  console.log('[Parchi] loadSettings done, configs:', Object.keys(this.configs), 'current:', this.currentConfig);
+  console.log('[Parchi] Config details:', JSON.stringify(this.configs[this.currentConfig] || {}).slice(0, 200));
   await this.loadHistoryList();
   await this.loadAccessState();
   if (this.isAccessReady()) {
     this.updateStatus('Ready', 'success');
   }
   this.updateModelDisplay();
+  console.log('[Parchi] Calling fetchAvailableModels...');
   this.fetchAvailableModels();
+  console.log('[Parchi] init() complete');
 };
 
 (SidePanelUI.prototype as any).setupEventListeners = function setupEventListeners() {

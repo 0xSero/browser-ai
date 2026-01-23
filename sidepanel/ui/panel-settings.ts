@@ -120,6 +120,7 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).loadSettings = async function loadSettings() {
+  console.log('[Parchi] loadSettings called');
   const settings = await chrome.storage.local.get([
     'visionBridge',
     'visionProfile',
