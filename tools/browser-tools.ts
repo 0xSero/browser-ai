@@ -260,23 +260,24 @@ export class BrowserTools {
   }
 
   async executeTool(toolName: string, args: Record<string, any> = {}) {
-    switch (toolName) {
-      case 'navigate':
-        return await this.navigate(args);
-      case 'openTab':
-        return await this.openTab(args);
-      case 'click':
-        return await this.click(args);
-      case 'type':
-        return await this.type(args);
-      case 'pressKey':
-        return await this.pressKey(args);
-      case 'scroll':
-        return await this.scroll(args);
-      case 'getContent':
-        return await this.getContent(args);
-      case 'screenshot':
-        return await this.screenshot(args);
+    try {
+      switch (toolName) {
+        case 'navigate':
+          return await this.navigate(args);
+        case 'openTab':
+          return await this.openTab(args);
+        case 'click':
+          return await this.click(args);
+        case 'type':
+          return await this.type(args);
+        case 'pressKey':
+          return await this.pressKey(args);
+        case 'scroll':
+          return await this.scroll(args);
+        case 'getContent':
+          return await this.getContent(args);
+        case 'screenshot':
+          return await this.screenshot(args);
       case 'getTabs':
         return await this.getTabs();
       case 'closeTab':
@@ -295,8 +296,17 @@ export class BrowserTools {
           maxTabs: MAX_SESSION_TABS,
           canOpenMore: this.sessionTabs.size < MAX_SESSION_TABS,
         };
-      default:
-        return { success: false, error: `Unknown tool: ${toolName}` };
+        default:
+          return { success: false, error: `Unknown tool: ${toolName}` };
+      }
+    } catch (error) {
+      // Catch any unhandled errors in tool execution
+      console.error(`Tool execution error (${toolName}):`, error);
+      return {
+        success: false,
+        error: `Tool "${toolName}" failed: ${error?.message || String(error)}`,
+        hint: 'Try a different approach or check the arguments.',
+      };
     }
   }
 
@@ -319,9 +329,31 @@ export class BrowserTools {
   private async navigate(args: Record<string, any>) {
     const tabId = await this.resolveTabId(args);
     if (!tabId) return { success: false, error: 'No active tab.' };
-    await chrome.tabs.update(tabId, { url: args.url });
-    this.currentSessionTabId = tabId;
-    return { success: true, tabId, url: args.url };
+    
+    const url = args.url;
+    if (!url || typeof url !== 'string') {
+      return { success: false, error: 'Missing or invalid url parameter.' };
+    }
+    
+    // Validate URL format
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('chrome://')) {
+      return { 
+        success: false, 
+        error: `Invalid URL: "${url}". URLs must start with http://, https://, or chrome://`,
+        hint: 'For Google searches, use: https://www.google.com/search?q=your+query',
+      };
+    }
+    
+    try {
+      await chrome.tabs.update(tabId, { url });
+      this.currentSessionTabId = tabId;
+      return { success: true, tabId, url };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: `Navigation failed: ${error?.message || String(error)}`,
+      };
+    }
   }
 
   private async openTab(args: Record<string, any>) {
@@ -329,17 +361,42 @@ export class BrowserTools {
     if (this.sessionTabs.size >= MAX_SESSION_TABS) {
       return {
         success: false,
-        error: `Tab limit reached (max ${MAX_SESSION_TABS} tabs per session). Close existing tabs or reuse current ones.`,
+        error: `Tab limit reached (max ${MAX_SESSION_TABS} tabs per session). Close existing tabs with closeTab or use navigate on current tab.`,
+        hint: 'Use closeTab({ tabId: <id> }) to close a tab, or navigate({ url: "..." }) to reuse current tab.',
       };
     }
-    const tab = await chrome.tabs.create({ url: args.url, active: true });
-    if (tab.id) {
-      this.sessionTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url });
-      this.currentSessionTabId = tab.id;
-      // Add new tab to session group
-      await this.ensureSessionTabGroup();
+    
+    // Validate URL
+    const url = args.url;
+    if (!url || typeof url !== 'string') {
+      return { success: false, error: 'Missing or invalid url parameter.' };
     }
-    return { success: true, tabId: tab.id, url: args.url };
+    
+    // Check if it looks like a valid URL
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('chrome://')) {
+      return { 
+        success: false, 
+        error: `Invalid URL: "${url}". URLs must start with http://, https://, or chrome://`,
+        hint: 'Use navigate({ url: "https://google.com/search?q=..." }) for searches.',
+      };
+    }
+    
+    try {
+      const tab = await chrome.tabs.create({ url, active: true });
+      if (tab.id) {
+        this.sessionTabs.set(tab.id, { id: tab.id, title: tab.title, url: tab.url });
+        this.currentSessionTabId = tab.id;
+        // Add new tab to session group
+        await this.ensureSessionTabGroup();
+      }
+      return { success: true, tabId: tab.id, url };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: `Failed to open tab: ${error?.message || String(error)}`,
+        hint: 'Try using navigate() on current tab instead.',
+      };
+    }
   }
 
   private async focusTab(args: Record<string, any>) {
