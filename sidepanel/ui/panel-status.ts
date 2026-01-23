@@ -27,6 +27,10 @@ import { SidePanelUI } from './panel-ui.js';
   const provider = config.provider || 'anthropic';
   const apiKey = config.apiKey || '';
   const customEndpoint = config.customEndpoint || '';
+  
+  console.log('[Parchi] fetchAvailableModels called');
+  console.log('[Parchi] currentConfig:', this.currentConfig);
+  console.log('[Parchi] config:', { provider, apiKey: apiKey ? '***' : '(empty)', customEndpoint });
 
   // Hardcoded model lists for providers that don't support /v1/models
   const ANTHROPIC_MODELS = [
@@ -155,8 +159,19 @@ import { SidePanelUI } from './panel-ui.js';
   models: string[],
   currentModel?: string,
 ) {
-  const select = this.elements.modelSelect;
-  if (!select) return;
+  // Try to get the select element - it might not be in this.elements if loaded dynamically
+  let select = this.elements.modelSelect;
+  if (!select) {
+    select = document.getElementById('modelSelect') as HTMLSelectElement;
+    if (select) {
+      this.elements.modelSelect = select;
+    }
+  }
+  
+  if (!select) {
+    console.error('[Parchi] modelSelect element not found!');
+    return;
+  }
 
   const config = this.configs[this.currentConfig] || {};
   const selectedModel = currentModel || config.model || '';
@@ -169,6 +184,8 @@ import { SidePanelUI } from './panel-ui.js';
   if (selectedModel && !finalModels.includes(selectedModel)) {
     finalModels = [selectedModel, ...finalModels];
   }
+
+  console.log('[Parchi] Populating model select with', finalModels.length, 'models, selected:', selectedModel);
 
   select.innerHTML = '';
 
@@ -191,14 +208,8 @@ import { SidePanelUI } from './panel-ui.js';
     }
     select.appendChild(option);
   }
-
-  if (currentModel && !finalModels.includes(currentModel)) {
-    const option = document.createElement('option');
-    option.value = currentModel;
-    option.textContent = currentModel;
-    option.selected = true;
-    select.insertBefore(option, select.firstChild?.nextSibling ?? null);
-  }
+  
+  console.log('[Parchi] Model select now has', select.options.length, 'options');
 };
 
 (SidePanelUI.prototype as any).handleModelSelectChange = function handleModelSelectChange() {
