@@ -5,7 +5,13 @@
  * Tests individual components without Chrome APIs
  */
 
-import { applyCompaction, buildCompactionSummaryMessage, shouldCompact } from '../../ai/compaction.js';
+import {
+  DEFAULT_COMPACTION_SETTINGS,
+  applyCompaction,
+  buildCompactionSummaryMessage,
+  estimateContextTokens,
+  shouldCompact,
+} from '../../ai/compaction.js';
 import { createMessage, normalizeConversationHistory, toProviderMessages } from '../../ai/message-schema.js';
 import type { Message } from '../../ai/message-schema.js';
 import { createExponentialBackoff, isValidFinalResponse } from '../../ai/retry-engine.js';
@@ -425,7 +431,12 @@ function testConversationCompaction(runner: TestRunner) {
       role: 'user',
       content: `Message ${idx} ${'x'.repeat(200)}`,
     }));
-    const check = shouldCompact({ messages: history, contextLimit: 500 });
+    const usage = estimateContextTokens(history);
+    const check = shouldCompact({
+      contextTokens: usage.tokens,
+      contextLimit: 500,
+      settings: DEFAULT_COMPACTION_SETTINGS,
+    });
     runner.assertTrue(check.shouldCompact, 'Should trigger compaction');
 
     const preserved = history.slice(-5);

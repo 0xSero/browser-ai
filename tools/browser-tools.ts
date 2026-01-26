@@ -502,26 +502,48 @@ export class BrowserTools {
   private async getContent(args: Record<string, any>) {
     const tabId = await this.resolveTabId(args);
     if (!tabId) return { success: false, error: 'No active tab.' };
-    const type = String(args.type || 'text');
+    const type = String(args.type || args.mode || 'text');
     const selector = args.selector ? String(args.selector) : '';
+    const maxChars = typeof args.maxChars === 'number' && args.maxChars > 0 ? args.maxChars : 8000;
     const result = await this.runInTab(
       tabId,
-      (t, sel) => {
+      (t, sel, limit) => {
         const base = sel ? document.querySelector<HTMLElement>(sel) : document.body;
         if (!base) return { success: false, error: 'Target not found.' };
-        if (t === 'html') return { success: true, content: base.innerHTML };
-        if (t === 'title') return { success: true, content: document.title };
-        if (t === 'url') return { success: true, content: window.location.href };
-        if (t === 'links') {
-          const links = Array.from(base.querySelectorAll('a')).map((link) => ({
-            text: link.textContent || '',
-            href: link.href,
-          }));
-          return { success: true, content: JSON.stringify(links) };
+        const normalizedType = ['text', 'html', 'title', 'url', 'links'].includes(t) ? t : 'text';
+        const truncate = (value: string) => {
+          const length = value.length;
+          if (length <= limit) {
+            return { content: value, truncated: false, contentLength: length };
+          }
+          return { content: value.slice(0, limit), truncated: true, contentLength: length };
+        };
+        if (normalizedType === 'html') {
+          const result = truncate(base.innerHTML);
+          return { success: true, ...result };
         }
-        return { success: true, content: base.innerText };
+        if (normalizedType === 'title') {
+          const result = truncate(document.title || '');
+          return { success: true, ...result };
+        }
+        if (normalizedType === 'url') {
+          const result = truncate(window.location.href || '');
+          return { success: true, ...result };
+        }
+        if (normalizedType === 'links') {
+          const links = Array.from(base.querySelectorAll('a'))
+            .slice(0, 200)
+            .map((link) => ({
+              text: link.textContent || '',
+              href: link.href,
+            }));
+          const result = truncate(JSON.stringify(links));
+          return { success: true, items: links.length, ...result };
+        }
+        const result = truncate(base.innerText || '');
+        return { success: true, ...result };
       },
-      [type, selector],
+      [type, selector, maxChars],
     );
     return result || { success: false, error: 'Script execution failed.' };
   }

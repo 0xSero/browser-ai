@@ -1,6 +1,6 @@
 /* Composer */
 .composer-wrapper {
-  padding: 14px 16px 18px;
+  padding: 18px 18px 22px;
   background: var(--background);
   display: flex;
   justify-content: center;
@@ -10,20 +10,26 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: linear-gradient(180deg, hsl(30, 7%, 13%) 0%, hsl(30, 6%, 9%) 100%);
+  border: 1px solid hsl(30, 6%, 19%);
+  border-radius: 18px;
   width: min(860px, 100%);
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
   position: relative;
 }
 
 /* Running state - model is working */
 .composer.running {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 18px 42px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .composer.running::before {
@@ -33,13 +39,14 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    var(--accent) 50%, 
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--accent) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+  z-index: 2;
 }
 
 @keyframes shimmer {
@@ -61,13 +68,12 @@
 
 .composer textarea {
   width: 100%;
-  min-height: 48px;
-  max-height: 220px;
-  padding: 14px 16px 10px;
+  min-height: 54px;
+  padding: 18px 18px 12px;
   background: transparent;
   color: var(--foreground);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   resize: none;
   border: none;
   border-radius: 0;
@@ -85,47 +91,96 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  background: transparent;
-  border-top: 1px solid var(--border);
+  gap: 12px;
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.35));
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .composer-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .composer-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.composer .icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-}
-
-.model-selector {
-  display: flex;
+.composer-status {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: transparent;
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 9999px;
-  font-size: 10px;
-  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--muted);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.composer-status .status-dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+}
+
+.composer-status #statusText {
+  font-size: 11px;
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.composer-status .status-meta {
+  font-size: 10px;
+  color: var(--muted-dim);
+  margin-left: 4px;
+}
+
+.composer-status .status-meta.hidden {
+  display: none;
+}
+
+.composer .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.composer .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+}
+
+.model-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--foreground);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .model-selector:hover {
-  border-color: var(--muted-dim);
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--foreground);
 }
 
@@ -136,10 +191,20 @@
   font: inherit;
   cursor: pointer;
   padding-right: 4px;
+  appearance: none;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .model-selector select:focus {
   outline: none;
+}
+
+.model-selector-chevron {
+  pointer-events: none;
+  opacity: 0.7;
 }
 
 /* Legacy composer-actions for backwards compat */
@@ -150,16 +215,17 @@
 .selected-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .selected-tab-pill {
-  padding: 2px 6px;
+  padding: 4px 8px;
   font-size: 10px;
-  background: hsl(168, 30%, 15%);
-  color: hsl(168, 45%, 50%);
+  background: hsl(30, 12%, 16%);
+  color: hsl(30, 40%, 65%);
   border-radius: 9999px;
+  border: 1px solid hsl(30, 10%, 22%);
 }
 
 /* Buttons */
@@ -216,21 +282,22 @@
 }
 
 .send-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
+  background: linear-gradient(180deg, hsl(270, 55%, 60%), hsl(270, 55%, 50%));
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #fff;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
   transition: all 0.15s;
 }
 
 .send-btn:hover {
-  background: hsl(270, 55%, 60%);
+  background: linear-gradient(180deg, hsl(270, 55%, 65%), hsl(270, 55%, 55%));
+  transform: translateY(-1px);
 }
 
 .send-btn:disabled {
@@ -238,4 +305,5 @@
   color: var(--muted-dim);
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }

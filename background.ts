@@ -1,5 +1,16 @@
 import { generateText, stepCountIs, streamText } from 'ai';
-import { applyCompaction, buildCompactionSummaryMessage, shouldCompact } from './ai/compaction.js';
+import {
+  applyCompaction,
+  buildCompactionSummaryMessage,
+  DEFAULT_COMPACTION_SETTINGS,
+  SUMMARIZATION_PROMPT,
+  SUMMARIZATION_SYSTEM_PROMPT,
+  UPDATE_SUMMARIZATION_PROMPT,
+  estimateContextTokens,
+  findCutPoint,
+  serializeConversation,
+  shouldCompact,
+} from './ai/compaction.js';
 import { normalizeConversationHistory } from './ai/message-schema.js';
 import type { Message } from './ai/message-schema.js';
 import { toModelMessages } from './ai/model-convert.js';
@@ -198,7 +209,6 @@ class BackgroundService {
       };
 
       const normalizedHistory = normalizeConversationHistory(conversationHistory || []);
-      const modelMessages = toModelMessages(normalizedHistory);
       const model = resolveLanguageModel(orchestratorProfile);
 
       const toolSet = buildToolSet(tools, async (toolName, args, options) =>
@@ -215,81 +225,177 @@ class BackgroundService {
       );
 
       const streamEnabled = settings.streamResponses !== false;
-      if (streamEnabled) {
-        this.sendRuntime(runMeta, { type: 'assistant_stream_start' });
-      }
+      const maxRecoveryAttempts = 2;
+      let recoveryAttempt = 0;
+      let currentHistory = normalizedHistory;
+      let finalText = '';
+      let reasoningText: string | null = null;
+      let totalUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+      let toolResults: Array<Record<string, any>> = [];
+      let responseMessages: Message[] = [];
 
-      const result = streamText({
-        model,
-        system: this.enhanceSystemPrompt(orchestratorProfile.systemPrompt || '', context),
-        messages: modelMessages,
-        tools: toolSet,
-        temperature: orchestratorProfile.temperature ?? 0.7,
-        maxOutputTokens: orchestratorProfile.maxTokens ?? 2048,
-        stopWhen: stepCountIs(48),
-        onChunk: ({ chunk }) => {
-          if (chunk.type === 'reasoning-delta') {
-            this.sendRuntime(runMeta, {
-              type: 'assistant_stream_delta',
-              content: chunk.text || '',
-              channel: 'reasoning',
-            });
-          }
-        },
-      });
-
-      if (streamEnabled) {
-        try {
-          for await (const textPart of result.textStream) {
-            this.sendRuntime(runMeta, {
-              type: 'assistant_stream_delta',
-              content: textPart || '',
-              channel: 'text',
-            });
-          }
-        } finally {
-          this.sendRuntime(runMeta, { type: 'assistant_stream_stop' });
+      const runModelPass = async (messages: Message[]) => {
+        const modelMessages = toModelMessages(messages);
+        if (streamEnabled) {
+          this.sendRuntime(runMeta, { type: 'assistant_stream_start' });
         }
-      } else {
-        await result.text;
-      }
 
-      const [text, reasoningText, totalUsage, steps] = await Promise.all([
-        result.text,
-        result.reasoningText,
-        result.totalUsage,
-        result.steps,
-      ]);
-
-      const toolResults = steps.flatMap((step) => step.toolResults || []);
-      const hadToolCalls = toolResults.length > 0;
-
-      // Allow empty text if tools were called (model communicated through actions)
-      // But encourage actual summaries via system prompt
-      const fallbackText = hadToolCalls ? 'Task completed. See tool results above for details.' : 'Done.';
-      const finalText = isValidFinalResponse(text, { allowEmpty: false })
-        ? text || fallbackText
-        : 'I completed the requested actions but could not produce a final summary. Please try again.';
-      const responseMessages: Message[] = [
-        {
-          role: 'assistant',
-          content: finalText,
-          thinking: reasoningText || null,
-        },
-      ];
-      if (toolResults.length > 0) {
-        responseMessages.push({
-          role: 'tool',
-          content: toolResults.map((resultItem) => ({
-            type: 'tool-result',
-            toolCallId: resultItem.toolCallId,
-            toolName: resultItem.toolName,
-            output:
-              resultItem.output && typeof resultItem.output === 'object'
-                ? { type: 'json', value: resultItem.output }
-                : { type: 'text', value: String(resultItem.output ?? '') },
-          })),
+        const result = streamText({
+          model,
+          system: this.enhanceSystemPrompt(orchestratorProfile.systemPrompt || '', context),
+          messages: modelMessages,
+          tools: toolSet,
+          temperature: orchestratorProfile.temperature ?? 0.7,
+          maxOutputTokens: orchestratorProfile.maxTokens ?? 2048,
+          stopWhen: stepCountIs(48),
+          onChunk: ({ chunk }) => {
+            if (chunk.type === 'reasoning-delta') {
+              this.sendRuntime(runMeta, {
+                type: 'assistant_stream_delta',
+                content: chunk.text || '',
+                channel: 'reasoning',
+              });
+            }
+          },
         });
+
+        if (streamEnabled) {
+          try {
+            for await (const textPart of result.textStream) {
+              this.sendRuntime(runMeta, {
+                type: 'assistant_stream_delta',
+                content: textPart || '',
+                channel: 'text',
+              });
+            }
+          } finally {
+            this.sendRuntime(runMeta, { type: 'assistant_stream_stop' });
+          }
+        } else {
+          await result.text;
+        }
+
+        const [text, reasoning, usage, steps] = await Promise.all([
+          result.text,
+          result.reasoningText,
+          result.totalUsage,
+          result.steps,
+        ]);
+
+        const normalizedUsage = {
+          inputTokens: Number(usage?.inputTokens || 0),
+          outputTokens: Number(usage?.outputTokens || 0),
+          totalTokens: Number(usage?.totalTokens || 0),
+        };
+
+        return {
+          text: text || '',
+          reasoningText: reasoning || null,
+          totalUsage: normalizedUsage,
+          toolResults: steps.flatMap((step) => step.toolResults || []),
+        };
+      };
+
+      while (true) {
+        const passResult = await runModelPass(currentHistory);
+        const xmlToolCalls = this.extractXmlToolCalls(passResult.text);
+        toolResults = passResult.toolResults || [];
+
+        if (xmlToolCalls.length > 0 && toolResults.length === 0 && recoveryAttempt < maxRecoveryAttempts) {
+          this.sendRuntime(runMeta, {
+            type: 'run_warning',
+            message: 'Detected XML tool call output. Executing tools and retrying.',
+          });
+
+          const cleanedText = this.stripXmlToolCalls(passResult.text);
+          if (cleanedText) {
+            currentHistory = normalizeConversationHistory([
+              ...currentHistory,
+              {
+                role: 'assistant',
+                content: cleanedText,
+                thinking: passResult.reasoningText || null,
+              },
+            ]);
+          }
+
+          const toolMessages: Message[] = [];
+          for (const call of xmlToolCalls) {
+            const toolCallId = `xml_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const output = await this.executeToolByName(
+              call.name,
+              call.args,
+              {
+                runMeta,
+                settings,
+                visionProfile,
+              },
+              toolCallId,
+            );
+            toolMessages.push({
+              role: 'tool',
+              toolCallId,
+              toolName: call.name,
+              content: [
+                {
+                  type: 'tool-result',
+                  toolCallId,
+                  toolName: call.name,
+                  output:
+                    output && typeof output === 'object'
+                      ? { type: 'json', value: output }
+                      : { type: 'text', value: String(output ?? '') },
+                },
+              ],
+            });
+          }
+
+          currentHistory = normalizeConversationHistory([
+            ...currentHistory,
+            ...toolMessages,
+            {
+              role: 'system',
+              content:
+                'Previous response included XML tool call markup. Tools were executed. Continue without XML tool tags.',
+            },
+          ]);
+
+          recoveryAttempt += 1;
+          continue;
+        }
+
+        reasoningText = passResult.reasoningText || null;
+        totalUsage = passResult.totalUsage || totalUsage;
+        const cleanedText = this.stripXmlToolCalls(passResult.text);
+        const hadToolCalls = toolResults.length > 0;
+        const fallbackText = hadToolCalls ? 'Task completed. See tool results above for details.' : 'Done.';
+        finalText = isValidFinalResponse(cleanedText, { allowEmpty: false })
+          ? cleanedText || fallbackText
+          : 'I completed the requested actions but could not produce a final summary. Please try again.';
+
+        responseMessages = [
+          {
+            role: 'assistant',
+            content: finalText,
+            thinking: reasoningText || null,
+          },
+        ];
+        if (toolResults.length > 0) {
+          responseMessages.push({
+            role: 'tool',
+            content: toolResults.map((resultItem) => ({
+              type: 'tool-result',
+              toolCallId: resultItem.toolCallId,
+              toolName: resultItem.toolName,
+              output:
+                resultItem.output && typeof resultItem.output === 'object'
+                  ? { type: 'json', value: resultItem.output }
+                  : { type: 'text', value: String(resultItem.output ?? '') },
+            })),
+          });
+        }
+
+        break;
       }
 
       this.sendRuntime(runMeta, {
@@ -305,49 +411,81 @@ class BackgroundService {
         responseMessages,
       });
 
-      const nextHistory = normalizeConversationHistory([...normalizedHistory, ...responseMessages]);
+      const nextHistory = normalizeConversationHistory([...currentHistory, ...responseMessages]);
       const contextLimit = orchestratorProfile.contextLimit || settings.contextLimit || 200000;
+      const compactionSettings = DEFAULT_COMPACTION_SETTINGS;
+      const contextUsage = estimateContextTokens(nextHistory);
       const compactionCheck = shouldCompact({
-        messages: nextHistory,
+        contextTokens: contextUsage.tokens,
         contextLimit,
+        settings: compactionSettings,
       });
 
       if (compactionCheck.shouldCompact) {
-        const preservedCount = Math.min(10, Math.floor(nextHistory.length / 2));
-        const preserved = nextHistory.slice(-preservedCount);
-        const trimmedCount = nextHistory.length - preservedCount;
+        let summaryIndex = -1;
+        for (let i = nextHistory.length - 1; i >= 0; i -= 1) {
+          const msg = nextHistory[i];
+          if (msg.role === 'system' && msg.meta?.kind === 'summary') {
+            summaryIndex = i;
+            break;
+          }
+        }
 
-        const summaryPrompt =
-          'Summarize the conversation so far for the next model run. Include: user goals, key context, decisions, tool outputs, open tasks, and constraints. Use bullet points. Keep it between 1,000 and 2,000 tokens.';
-        const summaryResult = await generateText({
-          model,
-          system: summaryPrompt,
-          messages: toModelMessages(nextHistory),
-          temperature: 0.2,
-          maxOutputTokens: 1600,
-        });
+        const previousSummary =
+          summaryIndex >= 0
+            ? typeof nextHistory[summaryIndex].content === 'string'
+              ? nextHistory[summaryIndex].content
+              : JSON.stringify(nextHistory[summaryIndex].content)
+            : undefined;
 
-        const summaryMessage = buildCompactionSummaryMessage(summaryResult.text, trimmedCount);
-        const compaction = applyCompaction({
-          summaryMessage,
-          preserved,
-          trimmedCount,
-        });
-        const newSessionId = `session-${Date.now()}`;
+        const compactionStart = summaryIndex >= 0 ? summaryIndex + 1 : 0;
+        const cutIndex = findCutPoint(nextHistory, compactionStart, compactionSettings.keepRecentTokens);
+        const messagesToSummarize = nextHistory.slice(compactionStart, cutIndex);
+        const preserved = nextHistory.slice(cutIndex);
 
-        this.sendRuntime(runMeta, {
-          type: 'context_compacted',
-          summary: summaryResult.text,
-          trimmedCount,
-          preservedCount: compaction.preservedCount,
-          newSessionId,
-          contextMessages: compaction.compacted,
-          contextUsage: {
-            approxTokens: compactionCheck.approxTokens,
-            contextLimit,
-            percent: Math.round(compactionCheck.percent * 100),
-          },
-        });
+        if (messagesToSummarize.length > 0) {
+          const conversationText = serializeConversation(messagesToSummarize);
+          let promptText = `<conversation>\n${conversationText}\n</conversation>\n\n`;
+          if (previousSummary) {
+            promptText += `<previous-summary>\n${previousSummary}\n</previous-summary>\n\n`;
+          }
+          promptText += previousSummary ? UPDATE_SUMMARIZATION_PROMPT : SUMMARIZATION_PROMPT;
+
+          const summaryResult = await generateText({
+            model,
+            system: SUMMARIZATION_SYSTEM_PROMPT,
+            messages: [
+              {
+                role: 'user',
+                content: promptText,
+              },
+            ],
+            temperature: 0.2,
+            maxOutputTokens: Math.floor(0.8 * compactionSettings.reserveTokens),
+          });
+
+          const summaryMessage = buildCompactionSummaryMessage(summaryResult.text, messagesToSummarize.length);
+          const compaction = applyCompaction({
+            summaryMessage,
+            preserved,
+            trimmedCount: messagesToSummarize.length,
+          });
+          const newSessionId = `session-${Date.now()}`;
+
+          this.sendRuntime(runMeta, {
+            type: 'context_compacted',
+            summary: summaryResult.text,
+            trimmedCount: messagesToSummarize.length,
+            preservedCount: compaction.preservedCount,
+            newSessionId,
+            contextMessages: compaction.compacted,
+            contextUsage: {
+              approxTokens: compactionCheck.approxTokens,
+              contextLimit,
+              percent: Math.round(compactionCheck.percent * 100),
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Error processing user message:', error);
@@ -420,8 +558,11 @@ class BackgroundService {
         sendResult(errorResult);
         return errorResult;
       }
-      const stepIndex = typeof args.step_index === 'number' ? args.step_index : -1;
-      const status = args.status || 'done';
+      const rawIndex = args.step_index;
+      const parsedIndex = typeof rawIndex === 'number' ? rawIndex : Number(rawIndex);
+      const stepIndex = Number.isFinite(parsedIndex) ? parsedIndex : -1;
+      const rawStatus = typeof args.status === 'string' ? args.status : 'done';
+      const status = rawStatus === 'pending' || rawStatus === 'done' || rawStatus === 'blocked' ? rawStatus : 'done';
       const maxIndex = this.currentPlan.steps.length - 1;
       if (stepIndex < 0 || stepIndex > maxIndex) {
         const errorResult = { 
@@ -546,6 +687,92 @@ class BackgroundService {
       return { ...(result as Record<string, unknown>), plan: this.currentPlan };
     }
     return { result, plan: this.currentPlan };
+  }
+
+  extractXmlToolCalls(text: string): Array<{ name: string; args: Record<string, unknown>; raw: string }> {
+    if (!text || typeof text !== 'string') return [];
+    const results: Array<{ name: string; args: Record<string, unknown>; raw: string }> = [];
+    const blocks: string[] = [];
+
+    const blockRegex = /<\s*(?:tool|function)_call[^>]*>[\s\S]*?<\s*\/\s*(?:tool|function)_call\s*>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = blockRegex.exec(text))) {
+      blocks.push(match[0]);
+    }
+
+    const inlineRegex = /([A-Za-z0-9_]+)\s*<\s*argkey\s*>[\s\S]*?<\s*\/\s*tool_call\s*>/gi;
+    while ((match = inlineRegex.exec(text))) {
+      blocks.push(match[0]);
+    }
+
+    if (!blocks.length && /<\s*argkey\s*>/i.test(text)) {
+      blocks.push(text);
+    }
+
+    for (const block of blocks) {
+      const name = this.extractXmlToolName(block);
+      if (!name) continue;
+      const args = this.extractXmlArgs(block);
+      results.push({ name, args, raw: block });
+    }
+
+    return results;
+  }
+
+  extractXmlToolName(block: string): string {
+    const nameMatch =
+      block.match(/<\s*(?:tool|function)_name\s*>([^<]+)<\s*\/\s*(?:tool|function)_name\s*>/i) ||
+      block.match(/<\s*name\s*>([^<]+)<\s*\/\s*name\s*>/i) ||
+      block.match(/<\s*tool\s*>([^<]+)<\s*\/\s*tool\s*>/i) ||
+      block.match(/<\s*function\s*>([^<]+)<\s*\/\s*function\s*>/i) ||
+      block.match(/([A-Za-z0-9_]+)\s*<\s*argkey\s*>/i);
+
+    if (!nameMatch) return '';
+    const name = nameMatch[1] ? String(nameMatch[1]) : '';
+    return name.trim();
+  }
+
+  extractXmlArgs(block: string): Record<string, unknown> {
+    const args: Record<string, unknown> = {};
+    const pairRegex = /<\s*argkey\s*>([\s\S]*?)<\s*\/\s*argkey\s*>\s*<\s*argvalue\s*>([\s\S]*?)<\s*\/\s*argvalue\s*>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = pairRegex.exec(block))) {
+      const key = String(match[1] || '').trim();
+      const value = this.coerceXmlArgValue(String(match[2] || '').trim());
+      if (key) args[key] = value;
+    }
+
+    const namedRegex = /<\s*arg\s+name\s*=\s*['\"]?([^'\">]+)['\"]?\s*>([\s\S]*?)<\s*\/\s*arg\s*>/gi;
+    while ((match = namedRegex.exec(block))) {
+      const key = String(match[1] || '').trim();
+      const value = this.coerceXmlArgValue(String(match[2] || '').trim());
+      if (key) args[key] = value;
+    }
+
+    return args;
+  }
+
+  coerceXmlArgValue(value: string): unknown {
+    if (!value) return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (!Number.isNaN(Number(trimmed)) && trimmed.length < 18) return Number(trimmed);
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed;
+    }
+  }
+
+  stripXmlToolCalls(text: string): string {
+    if (!text || typeof text !== 'string') return text;
+    let cleaned = text;
+    cleaned = cleaned.replace(/<\s*(?:tool|function)_call[^>]*>[\s\S]*?<\s*\/\s*(?:tool|function)_call\s*>/gi, '');
+    cleaned = cleaned.replace(/[A-Za-z0-9_]+\s*<\s*argkey\s*>[\s\S]*?<\s*\/\s*tool_call\s*>/gi, '');
+    cleaned = cleaned.replace(/<\s*argkey\s*>[\s\S]*?<\s*\/\s*argvalue\s*>/gi, '');
+    return cleaned.trim();
   }
 
   parsePlanSteps(text: string) {
@@ -876,10 +1103,10 @@ Before your next tool call, verify:
             status: {
               type: 'string',
               enum: ['done', 'pending', 'blocked'],
-              description: 'New status for the step',
+              description: 'New status for the step (defaults to "done")',
             },
           },
-          required: ['step_index', 'status'],
+          required: ['step_index'],
         },
       },
     ]);

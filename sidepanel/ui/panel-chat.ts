@@ -14,6 +14,7 @@ import { SidePanelUI } from './panel-ui.js';
   }
 
   this.elements.userInput.value = '';
+  this.elements.userInput.style.height = '';
   if (!this.firstUserMessage) {
     this.firstUserMessage = userMessage;
   }

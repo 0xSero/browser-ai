@@ -36,9 +36,8 @@ import { SidePanelUI } from './panel-ui.js';
     onAccount: () => this.openAccountPanel(),
   });
 
-  // Legacy settings toggle (if old button exists)
   this.elements.settingsBtn?.addEventListener('click', () => {
-    void this.toggleSettings();
+    this.openSettingsPanel();
   });
 
   this.elements.accountBtn?.addEventListener('click', () => {
@@ -164,6 +163,13 @@ import { SidePanelUI } from './panel-ui.js';
       event.preventDefault();
       this.sendMessage();
     }
+  });
+
+  // Auto-expand textarea height as user types
+  const userInput = this.elements.userInput;
+  userInput?.addEventListener('input', function () {
+    userInput.style.height = 'auto';
+    userInput.style.height = `${userInput.scrollHeight}px`;
   });
 
   // Model selector
