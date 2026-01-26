@@ -25,6 +25,7 @@ import { SidePanelUI } from './panel-ui.js';
   const isHidden = this.elements.tabSelector.classList.contains('hidden');
   if (isHidden) {
     await this.loadTabs();
+    this.updateTabSelectorButton();
     this.elements.tabSelector.classList.remove('hidden');
   } else {
     this.closeTabSelector();
@@ -33,6 +34,23 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).closeTabSelector = function closeTabSelector() {
   this.elements.tabSelector.classList.add('hidden');
+};
+
+(SidePanelUI.prototype as any).addActiveTabToSelection = async function addActiveTabToSelection() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab || typeof activeTab.id !== 'number') return;
+  this.selectedTabs.set(activeTab.id, this.buildSelectedTab(activeTab));
+  this.updateSelectedTabsBar();
+  this.updateTabSelectorButton();
+  this.loadTabs();
+};
+
+(SidePanelUI.prototype as any).clearSelectedTabs = function clearSelectedTabs() {
+  if (this.selectedTabs.size === 0) return;
+  this.selectedTabs.clear();
+  this.updateSelectedTabsBar();
+  this.updateTabSelectorButton();
+  this.loadTabs();
 };
 
 (SidePanelUI.prototype as any).loadTabs = async function loadTabs() {
@@ -67,7 +85,10 @@ import { SidePanelUI } from './panel-ui.js';
     const allSelected = groupTabs.every((tab) => typeof tab.id === 'number' && this.selectedTabs.has(tab.id));
     section.innerHTML = `
         <div class="tab-group-header" style="--group-color: ${color}">
-          <div class="tab-group-label">${this.escapeHtml(label)}</div>
+          <div class="tab-group-label">
+            <span>${this.escapeHtml(label)}</span>
+            <span class="tab-group-count">${groupTabs.length}</span>
+          </div>
           <button class="tab-group-toggle" type="button">${allSelected ? 'Clear' : 'Add all'}</button>
         </div>
       `;
@@ -83,10 +104,14 @@ import { SidePanelUI } from './panel-ui.js';
       const isSelected = typeof tabId === 'number' && this.selectedTabs.has(tabId);
       const item = document.createElement('div');
       item.className = `tab-item${isSelected ? ' selected' : ''}`;
+      const urlLabel = this.formatTabLabel(tab.url || '');
       item.innerHTML = `
           <div class="tab-item-checkbox"></div>
           <img class="tab-item-favicon" src="${tab.favIconUrl || 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23666%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%274%27/%3E%3C/svg%3E'">
-          <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
+          <div class="tab-item-text">
+            <span class="tab-item-title">${this.escapeHtml(tab.title || 'Untitled')}</span>
+            ${urlLabel ? `<span class=\"tab-item-url\">${this.escapeHtml(urlLabel)}</span>` : ''}
+          </div>
         `;
       item.addEventListener('click', () => this.toggleTabSelection(tab, item));
       section.appendChild(item);
@@ -216,10 +241,16 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).updateTabSelectorButton = function updateTabSelectorButton() {
-  if (this.selectedTabs.size > 0) {
+  const count = this.selectedTabs.size;
+  if (count > 0) {
     this.elements.tabSelectorBtn.classList.add('has-selection');
+    this.elements.tabSelectorBtn.dataset.count = String(count);
   } else {
     this.elements.tabSelectorBtn.classList.remove('has-selection');
+    delete this.elements.tabSelectorBtn.dataset.count;
+  }
+  if (this.elements.tabSelectorSummary) {
+    this.elements.tabSelectorSummary.textContent = count > 0 ? `${count} selected` : 'No tabs selected';
   }
 };
 
@@ -238,13 +269,25 @@ import { SidePanelUI } from './panel-ui.js';
   return palette[colorName] || 'var(--text-tertiary)';
 };
 
+(SidePanelUI.prototype as any).formatTabLabel = function formatTabLabel(url?: string) {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
 (SidePanelUI.prototype as any).getSelectedTabsContext = function getSelectedTabsContext() {
   if (this.selectedTabs.size === 0) return '';
 
   let context = '\n\n[Context from selected tabs:]\n';
   this.selectedTabs.forEach((tab: any) => {
     const tabTitle = tab.title || 'Untitled';
-    context += `- Tab [${tab.id}] "${tabTitle}": ${tab.url}\n`;
+    const groupLabel = tab.groupTitle ? `${tab.groupTitle} · ` : '';
+    const urlLabel = tab.url || '';
+    context += `- ${groupLabel}"${tabTitle}": ${urlLabel}\n`;
   });
   return context;
 };

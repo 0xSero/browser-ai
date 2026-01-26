@@ -326,7 +326,7 @@
 }
 
 .plan-checklist-item.current {
-  background: hsla(var(--accent-hsl), 0.08);
+  background: rgba(168, 99, 255, 0.12);
   border-left: 2px solid var(--accent);
   padding-left: 4px;
 }
@@ -360,8 +360,8 @@
 }
 
 .plan-checklist-checkbox.checked {
-  background: var(--success);
-  border-color: var(--success);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .plan-checklist-checkbox.checked svg {
@@ -455,7 +455,7 @@
 }
 
 .plan-step-done .plan-step-dot {
-  background: var(--success);
+  background: var(--accent);
 }
 
 .plan-step-blocked .plan-step-dot {

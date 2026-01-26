@@ -20,6 +20,8 @@ export class SidePanelUI {
   scrollPositions: Map<string, number>;
   pendingToolCount: number;
   isStreaming: boolean;
+  thinkingStartedAt: number | null;
+  thinkingTimerId: number | null;
   streamingState: {
     container: HTMLElement;
     eventsEl: HTMLElement | null;
@@ -81,6 +83,8 @@ export class SidePanelUI {
     this.scrollPositions = new Map();
     this.pendingToolCount = 0;
     this.isStreaming = false;
+    this.thinkingStartedAt = null;
+    this.thinkingTimerId = null;
     this.streamingState = null;
     this.userScrolledUp = false;
     this.isNearBottom = true;

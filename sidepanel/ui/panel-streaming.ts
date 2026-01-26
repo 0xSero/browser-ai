@@ -2,20 +2,51 @@ import { dedupeThinking } from '../../ai/message-utils.js';
 import type { RunPlan } from '../../types/plan.js';
 import { SidePanelUI } from './panel-ui.js';
 
+const formatElapsed = (elapsedMs: number) => {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const minuteLabel = minutes.toString().padStart(1, '0');
+  const secondLabel = seconds.toString().padStart(2, '0');
+  return `${minuteLabel}:${secondLabel}`;
+};
+
 (SidePanelUI.prototype as any).handleAssistantStream = function handleAssistantStream(event: any) {
   if (event.status === 'start') {
     this.isStreaming = true;
     this.clearErrorBanner();
     this.startStreamingMessage();
-    this.updateStatus('Model is thinking...', 'active');
+    this.startThinkingTimer();
   } else if (event.status === 'delta') {
     this.isStreaming = true;
     this.updateStreamingMessage(event.content || '');
   } else if (event.status === 'stop') {
     this.isStreaming = false;
     this.completeStreamingMessage();
+    this.stopThinkingTimer();
   }
   this.updateActivityState();
+};
+
+(SidePanelUI.prototype as any).startThinkingTimer = function startThinkingTimer() {
+  if (this.thinkingTimerId) {
+    window.clearInterval(this.thinkingTimerId);
+  }
+  this.thinkingStartedAt = Date.now();
+  const updateTimer = () => {
+    const elapsed = formatElapsed(Date.now() - (this.thinkingStartedAt || Date.now()));
+    this.updateStatus(`Thinking ${elapsed}`, 'active');
+  };
+  updateTimer();
+  this.thinkingTimerId = window.setInterval(updateTimer, 1000);
+};
+
+(SidePanelUI.prototype as any).stopThinkingTimer = function stopThinkingTimer() {
+  if (this.thinkingTimerId) {
+    window.clearInterval(this.thinkingTimerId);
+    this.thinkingTimerId = null;
+  }
+  this.thinkingStartedAt = null;
 };
 
 (SidePanelUI.prototype as any).startStreamingMessage = function startStreamingMessage() {

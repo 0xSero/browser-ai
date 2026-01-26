@@ -56,6 +56,7 @@ import { SidePanelUI } from './panel-ui.js';
     });
     this.persistHistory();
   } catch (error: any) {
+    this.stopThinkingTimer?.();
     this.updateStatus('Error: ' + error.message, 'error');
     this.elements.composer?.classList.remove('running');
     this.displayAssistantMessage('Sorry, an error occurred: ' + error.message);
@@ -75,6 +76,7 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.chatMessages.appendChild(turn);
   this.lastChatTurn = turn;
   this.scrollToBottom({ force: true });
+  this.updateChatEmptyState();
 };
 
 (SidePanelUI.prototype as any).displaySummaryMessage = function displaySummaryMessage(
@@ -89,6 +91,15 @@ import { SidePanelUI } from './panel-ui.js';
     `;
   this.elements.chatMessages.appendChild(container);
   this.scrollToBottom();
+  this.updateChatEmptyState();
+};
+
+(SidePanelUI.prototype as any).updateChatEmptyState = function updateChatEmptyState() {
+  const emptyState = this.elements.chatEmptyState;
+  if (!emptyState) return;
+  const hasMessages = (this.displayHistory && this.displayHistory.length > 0) ||
+    (this.elements.chatMessages && this.elements.chatMessages.children.length > 0);
+  emptyState.classList.toggle('hidden', hasMessages);
 };
 
 (SidePanelUI.prototype as any).displayAssistantMessage = function displayAssistantMessage(
@@ -97,6 +108,7 @@ import { SidePanelUI } from './panel-ui.js';
   usage: UsagePayload | null = null,
   model: string | null = null,
 ) {
+  this.stopThinkingTimer?.();
   const streamResult = this.finishStreamingMessage();
   const streamedContainer = streamResult?.container;
   const streamEventsEl = streamedContainer?.querySelector('.stream-events') as HTMLElement | null;
@@ -177,6 +189,7 @@ import { SidePanelUI } from './panel-ui.js';
     this.pendingToolCount = 0;
     this.updateActivityState();
     this.persistHistory();
+    this.updateChatEmptyState();
     return;
   }
 
@@ -233,4 +246,5 @@ import { SidePanelUI } from './panel-ui.js';
   this.pendingToolCount = 0;
   this.updateActivityState();
   this.persistHistory();
+  this.updateChatEmptyState();
 };

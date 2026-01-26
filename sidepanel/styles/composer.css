@@ -10,14 +10,14 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: linear-gradient(180deg, hsl(30, 7%, 13%) 0%, hsl(30, 6%, 9%) 100%);
-  border: 1px solid hsl(30, 6%, 19%);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 18px;
   width: min(860px, 100%);
   overflow: hidden;
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
     inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
   position: relative;
@@ -25,9 +25,9 @@
 
 /* Running state - model is working */
 .composer.running {
-  border-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.16);
   box-shadow:
-    0 0 0 1px var(--accent),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
     0 18px 42px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -41,7 +41,7 @@
   height: 2px;
   background: linear-gradient(90deg,
     transparent 0%,
-    var(--accent) 50%,
+    rgba(255, 255, 255, 0.4) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -83,6 +83,10 @@
   outline: none;
 }
 
+.composer textarea:focus-visible {
+  outline: none;
+}
+
 .composer textarea::placeholder {
   color: var(--muted-dim);
 }
@@ -93,8 +97,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.35));
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--card);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .composer-toolbar-left {
@@ -164,35 +168,76 @@
   color: var(--foreground);
 }
 
+.tab-selector-btn {
+  position: relative;
+}
+
+.tab-selector-btn.has-selection {
+  background: rgba(168, 99, 255, 0.18);
+  border-color: rgba(168, 99, 255, 0.4);
+  color: var(--foreground);
+}
+
+.tab-selector-btn.has-selection::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
 .model-selector {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 9999px;
-  font-size: 11px;
-  font-family: var(--font-mono);
+  font-size: 12px;
+  font-family: var(--font-sans);
   color: var(--foreground);
   cursor: pointer;
   transition: all 0.15s;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .model-selector:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--foreground);
+}
+
+.model-selector-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-dim);
 }
 
 .model-selector select {
   background: transparent;
   border: none;
-  color: inherit;
-  font: inherit;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
   padding-right: 4px;
   appearance: none;
-  max-width: 200px;
+  max-width: 180px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -214,18 +259,80 @@
 
 .selected-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.selected-tab-pill {
-  padding: 4px 8px;
+.selected-tabs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.selected-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 10px;
-  background: hsl(30, 12%, 16%);
-  color: hsl(30, 40%, 65%);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.selected-group-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--group-color, var(--accent));
+}
+
+.selected-group-count {
+  font-size: 10px;
+  padding: 1px 6px;
   border-radius: 9999px;
-  border: 1px solid hsl(30, 10%, 22%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+
+.selected-tabs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--foreground);
+}
+
+.selected-tab-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--muted-dim);
+}
+
+.selected-tab-chip button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
 }
 
 /* Buttons */

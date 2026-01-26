@@ -23,6 +23,7 @@ import { SidePanelUI } from './panel-ui.js';
   this.updateModelDisplay();
   console.log('[Parchi] Calling fetchAvailableModels...');
   this.fetchAvailableModels();
+  this.updateChatEmptyState?.();
   console.log('[Parchi] init() complete');
 };
 
@@ -184,6 +185,10 @@ import { SidePanelUI } from './panel-ui.js';
   // Tab selector
   this.elements.tabSelectorBtn?.addEventListener('click', () => this.toggleTabSelector());
   this.elements.closeTabSelector?.addEventListener('click', () => this.closeTabSelector());
+  this.elements.tabSelectorAddActive?.addEventListener('click', () => this.addActiveTabToSelection());
+  this.elements.tabSelectorClear?.addEventListener('click', () => this.clearSelectedTabs());
+  const tabBackdrop = this.elements.tabSelector?.querySelector('.modal-backdrop');
+  tabBackdrop?.addEventListener('click', () => this.closeTabSelector());
 
   this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
   this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));

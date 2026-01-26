@@ -516,49 +516,228 @@
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
 }
 
 .modal-content {
   position: relative;
-  width: min(400px, 90vw);
-  max-height: 70vh;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  overflow-y: auto;
+  width: min(520px, 92vw);
+  max-height: 75vh;
+  background: linear-gradient(180deg, hsl(30, 6%, 14%), hsl(30, 6%, 10%));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-title-row {
+  display: flex;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 500;
+  gap: 8px;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.modal-subtitle {
+  font-size: 11px;
+  color: var(--muted-dim);
+  line-height: 1.4;
+  max-width: 320px;
+}
+
+.tab-selector-summary {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-selector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-selector-hint {
+  font-size: 10px;
+  color: var(--muted-dim);
+  margin-top: -4px;
 }
 
 .tab-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tab-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tab-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tab-group-label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--group-color, var(--muted));
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.tab-group-count {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-group-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+.tab-group-toggle:hover {
+  color: var(--foreground);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .tab-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 10px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  font-size: 12px;
+  transition: all 0.15s;
 }
 
 .tab-item:hover {
-  background: var(--card-hover);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
 }
+
 .tab-item.selected {
-  background: hsl(270, 25%, 15%);
+  background: rgba(128, 94, 220, 0.18);
+  border-color: rgba(168, 99, 255, 0.45);
+}
+
+.tab-item-checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.02);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tab-item.selected .tab-item-checkbox {
+  background: var(--accent);
   border-color: var(--accent);
+}
+
+.tab-item.selected .tab-item-checkbox::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 4px;
+  height: 7px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+.tab-item-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tab-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tab-item-title {
+  font-size: 12px;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-item-url {
+  font-size: 10px;
+  color: var(--muted-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

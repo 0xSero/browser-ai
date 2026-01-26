@@ -56,6 +56,9 @@ export const getSidePanelElements = (): SidePanelElements => ({
 
   tabSelectorBtn: byId<HTMLButtonElement>('tabSelectorBtn'),
   tabSelector: byId<HTMLElement>('tabSelector'),
+  tabSelectorSummary: byId<HTMLElement>('tabSelectorSummary'),
+  tabSelectorAddActive: byId<HTMLButtonElement>('tabSelectorAddActive'),
+  tabSelectorClear: byId<HTMLButtonElement>('tabSelectorClear'),
   tabList: byId<HTMLElement>('tabList'),
   closeTabSelector: byId<HTMLButtonElement>('closeTabSelector'),
   selectedTabsBar: byId<HTMLElement>('selectedTabsBar'),
@@ -153,6 +156,7 @@ export const getSidePanelElements = (): SidePanelElements => ({
 
   // Chat interface
   chatMessages: byId<HTMLElement>('chatMessages'),
+  chatEmptyState: byId<HTMLElement>('chatEmptyState'),
   userInput: byId<HTMLTextAreaElement>('userInput'),
   sendBtn: byId<HTMLButtonElement>('sendBtn'),
   composer: byId<HTMLElement>('composer'),

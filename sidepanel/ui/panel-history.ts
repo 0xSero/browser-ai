@@ -34,6 +34,13 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).loadHistoryList = async function loadHistoryList() {
   if (!this.elements.historyItems) return;
+
+  const saveEnabled = this.elements.saveHistory?.value !== 'false';
+  if (!saveEnabled) {
+    this.elements.historyItems.innerHTML =
+      '<div class="history-empty">History is off. Enable “Save History” in Settings to see past chats.</div>';
+    return;
+  }
   
   try {
     const { chatSessions = [] } = await chrome.storage.local.get(['chatSessions']);
@@ -197,4 +204,5 @@ import { SidePanelUI } from './panel-ui.js';
     }
   });
   this.restoreScrollPosition();
+  this.updateChatEmptyState();
 };
