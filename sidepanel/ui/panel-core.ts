@@ -239,6 +239,13 @@ import { SidePanelUI } from './panel-ui.js';
     } else if (message.type === 'assistant_stream_stop') {
       this.handleAssistantStream({ status: 'stop' });
     } else if (message.type === 'run_error' || message.type === 'error') {
+      this.stopThinkingTimer?.();
+      this.elements.composer?.classList.remove('running');
+      this.pendingToolCount = 0;
+      this.isStreaming = false;
+      this.activeToolName = null;
+      this.updateActivityState();
+      this.finishStreamingMessage();
       this.showErrorBanner(message.message);
       this.updateStatus('Error', 'error');
     } else if (message.type === 'run_warning' || message.type === 'warning') {
@@ -329,6 +336,13 @@ import { SidePanelUI } from './panel-ui.js';
   }
 
   if (message.type === 'run_error') {
+    this.stopThinkingTimer?.();
+    this.elements.composer?.classList.remove('running');
+    this.pendingToolCount = 0;
+    this.isStreaming = false;
+    this.activeToolName = null;
+    this.updateActivityState();
+    this.finishStreamingMessage();
     this.showErrorBanner(message.message);
     this.updateStatus('Error', 'error');
     return;
