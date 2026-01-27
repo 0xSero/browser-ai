@@ -41,10 +41,6 @@ import { SidePanelUI } from './panel-ui.js';
     this.openSettingsPanel();
   });
 
-  this.elements.accountBtn?.addEventListener('click', () => {
-    this.toggleAccessPanel();
-  });
-
   this.elements.authStartBtn?.addEventListener('click', (event) => {
     event?.preventDefault?.();
     this.startEmailAuth();
@@ -103,11 +99,6 @@ import { SidePanelUI } from './panel-ui.js';
   this.elements.settingsTabProfilesBtn?.addEventListener('click', () => this.switchSettingsTab('profiles'));
   this.elements.createProfileBtn?.addEventListener('click', () => this.createProfileFromInput());
   this.elements.openGeneralBtn?.addEventListener('click', () => this.switchSettingsTab('general'));
-  this.elements.openProfilesBtn?.addEventListener('click', () => this.switchSettingsTab('profiles'));
-  this.elements.generalProfileSelect?.addEventListener('change', (event) =>
-    this.setActiveConfig((event.target as HTMLSelectElement).value),
-  );
-
   this.elements.agentGrid?.addEventListener('click', (event) => {
     const pill = (event.target as HTMLElement | null)?.closest('.role-pill');
     if (pill) {
@@ -133,10 +124,6 @@ import { SidePanelUI } from './panel-ui.js';
     this.assignProfileRole(profile, role);
   });
   this.elements.refreshProfilesBtn?.addEventListener('click', () => this.renderProfileGrid());
-
-  // View toggles
-  this.elements.viewChatBtn?.addEventListener('click', () => this.switchView('chat'));
-  this.elements.viewHistoryBtn?.addEventListener('click', () => this.switchView('history'));
 
   // Screenshot + vision controls
   this.elements.enableScreenshots?.addEventListener('change', () => this.updateScreenshotToggleState());
@@ -198,8 +185,6 @@ import { SidePanelUI } from './panel-ui.js';
 
   this.elements.chatMessages?.addEventListener('scroll', () => this.handleChatScroll());
   this.elements.scrollToLatestBtn?.addEventListener('click', () => this.scrollToBottom({ force: true }));
-
-  this.elements.activityCloseBtn?.addEventListener('click', () => this.toggleActivityPanel(false));
 
   // Profile editor controls
   this.elements.profileEditorProvider?.addEventListener('change', () => this.toggleProfileEditorEndpoint());

@@ -68,8 +68,7 @@
   flex: 1;
 }
 
-.error-banner .error-dismiss,
-.run-incomplete-dismiss {
+.error-banner .error-dismiss {
   flex-shrink: 0;
   padding: 2px 8px;
   font-size: 11px;
@@ -80,18 +79,9 @@
   cursor: pointer;
 }
 
-.error-banner .error-dismiss:hover,
-.run-incomplete-dismiss:hover {
+.error-banner .error-dismiss:hover {
   background: var(--card-hover);
   color: var(--foreground);
-}
-
-.run-incomplete-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--warning, hsl(40, 80%, 50%));
-  flex-shrink: 0;
 }
 
 /* Text utilities */

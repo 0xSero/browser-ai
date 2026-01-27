@@ -24,12 +24,6 @@ import { SidePanelUI } from './panel-ui.js';
       this.streamingState.lastEventType = 'tool';
     }
 
-    if (this.elements.toolLog) {
-      const logEntry = this.createToolTreeItem(entryId, toolName, args);
-      entry.log = logEntry;
-      this.elements.toolLog.appendChild(logEntry.container);
-    }
-
     this.scrollToBottom();
   }
 
@@ -116,9 +110,6 @@ import { SidePanelUI } from './panel-ui.js';
     }
   }
 
-  if (this.elements.toolLog) {
-    this.scrollToolLogToBottom();
-  }
 };
 
 (SidePanelUI.prototype as any).showErrorBanner = function showErrorBanner(message: string) {
@@ -289,76 +280,32 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).updateActivityToggle = function updateActivityToggle() {
-  const toggle = this.elements.activityToggleBtn;
-  if (!toggle) return;
-  const toolCount = this.toolCallViews.size;
-  const hasThinking = Boolean(this.latestThinking);
-  const segments: string[] = [];
-  if (toolCount > 0) {
-    segments.push(`${toolCount} tool${toolCount === 1 ? '' : 's'}`);
-  }
-  if (hasThinking) {
-    segments.push('thinking');
-  }
-  if (this.activeToolName) {
-    segments.push(`${this.activeToolName}…`);
-  }
-  toggle.textContent = segments.length ? `Activity · ${segments.join(' · ')}` : 'Activity';
-  const hasActiveWork = this.pendingToolCount > 0 || this.isStreaming;
-  toggle.classList.toggle('active', hasActiveWork);
+  // Activity panel removed — no-op
 };
 
-(SidePanelUI.prototype as any).toggleActivityPanel = function toggleActivityPanel(force?: boolean) {
-  const shouldOpen = typeof force === 'boolean' ? force : !this.activityPanelOpen;
-  this.activityPanelOpen = shouldOpen;
-  if (this.elements.activityPanel) {
-    this.elements.activityPanel.classList.toggle('open', shouldOpen);
-    this.elements.activityPanel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
-  }
-  this.elements.activityToggleBtn?.classList.toggle('open', shouldOpen);
-  this.elements.chatInterface?.classList.toggle('activity-open', shouldOpen);
-  if (shouldOpen) {
-    this.scrollToolLogToBottom();
-  }
+(SidePanelUI.prototype as any).toggleActivityPanel = function toggleActivityPanel(_force?: boolean) {
+  // Activity panel removed — no-op
 };
 
 (SidePanelUI.prototype as any).updateThinkingPanel = function updateThinkingPanel(
   thinking: string | null,
-  isStreaming = false,
+  _isStreaming = false,
 ) {
-  const panel = this.elements.thinkingPanel;
-  if (!panel) return;
-  const content = thinking ? thinking.trim() : '';
-  if (content) {
-    const cleaned = dedupeThinking(content);
-    this.latestThinking = cleaned;
-    panel.textContent = cleaned;
-    panel.classList.remove('empty');
-  } else {
-    if (!isStreaming) {
-      this.latestThinking = null;
-    }
-    panel.textContent = isStreaming ? 'Thinking…' : 'No reasoning captured yet.';
-    panel.classList.add('empty');
+  // Thinking panel removed — just track latest thinking for activity state
+  if (thinking) {
+    this.latestThinking = dedupeThinking(thinking.trim());
+  } else if (!_isStreaming) {
+    this.latestThinking = null;
   }
-  panel.classList.toggle('streaming', isStreaming);
 };
 
 (SidePanelUI.prototype as any).resetActivityPanel = function resetActivityPanel() {
-  if (this.elements.toolLog) {
-    this.elements.toolLog.innerHTML = '';
-  }
   if (this.elements.chatMessages) {
     const tree = this.elements.chatMessages.querySelector('.tool-tree');
     if (tree) tree.remove();
   }
   this.latestThinking = null;
   this.activeToolName = null;
-  this.updateThinkingPanel(null, false);
-  this.updateActivityToggle();
 };
 
-(SidePanelUI.prototype as any).scrollToolLogToBottom = function scrollToolLogToBottom() {
-  if (!this.elements.toolLog) return;
-  this.elements.toolLog.scrollTop = this.elements.toolLog.scrollHeight;
-};
+// scrollToolLogToBottom removed — toolLog panel no longer exists

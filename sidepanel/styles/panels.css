@@ -148,20 +148,6 @@
   gap: 10px;
 }
 
-.settings-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
-.settings-inline {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
 /* Form */
 .form-group {
   display: flex;

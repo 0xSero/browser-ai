@@ -94,15 +94,6 @@ import { SidePanelUI } from './panel-ui.js';
       : 'No active plan';
   }
 
-  if (this.elements.accountBtn) {
-    const label = accountRequired
-      ? state === 'auth'
-        ? 'Signed out'
-        : this.authState?.email || 'Signed in'
-      : this.authState?.email || 'Account';
-    this.elements.accountBtn.textContent = label;
-  }
-
   if (this.elements.accountNavLabel) {
     const navLabel = this.authState?.email || 'Account';
     this.elements.accountNavLabel.textContent = navLabel;
@@ -114,8 +105,6 @@ import { SidePanelUI } from './panel-ui.js';
   }
 
   const locked = showAccess;
-  if (this.elements.viewChatBtn) this.elements.viewChatBtn.disabled = locked;
-  if (this.elements.viewHistoryBtn) this.elements.viewHistoryBtn.disabled = locked;
   if (this.elements.startNewSessionBtn) this.elements.startNewSessionBtn.disabled = locked;
   if (this.elements.sendBtn) this.elements.sendBtn.disabled = locked;
   if (this.elements.userInput) this.elements.userInput.disabled = locked;

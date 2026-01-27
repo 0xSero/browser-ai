@@ -75,9 +75,6 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).refreshConfigDropdown = function refreshConfigDropdown() {
   this.elements.activeConfig.innerHTML = '';
-  if (this.elements.generalProfileSelect) {
-    this.elements.generalProfileSelect.innerHTML = '';
-  }
   Object.keys(this.configs).forEach((name) => {
     const option = document.createElement('option');
     option.value = name;
@@ -86,16 +83,6 @@ import { SidePanelUI } from './panel-ui.js';
       option.selected = true;
     }
     this.elements.activeConfig.appendChild(option);
-
-    if (this.elements.generalProfileSelect) {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      if (name === this.currentConfig) {
-        opt.selected = true;
-      }
-      this.elements.generalProfileSelect.appendChild(opt);
-    }
   });
   this.refreshProfileSelectors();
   this.updateModelDisplay();

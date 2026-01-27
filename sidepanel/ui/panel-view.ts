@@ -12,13 +12,9 @@ import { SidePanelUI } from './panel-ui.js';
     this.recordScrollPosition();
     this.elements.chatInterface.classList.add('hidden');
     this.elements.historyPanel.classList.remove('hidden');
-    this.elements.viewHistoryBtn?.classList.add('active');
-    this.elements.viewChatBtn?.classList.remove('active', 'live-active');
   } else {
     this.elements.chatInterface.classList.remove('hidden');
     this.elements.historyPanel.classList.add('hidden');
-    this.elements.viewChatBtn?.classList.add('active', 'live-active');
-    this.elements.viewHistoryBtn?.classList.remove('active');
     this.restoreScrollPosition();
   }
 };
