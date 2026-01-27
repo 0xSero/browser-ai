@@ -54,6 +54,29 @@ class BackgroundService {
   init() {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
 
+    // Kimi API requires a coding-agent User-Agent header.
+    // Chrome MV3 service workers cannot set User-Agent via fetch(),
+    // so we use declarativeNetRequest to inject it at the network level.
+    chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [9000],
+      addRules: [{
+        id: 9000,
+        priority: 1,
+        action: {
+          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+          requestHeaders: [{
+            header: 'User-Agent',
+            operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+            value: 'claude-code/1.0',
+          }],
+        },
+        condition: {
+          urlFilter: '||api.kimi.com',
+          resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+        },
+      }],
+    }).catch((e) => console.warn('Failed to set Kimi UA rule:', e));
+
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       this.handleMessage(message, sender, sendResponse);
       return true;

@@ -9,7 +9,8 @@
     "scripting",
     "tabs",
     "tabGroups",
-    "storage"
+    "storage",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "<all_urls>"
