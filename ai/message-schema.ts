@@ -1,5 +1,5 @@
 // Message schema utilities for extension <-> provider payloads
-export type Role = 'system' | 'user' | 'assistant' | 'tool';
+type Role = 'system' | 'user' | 'assistant' | 'tool';
 export type ContentPart =
   | string
   | {
@@ -25,11 +25,11 @@ export type Usage = {
   outputTokens: number;
   totalTokens: number;
 };
-export type OpenAIFunctionCall = {
+type OpenAIFunctionCall = {
   name?: string;
   arguments?: string;
 };
-export type OpenAIToolCall = {
+type OpenAIToolCall = {
   id?: string;
   type?: string;
   function?: OpenAIFunctionCall;
@@ -39,7 +39,7 @@ export type OpenAIToolCall = {
   arguments?: string;
   index?: number;
 };
-export type MessageMeta = {
+type MessageMeta = {
   kind?: 'summary' | 'compaction' | 'context' | 'tool';
   summaryOfCount?: number;
   source?: string;
@@ -61,7 +61,7 @@ export type Message = {
   usage?: Usage;
   meta?: MessageMeta;
 };
-export type ProviderMessage = {
+type ProviderMessage = {
   role: Role;
   content: MessageContent;
   tool_calls?: OpenAIToolCall[];
@@ -71,7 +71,7 @@ export type ProviderMessage = {
 
 const ROLE_SET = new Set<Role>(['system', 'user', 'assistant', 'tool']);
 
-export function createMessageId(): string {
+function createMessageId(): string {
   return `msg_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }
 
@@ -187,7 +187,7 @@ export function toProviderMessages(history: Message[] = []): ProviderMessage[] {
   });
 }
 
-export function normalizeToolCalls(toolCalls: Array<ToolCall | OpenAIToolCall> = []): ToolCall[] {
+function normalizeToolCalls(toolCalls: Array<ToolCall | OpenAIToolCall> = []): ToolCall[] {
   return toolCalls.map((call) => ({
     id: typeof call?.id === 'string' ? call.id : createMessageId(),
     name:

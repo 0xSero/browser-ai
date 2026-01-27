@@ -1,13 +1,6 @@
 import type { Message, Usage } from './message-schema.js';
 import { estimateTokensFromContent } from './message-utils.js';
 
-export type CompactionResult = {
-  compacted: Message[];
-  summaryMessage: Message;
-  trimmedCount: number;
-  preservedCount: number;
-};
-
 export type CompactionSettings = {
   enabled: boolean;
   reserveTokens: number;
@@ -18,13 +11,6 @@ export const DEFAULT_COMPACTION_SETTINGS: CompactionSettings = {
   enabled: true,
   reserveTokens: 16384,
   keepRecentTokens: 20000,
-};
-
-export type ContextUsageEstimate = {
-  tokens: number;
-  usageTokens: number;
-  trailingTokens: number;
-  lastUsageIndex: number | null;
 };
 
 export const SUMMARIZATION_SYSTEM_PROMPT = `You are a context summarization assistant. Your task is to read a conversation between a user and an AI coding assistant, then produce a structured summary following the exact format specified.
@@ -103,7 +89,7 @@ Use this EXACT format:
 
 Keep each section concise. Preserve exact file paths, function names, and error messages.`;
 
-export function calculateContextTokens(usage: Usage): number {
+function calculateContextTokens(usage: Usage): number {
   return usage.totalTokens || usage.inputTokens + usage.outputTokens;
 }
 
@@ -120,7 +106,12 @@ function getLastAssistantUsageInfo(messages: Message[]): { usage: Usage; index: 
   return undefined;
 }
 
-export function estimateContextTokens(messages: Message[]): ContextUsageEstimate {
+export function estimateContextTokens(messages: Message[]): {
+  tokens: number;
+  usageTokens: number;
+  trailingTokens: number;
+  lastUsageIndex: number | null;
+} {
   const usageInfo = getLastAssistantUsageInfo(messages);
   if (!usageInfo) {
     let estimated = 0;
@@ -169,7 +160,7 @@ export function shouldCompact({
   };
 }
 
-export function estimateTokens(message: Message): number {
+function estimateTokens(message: Message): number {
   let tokens = estimateTokensFromContent(message.content);
   if (message.thinking) {
     tokens += Math.ceil(message.thinking.length / 4);
@@ -306,7 +297,12 @@ export function applyCompaction({
   summaryMessage: Message;
   preserved: Message[];
   trimmedCount: number;
-}): CompactionResult {
+}): {
+  compacted: Message[];
+  summaryMessage: Message;
+  trimmedCount: number;
+  preservedCount: number;
+} {
   return {
     compacted: [summaryMessage, ...preserved],
     summaryMessage,
