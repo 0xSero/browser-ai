@@ -112,7 +112,7 @@ export class AIProvider {
     this.streamEnabled = Boolean(options?.stream);
     this.streamCallbacks = options?.streamCallbacks || null;
 
-    if (this.provider === 'anthropic') {
+    if (this.provider === 'anthropic' || this.provider === 'kimi') {
       return await this.callAnthropic(tools);
     } else {
       // OpenAI or compatible
@@ -181,6 +181,9 @@ Base every answer strictly on real tool output.`;
       'x-api-key': this.apiKey,
       'anthropic-version': '2023-06-01',
     };
+    if (this.provider === 'kimi') {
+      headers['User-Agent'] = 'claude-code/1.0';
+    }
     return headers;
   }
 
@@ -379,7 +382,10 @@ Base every answer strictly on real tool output.`;
   }
 
   getAnthropicEndpoint(): string {
-    const defaultBase = 'https://api.anthropic.com';
+    let defaultBase = 'https://api.anthropic.com';
+    if (this.provider === 'kimi') {
+      defaultBase = 'https://api.kimi.com/coding';
+    }
     const rawBase = (this.customEndpoint || defaultBase).replace(/\/+$/, '');
     if (/\/v1\/messages$/i.test(rawBase)) return rawBase;
     if (/\/messages$/i.test(rawBase)) return rawBase;
@@ -524,7 +530,7 @@ Base every answer strictly on real tool output.`;
   }
 
   addToolResult(toolCallId: string, result: Record<string, any>) {
-    if (this.provider === 'anthropic') {
+    if (this.provider === 'anthropic' || this.provider === 'kimi') {
       // Anthropic format - tool results must be in a user message
       // Check if we need to append to existing user message with tool_results
       const lastMsg = this.messages[this.messages.length - 1];
@@ -634,14 +640,14 @@ Base every answer strictly on real tool output.`;
     }
 
     // Anthropic: all Claude models support vision with their format
-    if (this.provider === 'anthropic') {
+    if (this.provider === 'anthropic' || this.provider === 'kimi') {
       return true;
     }
 
     // OpenAI and OpenAI-compatible endpoints: rely on the user toggle
     // If a custom endpoint cannot handle the multi-part payload, the user can
     // simply disable screenshot sending in settings.
-    if (this.provider === 'openai' || this.provider === 'custom' || this.provider === 'kimi') {
+    if (this.provider === 'openai' || this.provider === 'custom') {
       return true;
     }
 
@@ -653,7 +659,7 @@ Base every answer strictly on real tool output.`;
     // Use the tools that were provided in the initial chat() call
     const tools = this.availableTools || [];
 
-    if (this.provider === 'anthropic') {
+    if (this.provider === 'anthropic' || this.provider === 'kimi') {
       const response = await this.callAnthropic(tools);
       return {
         content: response.content,
@@ -854,7 +860,7 @@ Base every answer strictly on real tool output.`;
     }
     const base64Data = dataUrl.split(',')[1];
 
-    if (this.provider === 'anthropic') {
+    if (this.provider === 'anthropic' || this.provider === 'kimi') {
       const payload = {
         model: this.model,
         max_tokens: Math.min(this.maxTokens, 1024),

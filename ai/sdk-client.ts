@@ -30,7 +30,27 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
     return providerInstance(modelId);
   }
 
-  if (provider === 'custom' || provider === 'kimi') {
+  if (provider === 'kimi') {
+    // Kimi is Anthropic-compatible (x-api-key + /v1/messages)
+    // Also requires User-Agent header (enforced via declarativeNetRequest in background.ts)
+    let baseURL = (settings.customEndpoint || 'https://api.kimi.com/coding')
+      .replace(/\/v1\/messages\/?$/i, '')
+      .replace(/\/messages\/?$/i, '')
+      .replace(/\/+$/, '');
+
+    // createAnthropic expects base ending in /v1 — it appends /messages
+    if (!/\/v1$/i.test(baseURL)) {
+      baseURL = `${baseURL}/v1`;
+    }
+
+    const kimiProvider = createAnthropic({
+      apiKey,
+      baseURL,
+    });
+    return kimiProvider(modelId);
+  }
+
+  if (provider === 'custom') {
     // Normalize the base URL
     // - Remove /chat/completions suffix if present (SDK will add it)
     // - Remove /messages suffix if present
@@ -46,28 +66,13 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
     let baseURL = rawBase;
 
     if (!baseURL) {
-      if (provider === 'kimi') {
-        baseURL = 'https://api.kimi.com/coding/v1';
-      } else {
-        throw new Error('Custom provider requires a customEndpoint to be configured');
-      }
+      throw new Error('Custom provider requires a customEndpoint to be configured');
     }
-
-    if (provider === 'kimi' && !/\/v1$/i.test(baseURL)) {
-      baseURL = `${baseURL}/v1`;
-    }
-
-    const kimiFetch: typeof globalThis.fetch = (input, init) => {
-      const headers = new Headers(init?.headers);
-      headers.set('User-Agent', 'claude-code/1.0');
-      return globalThis.fetch(input, { ...init, headers });
-    };
 
     const customProvider = createOpenAICompatible({
       name: provider,
       apiKey,
       baseURL,
-      ...(provider === 'kimi' ? { fetch: kimiFetch } : {}),
     });
     return customProvider(modelId);
   }

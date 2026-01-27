@@ -41,9 +41,9 @@ import { SidePanelUI } from './panel-ui.js';
   if (this.elements.customEndpoint) {
     if (provider === 'kimi') {
       if (!this.elements.customEndpoint.value || this.elements.customEndpoint.value === 'https://openrouter.ai/api/v1') {
-        this.elements.customEndpoint.value = 'https://api.kimi.com/coding/v1';
+        this.elements.customEndpoint.value = 'https://api.kimi.com/coding';
       }
-      this.elements.customEndpoint.placeholder = 'https://api.kimi.com/coding/v1';
+      this.elements.customEndpoint.placeholder = 'https://api.kimi.com/coding';
     } else if (isCustom) {
       this.elements.customEndpoint.placeholder = 'https://openrouter.ai/api/v1';
     } else {
