@@ -7,6 +7,8 @@ import { SidePanelUI } from './panel-ui.js';
   const escapeAttr = (value = '') => this.escapeAttribute(value);
 
   let working = String(text).replace(/\r\n/g, '\n');
+  
+  // Extract code blocks first (preserve them)
   const codeBlocks: string[] = [];
   const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
   working = working.replace(codeBlockRegex, (_: string, lang = '', body = '') => {
@@ -86,7 +88,6 @@ import { SidePanelUI } from './panel-ui.js';
       continue;
     }
 
-    // Handle table placeholders
     const tableMatch = trimmed.match(/^@@TABLE_(\d+)@@$/);
     if (tableMatch) {
       flushParagraph();
@@ -210,8 +211,8 @@ import { SidePanelUI } from './panel-ui.js';
       if (cells.length > 0) {
         html += '<tr>';
         cells.forEach((cell, idx) => {
-          // Use th for first column if it looks like a header cell
-          const tag = idx === 0 && cell.length < 30 ? 'th' : 'td';
+          // First column often acts as row header
+          const tag = idx === 0 ? 'th' : 'td';
           html += `<${tag}>${escape(cell)}</${tag}>`;
         });
         // Fill empty cells to match header count

@@ -58,7 +58,7 @@
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -75,41 +75,46 @@
   height: 14px;
 }
 
-/* Messages */
+/* ============================================================================
+   Message Layout - Clean, readable, flowing
+   ============================================================================ */
+
 .chat-turn {
   display: flex;
   flex-direction: column;
   gap: 0;
+  margin-bottom: 8px;
 }
 
-.message {
-  max-width: 100%;
-  padding: 8px 0;
-}
-
+/* User Message - Minimal, elegant */
 .message.user {
-  padding: 12px 0;
-  margin-bottom: 4px;
+  padding: 12px 0 16px;
+  margin-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
 .message.user .message-content {
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
+/* Assistant Message - Rich, organized */
 .message.assistant {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  padding: 8px 0 20px;
 }
 
 .message.assistant .message-content {
   color: var(--foreground);
+  font-size: 15px;
+  line-height: 1.7;
 }
 
-/* Tool message - contains tool-event details */
+/* Tool message - embedded in flow */
 .message.tool {
   padding: 0;
   margin: 0;
@@ -131,77 +136,217 @@
   margin-bottom: 2px;
 }
 
+/* ============================================================================
+   Message Content - Beautiful typography
+   ============================================================================ */
+
 .message-content {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
+/* Paragraph spacing for readability */
 .message-content p {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
 }
 
 .message-content p:last-child {
   margin-bottom: 0;
 }
 
-/* Lists */
+/* Strong emphasis */
+.message-content strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Emphasis */
+.message-content em {
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Strikethrough */
+.message-content del {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Inline code - subtle but clear */
+.message-content code {
+  padding: 2px 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+/* Code blocks - elegant, readable */
+.message-content pre {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-content pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+/* Blockquotes - elegant left accent */
+.message-content blockquote {
+  margin: 16px 0;
+  padding: 8px 0 8px 16px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  font-style: italic;
+}
+
+.message-content blockquote p {
+  margin: 0;
+}
+
+/* Links */
+.message-content a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.message-content a:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* Lists - clean hierarchy */
 .message-content ul,
 .message-content ol {
-  margin: 8px 0;
-  padding-left: 20px;
+  margin: 12px 0;
+  padding-left: 24px;
 }
 
 .message-content li {
-  margin: 4px 0;
-  line-height: 1.5;
+  margin: 6px 0;
+  line-height: 1.6;
 }
 
 .message-content li::marker {
   color: var(--muted);
 }
 
-.message-content code {
-  padding: 1px 4px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 12px;
+/* Nested lists */
+.message-content ul ul,
+.message-content ol ol,
+.message-content ul ol,
+.message-content ol ul {
+  margin: 6px 0;
 }
 
-.message-content pre {
-  margin: 8px 0;
-  padding: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+/* ============================================================================
+   Tables - Beautiful, readable data display
+   ============================================================================ */
+
+.table-wrapper {
+  margin: 16px 0;
   overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.message-content blockquote {
-  margin: 8px 0;
-  padding-left: 10px;
-  border-left: 2px solid var(--border);
-  color: var(--muted);
-}
-
-.message-content a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.message-content a:hover {
-  text-decoration: underline;
-}
-
-/* Markdown body class (used on rendered content) */
-.markdown-body {
+.markdown-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
-  line-height: 1.6;
+  background: var(--card);
+}
+
+/* Header */
+.markdown-table thead {
+  background: var(--background);
+}
+
+.markdown-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--foreground);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+
+/* Body cells */
+.markdown-table td {
+  padding: 10px 16px;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+/* First column as row header */
+.markdown-table tbody th {
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Row hover */
+.markdown-table tbody tr:hover td,
+.markdown-table tbody tr:hover th {
+  background: var(--card-hover);
+}
+
+/* Last row no border */
+.markdown-table tbody tr:last-child td,
+.markdown-table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+/* Zebra striping for large tables */
+.markdown-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.markdown-table tbody tr:nth-child(even):hover {
+  background: var(--card-hover);
+}
+
+/* Compact table variant */
+.markdown-table.compact th,
+.markdown-table.compact td {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* ============================================================================
+   Markdown Body - Consistent styling class
+   ============================================================================ */
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .markdown-body p {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
 }
 
 .markdown-body p:last-child {
@@ -210,65 +355,23 @@
 
 .markdown-body ul,
 .markdown-body ol {
-  margin: 6px 0;
-  padding-left: 18px;
+  margin: 12px 0;
+  padding-left: 24px;
 }
 
 .markdown-body li {
-  margin: 2px 0;
-  line-height: 1.5;
+  margin: 6px 0;
+  line-height: 1.6;
 }
 
-/* Tables */
-.table-wrapper {
-  margin: 12px 0;
-  overflow-x: auto;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-
-.markdown-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  background: var(--card);
-}
-
-.markdown-table thead {
-  background: var(--background);
-}
-
-.markdown-table th,
-.markdown-table td {
-  padding: 8px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.markdown-table th {
-  font-weight: 600;
-  color: var(--foreground);
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
-
-.markdown-table td {
-  color: var(--muted);
-}
-
-.markdown-table tr:last-child td,
-.markdown-table tr:last-child th {
-  border-bottom: none;
-}
-
-.markdown-table tbody tr:hover {
-  background: var(--card-hover);
-}
+/* ============================================================================
+   Summary / Context Compaction Messages
+   ============================================================================ */
 
 .message.summary {
   text-align: center;
-  padding: 10px;
+  padding: 12px 16px;
+  margin: 8px 0;
   background: hsl(270, 25%, 15%);
   border: 1px solid hsl(270, 25%, 25%);
   border-radius: var(--radius-sm);
@@ -282,27 +385,30 @@
   margin-bottom: 4px;
 }
 
-/* Thinking Block - Subtle collapsible reasoning display */
+/* ============================================================================
+   Thinking Block - Subtle reasoning display
+   ============================================================================ */
+
 .thinking-block {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   border-left: 2px solid var(--border);
-  padding-left: 10px;
+  padding-left: 12px;
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 0;
   background: transparent;
   border: none;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--muted-dim);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .thinking-header .chevron {
@@ -325,16 +431,16 @@
 }
 
 .thinking-content {
-  margin-top: 4px;
+  margin-top: 8px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--muted-dim);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 120px;
+  max-height: 200px;
   overflow-y: auto;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .thinking-block.collapsed .thinking-content {
@@ -345,7 +451,10 @@
   display: none;
 }
 
-/* Streaming Message */
+/* ============================================================================
+   Streaming Message
+   ============================================================================ */
+
 .message.streaming .message-content {
   color: var(--foreground);
 }
@@ -353,13 +462,13 @@
 .streaming-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .stream-events {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .stream-event {
@@ -367,50 +476,52 @@
 }
 
 .stream-event-text {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .stream-event-reasoning {
   border-left: 2px solid var(--border);
-  padding-left: 10px;
+  padding-left: 12px;
   color: var(--muted-dim);
+  margin: 8px 0;
 }
 
 .stream-reasoning-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.7;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .stream-reasoning-content {
   font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 140px;
+  max-height: 200px;
   overflow-y: auto;
   opacity: 0.85;
 }
 
+/* Typing indicator */
 .typing-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 0;
-  height: 16px;
+  gap: 4px;
+  padding: 4px 0;
+  height: 20px;
 }
 
 .typing-indicator span {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   background: var(--muted);
   border-radius: 50%;
-  animation: typing-bounce 1.2s infinite ease-in-out both;
+  animation: typing-bounce 1.4s infinite ease-in-out both;
 }
 
 .typing-indicator span:nth-child(1) {
@@ -430,10 +541,57 @@
   80%,
   100% {
     transform: scale(0.6);
-    opacity: 0.5;
+    opacity: 0.4;
   }
   40% {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* ============================================================================
+   Tool Output Styling within Messages
+   ============================================================================ */
+
+/* Tool result blocks in assistant content */
+.tool-output {
+  margin: 12px 0;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tool-output-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tool-output-content {
+  color: var(--foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* MCP output styling */
+.mcp-output {
+  border-left: 3px solid var(--accent);
+}
+
+.mcp-output-header {
+  color: var(--accent);
 }
