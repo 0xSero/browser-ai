@@ -43,86 +43,6 @@ import { SidePanelUI } from './panel-ui.js';
   this.updateActivityToggle();
 };
 
-(SidePanelUI.prototype as any).createToolMessage = function createToolMessage(
-  entryId: string,
-  toolName: string,
-  args: any,
-) {
-  if (!this.elements.toolLog) {
-    const container = document.createElement('div');
-    container.className = 'message tool';
-    container.dataset.id = entryId;
-    const safeToolName = toolName || 'tool';
-    const argsPreview = this.getArgsPreview(args);
-    const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
-
-    const details = document.createElement('details');
-    details.className = 'tool-event running';
-    details.innerHTML = `
-        <summary>
-          <span class="tool-event-dot"></span>
-          <span class="tool-event-name">${this.escapeHtml(safeToolName)}</span>
-          <span class="tool-event-preview">${this.escapeHtml(argsPreview || 'No args')}</span>
-          <span class="tool-event-status">Running</span>
-        </summary>
-        <div class="tool-event-body">
-          <div class="tool-event-section">
-            <div class="tool-event-label">Args</div>
-            <pre class="tool-event-args-pre">${this.escapeHtml(argsText || 'No args')}</pre>
-          </div>
-          <div class="tool-event-section">
-            <div class="tool-event-label">Result</div>
-            <pre class="tool-event-result-pre">Waiting...</pre>
-          </div>
-        </div>
-      `;
-
-    container.appendChild(details);
-    return {
-      container,
-      details,
-      statusEl: details.querySelector('.tool-event-status'),
-      resultEl: details.querySelector('.tool-event-result-pre'),
-      previewEl: details.querySelector('.tool-event-preview'),
-    };
-  }
-
-  const container = document.createElement('div');
-  container.className = 'tool-log-item running';
-  container.dataset.id = entryId;
-  const safeToolName = toolName || 'tool';
-  const argsPreview = this.getArgsPreview(args);
-  const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
-
-  container.innerHTML = `
-      <div class="tool-log-header">
-        <div class="tool-log-title"><span>${this.escapeHtml(safeToolName)}</span></div>
-        <span class="tool-log-status">Running</span>
-      </div>
-      <div class="tool-log-meta">${this.escapeHtml(argsPreview || 'No args')}</div>
-      <div class="tool-log-body">
-        <div class="tool-log-args">${this.escapeHtml(argsText || 'No args')}</div>
-        <div class="tool-log-result">Waiting...</div>
-      </div>
-      <button class="tool-log-toggle" type="button">Details</button>
-    `;
-
-  const toggleBtn = container.querySelector('.tool-log-toggle');
-  toggleBtn?.addEventListener('click', () => {
-    container.classList.toggle('expanded');
-    const expanded = container.classList.contains('expanded');
-    (toggleBtn as HTMLElement).textContent = expanded ? 'Hide' : 'Details';
-  });
-
-  return {
-    container,
-    statusEl: container.querySelector('.tool-log-status'),
-    resultEl: container.querySelector('.tool-log-result'),
-    previewEl: container.querySelector('.tool-log-meta'),
-    toggleBtn,
-  };
-};
-
 (SidePanelUI.prototype as any).updateToolMessage = function updateToolMessage(entry: any, result: any) {
   if (!entry) return;
 
@@ -231,28 +151,6 @@ import { SidePanelUI } from './panel-ui.js';
   setTimeout(() => banner.remove(), 8000);
 };
 
-(SidePanelUI.prototype as any).showRunIncompleteBanner = function showRunIncompleteBanner() {
-  // Check globally for existing banner to prevent duplicates
-  const existing = document.querySelector('.run-incomplete-banner');
-  if (existing) return;
-
-  const banner = document.createElement('div');
-  banner.className = 'run-incomplete-banner';
-  banner.innerHTML = `
-      <span class="run-incomplete-dot"></span>
-      <span>Run incomplete — response may be partial.</span>
-      <button class="run-incomplete-dismiss" title="Dismiss">Dismiss</button>
-    `;
-  const dismiss = banner.querySelector('.run-incomplete-dismiss');
-  dismiss?.addEventListener('click', () => banner.remove());
-
-  // Append to body for fixed positioning (toast style)
-  document.body.appendChild(banner);
-
-  // Auto-dismiss after 10 seconds
-  setTimeout(() => banner.remove(), 10000);
-};
-
 (SidePanelUI.prototype as any).clearRunIncompleteBanner = function clearRunIncompleteBanner() {
   // Remove all run-incomplete banners globally
   document.querySelectorAll('.run-incomplete-banner').forEach((el) => el.remove());
@@ -320,20 +218,6 @@ import { SidePanelUI } from './panel-ui.js';
       entry.statusEl.textContent = dur > 0 ? `${dur}ms` : 'Done';
     }
   }
-};
-
-(SidePanelUI.prototype as any).ensureToolTree = function ensureToolTree() {
-  const container = this.lastChatTurn || this.elements.chatMessages;
-  if (!container) {
-    return document.createElement('div');
-  }
-  let tree = container.querySelector('.tool-tree');
-  if (!tree) {
-    tree = document.createElement('div');
-    tree.className = 'tool-tree';
-    container.appendChild(tree);
-  }
-  return tree;
 };
 
 (SidePanelUI.prototype as any).updateActivityState = function updateActivityState() {

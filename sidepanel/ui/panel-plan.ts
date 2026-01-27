@@ -165,20 +165,4 @@ import { SidePanelUI } from './panel-ui.js';
   this.renderPlanDrawer(this.currentPlan);
 };
 
-/**
- * Check if all plan steps are completed
- */
-(SidePanelUI.prototype as any).isPlanComplete = function isPlanComplete(): boolean {
-  if (!this.currentPlan || !this.currentPlan.steps) return true;
-  return this.currentPlan.steps.every((s: { status: string }) => s.status === 'done');
-};
 
-/**
- * Get incomplete plan steps for validation
- */
-(SidePanelUI.prototype as any).getIncompletePlanSteps = function getIncompletePlanSteps(): string[] {
-  if (!this.currentPlan || !this.currentPlan.steps) return [];
-  return this.currentPlan.steps
-    .filter((s: { status: string }) => s.status !== 'done')
-    .map((s: { title: string }) => s.title);
-};

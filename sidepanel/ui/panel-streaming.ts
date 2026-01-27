@@ -175,38 +175,6 @@ const formatElapsed = (elapsedMs: number) => {
   }
 };
 
-(SidePanelUI.prototype as any).renderPlanBlock = function renderPlanBlock(plan: RunPlan) {
-  if (!this.streamingState) {
-    this.startStreamingMessage();
-  }
-  const planEl = this.ensurePlanBlock();
-  if (!planEl || !this.streamingState) return;
-
-  const steps = Array.isArray(plan.steps) ? plan.steps : [];
-  if (this.streamingState.planMetaEl) {
-    this.streamingState.planMetaEl.textContent = steps.length === 1 ? '1 step' : `${steps.length} steps`;
-  }
-  if (this.streamingState.planListEl) {
-    this.streamingState.planListEl.innerHTML = steps
-      .map((step) => {
-        const status = step.status || 'pending';
-        const statusClass = `plan-step-${status}`;
-        const notes = step.notes ? `<div class="plan-step-notes">${this.escapeHtml(step.notes)}</div>` : '';
-        return `
-            <li class="plan-step ${statusClass}">
-              <span class="plan-step-dot"></span>
-              <div class="plan-step-content">
-                <span class="plan-step-title">${this.escapeHtml(step.title)}</span>
-                ${notes}
-              </div>
-            </li>
-          `;
-      })
-      .join('');
-  }
-  this.scrollToBottom();
-};
-
 (SidePanelUI.prototype as any).ensurePlanBlock = function ensurePlanBlock() {
   if (!this.streamingState?.eventsEl) return null;
   if (this.streamingState.planEl) return this.streamingState.planEl;
