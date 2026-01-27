@@ -33,19 +33,25 @@
     </div>
 
     <!-- Profiles Section -->
-    <details class="settings-section">
+    <details class="settings-section" id="profilesSection">
         <summary>📋 Profiles</summary>
         <div class="settings-body">
             <div class="form-group">
-                <label for="activeConfig">Active Profile</label>
-                <div class="config-row">
-                    <select id="activeConfig">
-                        <option value="default">Default</option>
-                    </select>
-                    <button id="newConfigBtn" class="btn btn-secondary">+ New</button>
-                </div>
+                <label>Active Profile</label>
+                <select id="activeConfig">
+                    <option value="default">Default</option>
+                </select>
+                <small>Switch profiles to load their provider/model/key.</small>
             </div>
-            <button id="deleteConfigBtn" class="btn btn-secondary" style="width: 100%;">Delete Profile</button>
+            <div class="form-group">
+                <label>Add New</label>
+                <div class="config-row">
+                    <input type="text" id="newProfileInput" placeholder="e.g. Claude, GPT-4, Gemini…" />
+                    <button id="newConfigBtn" class="btn btn-primary">Create</button>
+                </div>
+                <small>Creates a copy of the current profile. Edit provider/model/key above, then Save.</small>
+            </div>
+            <button id="deleteConfigBtn" class="btn btn-secondary" style="width: 100%; margin-top: 4px;">Delete Active Profile</button>
         </div>
     </details>
 

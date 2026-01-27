@@ -1,30 +1,48 @@
 import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).createNewConfig = async function createNewConfig(name?: string) {
-  const trimmedName = (name || '').trim() || prompt('Enter profile name:') || '';
-  if (!trimmedName) return;
+  // Read from whichever input has a value
+  const inputA = this.elements.newProfileInput;
+  const inputB = this.elements.newProfileNameInput;
+  const trimmedName = (name || inputA?.value || inputB?.value || '').trim();
+  if (!trimmedName) {
+    this.updateStatus('Enter a profile name', 'warning');
+    return;
+  }
   if (this.configs[trimmedName]) {
-    alert('Profile already exists!');
+    this.updateStatus('Profile already exists', 'warning');
     return;
   }
 
+  // Clear both inputs
+  if (inputA) inputA.value = '';
+  if (inputB) inputB.value = '';
+
+  // Clone the current active config so the new profile starts with sane defaults
+  const current = this.configs[this.currentConfig] || {};
   this.configs[trimmedName] = {
-    provider: this.elements.provider.value,
-    apiKey: this.elements.apiKey.value,
-    model: this.elements.model.value,
-    customEndpoint: this.elements.customEndpoint.value,
-    systemPrompt: this.elements.systemPrompt.value,
-    temperature: Number.parseFloat(this.elements.temperature.value),
-    maxTokens: Number.parseInt(this.elements.maxTokens.value),
-    timeout: Number.parseInt(this.elements.timeout.value),
-    sendScreenshotsAsImages: this.elements.sendScreenshotsAsImages.value === 'true',
-    screenshotQuality: this.elements.screenshotQuality.value,
-    streamResponses: this.elements.streamResponses.value === 'true',
-    enableScreenshots: this.elements.enableScreenshots.value === 'true',
+    provider: current.provider || 'openai',
+    apiKey: current.apiKey || '',
+    model: current.model || 'gpt-4o',
+    customEndpoint: current.customEndpoint || '',
+    systemPrompt: current.systemPrompt || '',
+    temperature: current.temperature ?? 0.7,
+    maxTokens: current.maxTokens || 4096,
+    contextLimit: current.contextLimit || 200000,
+    timeout: current.timeout || 30000,
+    sendScreenshotsAsImages: current.sendScreenshotsAsImages || false,
+    screenshotQuality: current.screenshotQuality || 'high',
+    streamResponses: current.streamResponses !== false,
+    enableScreenshots: current.enableScreenshots || false,
+    saveHistory: current.saveHistory !== false,
+    showThinking: current.showThinking !== false,
+    autoScroll: current.autoScroll !== false,
+    confirmActions: current.confirmActions !== false,
   };
 
   this.refreshConfigDropdown();
   this.setActiveConfig(trimmedName, true);
+  await this.persistAllSettings({ silent: true });
   this.updateStatus(`Profile "${trimmedName}" created`, 'success');
 };
 
@@ -38,6 +56,7 @@ import { SidePanelUI } from './panel-ui.js';
     delete this.configs[this.currentConfig];
     this.currentConfig = 'default';
     this.refreshConfigDropdown();
+    this.updateModelDisplay();
     this.setActiveConfig(this.currentConfig, true);
     this.updateStatus('Profile deleted', 'success');
   }
@@ -79,6 +98,7 @@ import { SidePanelUI } from './panel-ui.js';
     }
   });
   this.refreshProfileSelectors();
+  this.updateModelDisplay();
   this.renderProfileGrid();
   this.updateContextUsage();
 };
@@ -296,9 +316,8 @@ import { SidePanelUI } from './panel-ui.js';
   this.renderProfileGrid?.();
   this.updateScreenshotToggleState?.();
   this.editProfile?.(name, true);
-  this.updateModelDisplay();
-  this.fetchAvailableModels();
+  this.fetchAvailableModels(); // This now repopulates the composer dropdown with all profiles
   if (!quiet) {
-    this.updateStatus(`Switched to configuration "${name}"`, 'success');
+    this.updateStatus(`Switched to "${name}"`, 'success');
   }
 };

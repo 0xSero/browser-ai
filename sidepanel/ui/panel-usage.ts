@@ -82,7 +82,8 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).getActiveModelLabel = function getActiveModelLabel() {
-  return this.elements.modelSelect?.value || this.configs[this.currentConfig]?.model || '';
+  const config = this.configs[this.currentConfig] || {};
+  return config.model || '';
 };
 
 (SidePanelUI.prototype as any).updateUsageStats = function updateUsageStats(usage: UsageStats | null) {

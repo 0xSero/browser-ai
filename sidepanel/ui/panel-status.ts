@@ -15,10 +15,9 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).updateModelDisplay = function updateModelDisplay() {
-  const config = this.configs[this.currentConfig] || {};
-  const modelName = config.model || '';
+  // Now the model select shows profiles, so we update it to the current config
   if (this.elements.modelSelect) {
-    this.elements.modelSelect.value = modelName;
+    this.elements.modelSelect.value = this.currentConfig;
   }
 };
 
@@ -178,59 +177,70 @@ import { SidePanelUI } from './panel-ui.js';
     return;
   }
 
-  const config = this.configs[this.currentConfig] || {};
-  const selectedModel = currentModel || config.model || '';
-
-  const normalizedModels = models.filter((model) => Boolean(model && model.trim?.())) as string[];
-  const fallbackModel = selectedModel || 'gpt-4o';
-  
-  // Ensure current model is in the list
-  let finalModels = normalizedModels.length > 0 ? normalizedModels : [fallbackModel];
-  if (selectedModel && !finalModels.includes(selectedModel)) {
-    finalModels = [selectedModel, ...finalModels];
-  }
-
-  console.log('[Parchi] Populating model select with', finalModels.length, 'models, selected:', selectedModel);
-
+  // Populate with profiles instead of just models
+  // Each profile shows as: providerIcon profileName - model
   select.innerHTML = '';
 
-  // Add placeholder only if no model is selected
-  if (!selectedModel) {
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = 'Select model';
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    select.appendChild(placeholder);
+  const configNames = Object.keys(this.configs);
+  if (configNames.length === 0) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'No profiles';
+    select.appendChild(option);
+    return;
   }
 
-  for (const model of finalModels) {
+  for (const name of configNames) {
+    const config = this.configs[name];
     const option = document.createElement('option');
-    option.value = model;
-    option.textContent = model;
-    if (model === selectedModel) {
+    option.value = name; // Use profile name as value
+    
+    // Format: icon provider/model (e.g., "🅒 anthropic/claude-sonnet")
+    const providerIcon = this.getProviderIcon(config.provider);
+    const modelShort = this.shortenModelName(config.model || 'no-model');
+    option.textContent = `${providerIcon} ${config.provider}/${modelShort}`;
+    
+    if (name === this.currentConfig) {
       option.selected = true;
     }
     select.appendChild(option);
   }
   
-  console.log('[Parchi] Model select now has', select.options.length, 'options');
+  console.log('[Parchi] Model select now has', select.options.length, 'profiles');
+};
+
+(SidePanelUI.prototype as any).shortenModelName = function shortenModelName(model: string): string {
+  if (!model) return 'unknown';
+  // Remove common prefixes
+  const clean = model
+    .replace(/^claude-/, '')
+    .replace(/^gpt-/, '')
+    .replace(/^gemini-/, '')
+    .replace(/^kimi-/, '');
+  // Truncate if still long
+  if (clean.length <= 20) return clean;
+  return clean.slice(0, 19) + '…';
 };
 
 (SidePanelUI.prototype as any).handleModelSelectChange = function handleModelSelectChange() {
   const select = this.elements.modelSelect;
   if (!select) return;
 
-  const selectedModel = select.value;
-  if (!selectedModel) return;
+  const selectedProfile = select.value;
+  if (!selectedProfile || !this.configs[selectedProfile]) return;
 
-  if (this.configs[this.currentConfig]) {
-    this.configs[this.currentConfig].model = selectedModel;
-  }
+  // Switch to the selected profile
+  this.setActiveConfig(selectedProfile);
+  this.updateStatus(`Switched to ${this.configs[selectedProfile].provider}/${this.configs[selectedProfile].model}`, 'success');
+};
 
-  if (this.elements.model) {
-    this.elements.model.value = selectedModel;
-  }
-
-  this.persistAllSettings({ silent: true });
+(SidePanelUI.prototype as any).getProviderIcon = function getProviderIcon(provider: string): string {
+  const icons: Record<string, string> = {
+    anthropic: '🅒',
+    openai: '🅞',
+    google: '🅖',
+    kimi: '🅚',
+    custom: '⚙️',
+  };
+  return icons[provider] || '⚙️';
 };

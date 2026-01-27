@@ -219,6 +219,53 @@
   line-height: 1.5;
 }
 
+/* Tables */
+.table-wrapper {
+  margin: 12px 0;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--card);
+}
+
+.markdown-table thead {
+  background: var(--background);
+}
+
+.markdown-table th,
+.markdown-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-table th {
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.markdown-table td {
+  color: var(--muted);
+}
+
+.markdown-table tr:last-child td,
+.markdown-table tr:last-child th {
+  border-bottom: none;
+}
+
+.markdown-table tbody tr:hover {
+  background: var(--card-hover);
+}
+
 .message.summary {
   text-align: center;
   padding: 10px;

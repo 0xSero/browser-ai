@@ -54,7 +54,8 @@ import { SidePanelUI } from './panel-ui.js';
       selectedTabs: Array.from(this.selectedTabs.values()),
       sessionId: this.sessionId,
     });
-    this.persistHistory();
+    // Note: persistHistory is called after the assistant response completes
+    // in displayAssistantMessage to ensure complete conversation is saved
   } catch (error: any) {
     this.stopThinkingTimer?.();
     this.updateStatus('Error: ' + error.message, 'error');

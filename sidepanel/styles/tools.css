@@ -477,45 +477,121 @@
   color: var(--muted-dim);
 }
 
-/* Tool Tree (inline in chat messages) - Compact Design */
+/* Tool Tree (inline in chat messages) - Vertical Timeline Design */
 .tool-tree {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  margin: 8px 0;
-  background: var(--border);
-  border-radius: 6px;
-  overflow: hidden;
+  margin: 12px 0;
+  padding: 0 0 0 16px;
+  position: relative;
+}
+
+/* Vertical timeline line */
+.tool-tree::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--border) 0%,
+    var(--border) 100%
+  );
+  border-radius: 1px;
 }
 
 .tool-tree-item {
-  background: var(--card);
-  padding: 6px 10px;
-  font-size: 11px;
+  position: relative;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.tool-tree-item:first-child {
-  border-radius: 6px 6px 0 0;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-left: 8px;
+  animation: tool-slide-in 0.3s ease-out;
+  transition: all 0.2s ease;
 }
 
 .tool-tree-item:last-child {
-  border-radius: 0 0 6px 6px;
+  margin-bottom: 0;
 }
 
-.tool-tree-item:only-child {
-  border-radius: 6px;
+.tool-tree-item:hover {
+  border-color: var(--accent);
+  background: var(--card-hover);
 }
 
-/* Status dot */
+/* Timeline node (dot on the line) */
+.tool-tree-item::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--muted);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.tool-tree-item.running::before {
+  border-color: var(--warning);
+  background: var(--warning);
+  animation: tool-pulse-ring 1.5s ease-out infinite;
+}
+
+.tool-tree-item.success::before {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.tool-tree-item.error::before {
+  border-color: var(--error);
+  background: var(--error);
+}
+
+/* Connector line from timeline to card */
+.tool-tree-item::after {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--border);
+  transition: background 0.3s ease;
+}
+
+.tool-tree-item.running::after {
+  background: var(--warning);
+  animation: tool-connector-flow 1s ease-in-out infinite;
+}
+
+.tool-tree-item.success::after {
+  background: var(--success);
+}
+
+.tool-tree-item.error::after {
+  background: var(--error);
+}
+
+/* Status dot (inside the card) */
 .tool-tree-status {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--muted);
+  transition: all 0.3s ease;
 }
 
 .tool-tree-item.running .tool-tree-status {
@@ -536,13 +612,13 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .tool-tree-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
@@ -550,39 +626,116 @@
 .tool-tree-title {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .tool-tree-icon {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.tool-tree-item.running .tool-tree-icon {
+  color: var(--warning);
+  animation: tool-icon-pulse 1s ease-in-out infinite;
+}
+
+.tool-tree-item.success .tool-tree-icon {
+  color: var(--success);
+}
+
+.tool-tree-item.error .tool-tree-icon {
+  color: var(--error);
 }
 
 .tool-tree-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--foreground);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .tool-tree-args {
   flex: 1;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
 }
 
 .tool-tree-meta {
   font-size: 10px;
   color: var(--muted);
   white-space: nowrap;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  background: var(--background);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.tool-tree-item.running .tool-tree-meta {
+  color: var(--warning);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .tool-tree-item.success .tool-tree-meta {
   color: var(--success);
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .tool-tree-item.error .tool-tree-meta {
   color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Animations */
+@keyframes tool-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tool-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(234, 179, 8, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+  }
+}
+
+@keyframes tool-connector-flow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes tool-icon-pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }

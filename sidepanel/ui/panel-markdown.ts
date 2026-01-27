@@ -16,6 +16,15 @@ import { SidePanelUI } from './panel-ui.js';
     return placeholder;
   });
 
+  // Extract tables before processing other content
+  const tables: string[] = [];
+  const tableRegex = /(?:^|\n)((?:\|[^\n]*)+\|(?:\n|\r?\n?))+/gm;
+  working = working.replace(tableRegex, (match: string) => {
+    const placeholder = `@@TABLE_${tables.length}@@`;
+    tables.push(this.renderMarkdownTable(match.trim()));
+    return placeholder;
+  });
+
   const applyInline = (value = '') => {
     let html = escape(value);
     html = html.replace(
@@ -71,6 +80,15 @@ import { SidePanelUI } from './panel-ui.js';
 
     const placeholderMatch = trimmed.match(/^@@CODE_BLOCK_(\d+)@@$/);
     if (placeholderMatch) {
+      flushParagraph();
+      closeLists();
+      blocks.push(trimmed);
+      continue;
+    }
+
+    // Handle table placeholders
+    const tableMatch = trimmed.match(/^@@TABLE_(\d+)@@$/);
+    if (tableMatch) {
       flushParagraph();
       closeLists();
       blocks.push(trimmed);
@@ -140,5 +158,72 @@ import { SidePanelUI } from './panel-ui.js';
     html = html.split(placeholder).join(block);
   });
 
+  tables.forEach((table, index) => {
+    const placeholder = `@@TABLE_${index}@@`;
+    html = html.split(placeholder).join(table);
+  });
+
+  return html;
+};
+
+(SidePanelUI.prototype as any).renderMarkdownTable = function renderMarkdownTable(tableText: string): string {
+  const escape = (value = '') => this.escapeHtmlBasic(value);
+  
+  const lines = tableText.trim().split('\n').filter(line => line.trim());
+  if (lines.length < 2) return `<p>${escape(tableText)}</p>`;
+  
+  // Parse header row
+  const headerLine = lines[0];
+  const headers = headerLine
+    .split('|')
+    .map(cell => cell.trim())
+    .filter(cell => cell);
+  
+  // Check if second line is separator
+  const separatorLine = lines[1];
+  const isSeparator = /^\s*[-:|\s]+$/.test(separatorLine);
+  
+  const bodyStartIndex = isSeparator ? 2 : 1;
+  const bodyLines = lines.slice(bodyStartIndex);
+  
+  if (headers.length === 0) return `<p>${escape(tableText)}</p>`;
+  
+  // Build table HTML
+  let html = '<div class="table-wrapper"><table class="markdown-table">';
+  
+  // Header
+  html += '<thead><tr>';
+  headers.forEach(header => {
+    html += `<th>${escape(header)}</th>`;
+  });
+  html += '</tr></thead>';
+  
+  // Body
+  if (bodyLines.length > 0) {
+    html += '<tbody>';
+    bodyLines.forEach(rowLine => {
+      const cells = rowLine
+        .split('|')
+        .map(cell => cell.trim())
+        .filter(cell => cell);
+      
+      if (cells.length > 0) {
+        html += '<tr>';
+        cells.forEach((cell, idx) => {
+          // Use th for first column if it looks like a header cell
+          const tag = idx === 0 && cell.length < 30 ? 'th' : 'td';
+          html += `<${tag}>${escape(cell)}</${tag}>`;
+        });
+        // Fill empty cells to match header count
+        for (let i = cells.length; i < headers.length; i++) {
+          html += '<td></td>';
+        }
+        html += '</tr>';
+      }
+    });
+    html += '</tbody>';
+  }
+  
+  html += '</table></div>';
   return html;
 };

@@ -183,13 +183,16 @@ import { SidePanelUI } from './panel-ui.js';
   container.dataset.start = String(Date.now());
 
   const argsPreview = this.getArgsPreview(args);
-  const argsText = this.truncateText(this.safeJsonStringify(args), 1600);
+  const icon = this.getToolIcon(toolName);
 
   container.innerHTML = `
       <span class="tool-tree-status"></span>
       <div class="tool-tree-content">
         <div class="tool-tree-header">
-          <span class="tool-tree-name">${this.escapeHtml(toolName || 'tool')}</span>
+          <div class="tool-tree-title">
+            <span class="tool-tree-icon">${icon}</span>
+            <span class="tool-tree-name">${this.escapeHtml(toolName || 'tool')}</span>
+          </div>
           <span class="tool-tree-args">${this.escapeHtml(argsPreview || '')}</span>
         </div>
         <span class="tool-tree-meta">Running</span>
@@ -200,6 +203,41 @@ import { SidePanelUI } from './panel-ui.js';
     container,
     statusEl: container.querySelector('.tool-tree-meta'),
   };
+};
+
+(SidePanelUI.prototype as any).getToolIcon = function getToolIcon(toolName: string): string {
+  const iconMap: Record<string, string> = {
+    browser_navigate: '→',
+    browser_click: '👆',
+    browser_type: '⌨️',
+    browser_screenshot: '📷',
+    browser_get_page_text: '📄',
+    browser_scroll: '↕️',
+    browser_go_back: '←',
+    browser_go_forward: '→',
+    browser_refresh: '↻',
+    browser_find_element: '🔍',
+    browser_press_key: '🔘',
+    browser_select_option: '☑️',
+    browser_get_element_text: '📝',
+    browser_get_element_attribute: '🏷️',
+    browser_execute_script: '⚡',
+    browser_wait: '⏱️',
+    browser_set_viewport: '📐',
+    browser_clear_cookies: '🍪',
+    browser_get_cookies: '🍪',
+    browser_set_cookie: '🍪',
+    browser_delete_cookie: '🗑️',
+  };
+  
+  // Find matching icon or return default
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (toolName.toLowerCase().includes(key.toLowerCase().replace('browser_', ''))) {
+      return icon;
+    }
+  }
+  
+  return '⚙️';
 };
 
 (SidePanelUI.prototype as any).updateToolTreeItem = function updateToolTreeItem(entry: any, result: any) {

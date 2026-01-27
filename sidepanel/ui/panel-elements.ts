@@ -150,6 +150,7 @@ export const getSidePanelElements = (): SidePanelElements => ({
   // Profile management
   activeConfig: byId<HTMLSelectElement>('activeConfig'),
   newConfigBtn: byId<HTMLButtonElement>('newConfigBtn'),
+  newProfileInput: byId<HTMLInputElement>('newProfileInput'),
   deleteConfigBtn: byId<HTMLButtonElement>('deleteConfigBtn'),
   refreshProfilesBtn: byId<HTMLButtonElement>('refreshProfilesBtn'),
   agentGrid: byId<HTMLElement>('agentGrid'),

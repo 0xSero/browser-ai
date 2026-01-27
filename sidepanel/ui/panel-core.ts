@@ -90,6 +90,12 @@ import { SidePanelUI } from './panel-ui.js';
 
   // Configuration management
   this.elements.newConfigBtn?.addEventListener('click', () => this.createNewConfig());
+  this.elements.newProfileInput?.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.createNewConfig();
+    }
+  });
   this.elements.deleteConfigBtn?.addEventListener('click', () => this.deleteConfig());
   this.elements.activeConfig?.addEventListener('change', () => this.switchConfig());
 
@@ -173,7 +179,7 @@ import { SidePanelUI } from './panel-ui.js';
     userInput.style.height = `${userInput.scrollHeight}px`;
   });
 
-  // Model selector
+  // Model selector (now shows profiles)
   this.elements.modelSelect?.addEventListener('change', () => this.handleModelSelectChange());
 
   // File upload
