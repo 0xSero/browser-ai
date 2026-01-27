@@ -61,6 +61,7 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
       name: provider,
       apiKey,
       baseURL,
+      ...(provider === 'kimi' ? { headers: { 'User-Agent': 'claude-code/1.0' } } : {}),
     });
     return customProvider(modelId);
   }
