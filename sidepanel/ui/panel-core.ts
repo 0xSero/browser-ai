@@ -208,53 +208,6 @@ import { SidePanelUI } from './panel-ui.js';
   chrome.runtime.onMessage.addListener((message) => {
     if (isRuntimeMessage(message)) {
       this.handleRuntimeMessage(message);
-      return;
-    }
-
-    if (message.type === 'tool_execution_start') {
-      this.pendingToolCount += 1;
-      this.clearErrorBanner();
-      this.updateActivityState();
-      this.activeToolName = message.tool || null;
-      this.displayToolExecution(message.tool, message.args, null, message.id);
-    } else if (message.type === 'tool_execution_result') {
-      this.pendingToolCount = Math.max(0, this.pendingToolCount - 1);
-      this.updateActivityState();
-      this.activeToolName = null;
-      this.displayToolExecution(message.tool, message.args, message.result, message.id);
-    } else if (message.type === 'assistant_response' || message.type === 'assistant_final') {
-      this.displayAssistantMessage(message.content, message.thinking, message.usage, message.model);
-      if (message.usage?.inputTokens) {
-        this.updateContextUsage(message.usage.inputTokens);
-      } else {
-        this.updateContextUsage();
-      }
-    } else if (message.type === 'assistant_stream_start') {
-      this.handleAssistantStream({ status: 'start' });
-    } else if (message.type === 'assistant_stream_delta') {
-      this.handleAssistantStream({
-        status: 'delta',
-        content: message.content,
-      });
-    } else if (message.type === 'assistant_stream_stop') {
-      this.handleAssistantStream({ status: 'stop' });
-    } else if (message.type === 'run_error' || message.type === 'error') {
-      this.stopThinkingTimer?.();
-      this.elements.composer?.classList.remove('running');
-      this.pendingToolCount = 0;
-      this.isStreaming = false;
-      this.activeToolName = null;
-      this.updateActivityState();
-      this.finishStreamingMessage();
-      this.showErrorBanner(message.message);
-      this.updateStatus('Error', 'error');
-    } else if (message.type === 'run_warning' || message.type === 'warning') {
-      this.showErrorBanner(message.message);
-    } else if (message.type === 'subagent_start') {
-      this.addSubagent(message.id, message.name, message.tasks);
-      this.updateStatus(`Sub-agent "${message.name}" started`, 'active');
-    } else if (message.type === 'subagent_complete') {
-      this.updateSubagentStatus(message.id, message.success ? 'completed' : 'error');
     }
   });
 };
