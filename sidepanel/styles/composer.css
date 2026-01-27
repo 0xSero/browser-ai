@@ -264,11 +264,6 @@
   }
 }
 
-/* Legacy composer-actions for backwards compat */
-.composer-actions {
-  display: none;
-}
-
 .selected-tabs {
   display: flex;
   flex-direction: column;

@@ -1,16 +1,3 @@
-/* Hidden by default - only show on expand */
-.tool-tree-body {
-  display: none;
-}
-
-.tool-tree-toggle {
-  display: none;
-}
-
-.tool-tree-result {
-  display: none;
-}
-
 /* Agent Nav */
 .agent-nav {
   display: flex;
