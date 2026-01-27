@@ -57,11 +57,17 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
       baseURL = `${baseURL}/v1`;
     }
 
+    const kimiFetch: typeof globalThis.fetch = (input, init) => {
+      const headers = new Headers(init?.headers);
+      headers.set('User-Agent', 'claude-code/1.0');
+      return globalThis.fetch(input, { ...init, headers });
+    };
+
     const customProvider = createOpenAICompatible({
       name: provider,
       apiKey,
       baseURL,
-      ...(provider === 'kimi' ? { headers: { 'User-Agent': 'claude-code/1.0' } } : {}),
+      ...(provider === 'kimi' ? { fetch: kimiFetch } : {}),
     });
     return customProvider(modelId);
   }
