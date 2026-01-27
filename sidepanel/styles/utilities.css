@@ -1,0 +1,150 @@
+/* Jump to Latest */
+.jump-to-latest {
+  position: absolute;
+  right: 16px;
+  bottom: 80px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  color: var(--foreground);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.jump-to-latest:hover {
+  background: var(--card-hover);
+}
+
+/* Error/Warning Banners - Toast style in corner */
+.error-banner,
+.run-incomplete-banner {
+  position: fixed;
+  bottom: 120px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  max-width: 320px;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.error-banner {
+  border-color: var(--error);
+  background: hsl(0, 40%, 12%);
+}
+
+.run-incomplete-banner {
+  border-color: var(--warning, hsl(40, 80%, 50%));
+  background: hsl(40, 30%, 12%);
+}
+
+.error-banner .error-icon {
+  flex-shrink: 0;
+  color: var(--error);
+}
+
+.error-banner .error-text {
+  flex: 1;
+}
+
+.error-banner .error-dismiss,
+.run-incomplete-dismiss {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.error-banner .error-dismiss:hover,
+.run-incomplete-dismiss:hover {
+  background: var(--card-hover);
+  color: var(--foreground);
+}
+
+.run-incomplete-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning, hsl(40, 80%, 50%));
+  flex-shrink: 0;
+}
+
+/* Text utilities */
+.text-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Tab panels */
+.tab-panel.hidden {
+  display: none;
+}
+
+/* Hidden */
+.hidden {
+  display: none !important;
+}
+
+/* Streaming */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.streaming .status-dot {
+  animation: pulse 1.5s ease-in-out infinite;
+  background: var(--accent);
+}
+
+/* Focus */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Disabled */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+::selection {
+  background: hsl(270, 30%, 30%);
+  color: var(--foreground);
+}

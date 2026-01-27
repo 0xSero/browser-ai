@@ -1,0 +1,416 @@
+/* Composer */
+.composer-wrapper {
+  padding: 18px 18px 22px;
+  background: var(--background);
+  display: flex;
+  justify-content: center;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  width: min(860px, 100%);
+  overflow: hidden;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  position: relative;
+}
+
+/* Running state - model is working */
+.composer.running {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 18px 42px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.composer.running::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.composer.running textarea {
+  color: var(--muted);
+}
+
+.composer.running .send-btn {
+  background: var(--error);
+}
+
+.composer.running .send-btn:hover {
+  background: hsl(0, 60%, 50%);
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 54px;
+  padding: 18px 18px 12px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 15px;
+  line-height: 1.6;
+  resize: none;
+  border: none;
+  border-radius: 0;
+}
+
+.composer textarea:focus {
+  outline: none;
+}
+
+.composer textarea:focus-visible {
+  outline: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--muted-dim);
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 12px;
+  background: var(--card);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.composer-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.composer-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.composer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.composer-status .status-dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+}
+
+.composer-status #statusText {
+  font-size: 11px;
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.composer-status .status-meta {
+  font-size: 10px;
+  color: var(--muted-dim);
+  margin-left: 4px;
+}
+
+.composer-status .status-meta.hidden {
+  display: none;
+}
+
+.composer .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.composer .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+}
+
+.tab-selector-btn {
+  position: relative;
+}
+
+.tab-selector-btn.has-selection {
+  background: rgba(168, 99, 255, 0.18);
+  border-color: rgba(168, 99, 255, 0.4);
+  color: var(--foreground);
+}
+
+.tab-selector-btn.has-selection::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.model-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.model-selector:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+}
+
+.model-selector-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-dim);
+}
+
+.model-selector select {
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  padding-right: 4px;
+  appearance: none;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector select:focus {
+  outline: none;
+}
+
+.model-selector-chevron {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Legacy composer-actions for backwards compat */
+.composer-actions {
+  display: none;
+}
+
+.selected-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.selected-tabs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.selected-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.selected-group-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--group-color, var(--accent));
+}
+
+.selected-group-count {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+
+.selected-tabs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--foreground);
+}
+
+.selected-tab-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--muted-dim);
+}
+
+.selected-tab-chip button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  background: var(--card-hover);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: hsl(270, 55%, 50%);
+}
+
+.btn-secondary {
+  background: transparent;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  transition: all 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--card-hover);
+  color: var(--foreground);
+}
+
+.send-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, hsl(270, 55%, 60%), hsl(270, 55%, 50%));
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s;
+}
+
+.send-btn:hover {
+  background: linear-gradient(180deg, hsl(270, 55%, 65%), hsl(270, 55%, 55%));
+  transform: translateY(-1px);
+}
+
+.send-btn:disabled {
+  background: var(--border);
+  color: var(--muted-dim);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}

@@ -1,16 +1,20 @@
 {
-  "name": "browser-ai-agent",
-  "version": "1.0.0",
-  "description": "AI-powered browser automation extension with configurable LLM providers",
+  "name": "parchi-extension",
+  "version": "0.2.0",
+  "description": "Warm-paper browser automation extension with configurable LLM providers",
   "type": "module",
   "scripts": {
-    "test": "node tests/run-tests.js",
-    "validate": "node tests/validate-extension.js",
-    "test:unit": "node tests/unit/run-unit-tests.js",
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/build.mjs && node dist/tests/validate-extension.js",
+    "test": "node scripts/build.mjs && node dist/tests/run-tests.js",
+    "test:unit": "node scripts/build.mjs && node dist/tests/unit/run-unit-tests.js",
     "test:integration": "echo 'Load tests/integration/test-page.html in browser and run tests'",
-    "lint": "echo 'Linting extension files...' && node tests/lint-check.js",
-    "build": "node tests/validate-extension.js && echo 'Extension validated successfully'",
-    "dev": "echo 'Load extension from Chrome://extensions in Developer Mode'"
+    "test:e2e": "node scripts/build.mjs && node dist/tests/e2e/run-e2e.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "dev": "echo 'Run npm run build, then load the dist/ folder in Chrome://extensions'"
   },
   "keywords": [
     "chrome-extension",
@@ -22,5 +26,25 @@
   ],
   "author": "",
   "license": "MIT",
-  "devDependencies": {}
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.17",
+    "@ai-sdk/openai": "^3.0.13",
+    "@ai-sdk/openai-compatible": "^2.0.16",
+    "ai": "^6.0.42"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/chrome": "^0.0.268",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "esbuild": "^0.27.2",
+    "express": "^4.19.2",
+    "marked": "^17.0.1",
+    "playwright": "^1.57.0",
+    "stripe": "^16.5.0",
+    "typescript": "^5.6.3"
+  }
 }

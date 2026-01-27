@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parchi Account Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/public/portal.css">
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main class="shell">
+      <header class="hero">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span>Parchi</span>
+        </div>
+        <h1>Account Center</h1>
+        <p>Manage subscriptions, billing, and workspace visibility from one place.</p>
+        <div class="hero-actions">
+          <button id="refreshBtn" class="ghost">Refresh data</button>
+          <button id="signOutBtn" class="ghost">Sign out</button>
+        </div>
+      </header>
+
+      <section id="authCard" class="card auth">
+        <div class="card-header">
+          <h2>Sign in</h2>
+          <p>Use your email to unlock billing tools and manage your subscription.</p>
+        </div>
+
+        <div class="auth-grid">
+          <div class="auth-step">
+            <div class="step-header">
+              <span class="step-pill">Sign in</span>
+              <h3>Continue with email</h3>
+            </div>
+            <form id="authForm" class="auth-form">
+              <label>
+                Work email
+                <input id="authEmail" name="email" type="email" placeholder="you@company.com" required>
+              </label>
+              <button id="confirmAuthBtn" class="primary" type="submit">Sign in</button>
+            </form>
+            <p class="status" id="authStatus"></p>
+          </div>
+        </div>
+
+        <div class="token-panel">
+          <div>
+            <h4>Have an access token?</h4>
+            <p>Paste an existing token to resume your session.</p>
+          </div>
+          <div class="token-input">
+            <input id="tokenInput" type="text" placeholder="sess_...">
+            <button id="tokenApplyBtn" class="ghost">Use token</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="accountCard" class="card account hidden">
+        <div class="card-header">
+          <div>
+            <h2>Account overview</h2>
+            <p id="accountEmail">Signed in</p>
+          </div>
+          <span id="planBadge" class="badge">No plan</span>
+        </div>
+
+        <div class="grid">
+          <div class="stat-card">
+            <h3>Subscription</h3>
+            <p id="planStatus">Status</p>
+            <div class="actions">
+              <button id="checkoutBtn" class="primary">Start subscription</button>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <h3>Payment method</h3>
+            <p id="paymentMethod">No payment method on file.</p>
+            <div class="actions">
+              <button id="portalBtn" class="ghost">Manage billing</button>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <h3>Recent invoices</h3>
+            <div id="invoiceList" class="invoice-list"></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="stat-card">
+            <h3>Configurations</h3>
+            <p id="configStatus">No synced configurations yet.</p>
+            <p class="muted">Connect the extension to sync profiles and settings.</p>
+          </div>
+
+          <div class="stat-card">
+            <h3>History</h3>
+            <p id="historyStatus">No synced sessions yet.</p>
+            <p class="muted">Session history appears once syncing is enabled.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/public/portal.js"></script>
+  </body>
+</html>

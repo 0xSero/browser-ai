@@ -1,0 +1,97 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f3ee;
+  --panel: #ffffff;
+  --border: #e6ded2;
+  --text: #2f2620;
+  --muted: #6b5f55;
+  --accent: #2f2620;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Geist Sans", "Inter", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #fff7ec, var(--bg));
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 24px;
+}
+
+.device {
+  width: min(520px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 16px 40px rgba(47, 38, 32, 0.12);
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.device-form {
+  display: grid;
+  gap: 16px;
+}
+
+label {
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  gap: 6px;
+}
+
+input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+button {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.status {
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.status.success {
+  color: #1f7a4a;
+}
+
+.status.error {
+  color: #b63a2e;
+}

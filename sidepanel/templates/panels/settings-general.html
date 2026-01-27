@@ -1,0 +1,172 @@
+<div id="settingsTabGeneral" class="tab-panel" data-tab="general">
+    <!-- Quick Setup - Always visible, most important -->
+    <div class="settings-quick-setup">
+        <h3 class="setup-title">🔑 Quick Setup</h3>
+        <div class="form-group">
+            <label for="provider">Provider</label>
+            <select id="provider">
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI</option>
+                <option value="google">Google (Gemini)</option>
+                <option value="kimi">Kimi (Coding)</option>
+                <option value="custom">Custom / OpenRouter</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="apiKey">API Key</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key..." />
+            <small>Your key is stored locally and never sent to our servers.</small>
+        </div>
+        <div class="form-group">
+            <label for="model">Model</label>
+            <input type="text" id="model" placeholder="e.g., claude-sonnet-4-20250514" />
+            <small id="modelHint">Recommended: claude-sonnet-4-20250514</small>
+        </div>
+        <div class="form-group" id="customEndpointGroup">
+            <label for="customEndpoint">API URL <span class="optional-badge">(optional)</span></label>
+            <input type="text" id="customEndpoint" placeholder="https://openrouter.ai/api/v1" />
+            <small>Override the default API endpoint. Required for OpenRouter/custom providers.</small>
+        </div>
+        <button id="saveSettingsBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+            Save Settings
+        </button>
+    </div>
+
+    <!-- Profiles Section -->
+    <details class="settings-section">
+        <summary>📋 Profiles</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="activeConfig">Active Profile</label>
+                <div class="config-row">
+                    <select id="activeConfig">
+                        <option value="default">Default</option>
+                    </select>
+                    <button id="newConfigBtn" class="btn btn-secondary">+ New</button>
+                </div>
+            </div>
+            <button id="deleteConfigBtn" class="btn btn-secondary" style="width: 100%;">Delete Profile</button>
+        </div>
+    </details>
+
+    <!-- Model Parameters -->
+    <details class="settings-section">
+        <summary>⚙️ Model Parameters</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" />
+                <small>Lower = more focused, Higher = more creative</small>
+            </div>
+            <div class="form-group">
+                <label for="maxTokens">Max Output Tokens</label>
+                <input type="number" id="maxTokens" value="4096" min="256" max="32000" />
+            </div>
+            <div class="form-group">
+                <label for="contextLimit">Context Limit</label>
+                <input type="number" id="contextLimit" value="200000" min="4000" max="2000000" />
+            </div>
+        </div>
+    </details>
+
+    <!-- Browser Settings -->
+    <details class="settings-section">
+        <summary>🌐 Browser Controls</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="enableScreenshots">Screenshots</label>
+                <select id="enableScreenshots">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sendScreenshotsAsImages">Send Screenshots as Images</label>
+                <select id="sendScreenshotsAsImages">
+                    <option value="true">Yes (for vision models)</option>
+                    <option value="false">No (text description only)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="allowedDomains">Allowed Domains</label>
+                <input type="text" id="allowedDomains" placeholder="Leave empty for all domains" />
+                <small>Comma-separated list, e.g.: google.com, github.com</small>
+            </div>
+        </div>
+    </details>
+
+    <!-- Response Settings -->
+    <details class="settings-section">
+        <summary>💬 Response Settings</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="streamResponses">Stream Responses</label>
+                <select id="streamResponses">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="showThinking">Show Reasoning</label>
+                <select id="showThinking">
+                    <option value="true">Show</option>
+                    <option value="false">Hide</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="saveHistory">Save History</label>
+                <select id="saveHistory">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+            </div>
+        </div>
+    </details>
+
+    <!-- Advanced Settings -->
+    <details class="settings-section">
+        <summary>🔧 Advanced</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="useOrchestrator">Orchestrator Mode</label>
+                <select id="useOrchestrator">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                </select>
+                <small>Use a separate model for orchestration</small>
+            </div>
+            <div class="form-group">
+                <label for="orchestratorProfile">Orchestrator Profile</label>
+                <select id="orchestratorProfile">
+                    <option value="">Same as main</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visionProfile">Vision Profile</label>
+                <select id="visionProfile">
+                    <option value="">Same as main</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visionBridge">Vision Bridge</label>
+                <select id="visionBridge">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+                <small>Describe screenshots for non-vision models</small>
+            </div>
+        </div>
+    </details>
+
+    <!-- System Prompt -->
+    <details class="settings-section">
+        <summary>📝 System Prompt</summary>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="systemPrompt">Custom System Prompt</label>
+                <textarea id="systemPrompt" rows="6" placeholder="Leave empty for default..."></textarea>
+                <small>Override the default system prompt (advanced)</small>
+            </div>
+        </div>
+    </details>
+</div>

@@ -1,0 +1,588 @@
+/* Tool Events (in chat) */
+.tool-event {
+  margin: 4px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.tool-event summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tool-event summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.tool-event.running .tool-event-dot {
+  background: var(--warning);
+  animation: pulse 1s infinite;
+}
+
+.tool-event.success .tool-event-dot {
+  background: var(--success);
+}
+
+.tool-event.error .tool-event-dot {
+  background: var(--error);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.tool-event-name {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.tool-event-preview {
+  flex: 1;
+  color: var(--muted-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-event-status {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tool-event.success .tool-event-status {
+  color: var(--success);
+}
+
+.tool-event.error .tool-event-status {
+  color: var(--error);
+}
+
+.tool-event-body {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-event-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-event-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tool-event-args-pre,
+.tool-event-result-pre {
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tool-log {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tool-log-item {
+  padding: 8px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.tool-log-item.success {
+  border-left: 2px solid var(--success);
+}
+.tool-log-item.error {
+  border-left: 2px solid var(--error);
+}
+
+.tool-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tool-log-meta {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted-dim);
+}
+
+.tool-log-body {
+  display: none;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.tool-log-item.expanded .tool-log-body {
+  display: block;
+}
+
+.tool-log-toggle {
+  margin-top: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  color: var(--muted);
+}
+
+.tool-log-toggle:hover {
+  color: var(--foreground);
+}
+
+/* Plan Drawer - Dropup above composer */
+.plan-drawer {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  margin: 0 auto;
+  width: min(860px, calc(100% - 32px));
+  overflow: hidden;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.plan-drawer.hidden {
+  display: none;
+}
+
+/* When plan drawer is visible, connect to composer */
+.plan-drawer:not(.hidden) + .composer-wrapper {
+  padding-top: 0;
+}
+
+.plan-drawer:not(.hidden) + .composer-wrapper .composer {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
+}
+
+.plan-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.plan-drawer-header:hover {
+  background: var(--card-hover);
+}
+
+.plan-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.plan-drawer-chevron {
+  transition: transform 0.2s ease;
+  color: var(--muted);
+}
+
+.plan-drawer.collapsed .plan-drawer-chevron {
+  transform: rotate(-90deg);
+}
+
+.plan-drawer-count {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.plan-drawer-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.plan-drawer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.plan-drawer-btn:hover {
+  background: var(--border);
+  color: var(--foreground);
+}
+
+.plan-drawer-content {
+  padding: 0 8px 8px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.plan-drawer.collapsed .plan-drawer-content {
+  display: none;
+}
+
+/* Plan Checklist */
+.plan-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--foreground);
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.plan-checklist-item:hover {
+  background: var(--card-hover);
+}
+
+.plan-checklist-item.completed {
+  color: var(--muted);
+}
+
+.plan-checklist-item.completed .plan-checklist-title {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.plan-checklist-item.current {
+  background: rgba(168, 99, 255, 0.12);
+  border-left: 2px solid var(--accent);
+  padding-left: 4px;
+}
+
+.plan-checklist-item.blocked {
+  opacity: 0.5;
+}
+
+.plan-checklist-checkbox {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.plan-checklist-checkbox:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.plan-checklist-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.plan-checklist-checkbox.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.plan-checklist-checkbox.checked svg {
+  color: white;
+}
+
+.plan-checklist-checkbox svg {
+  width: 10px;
+  height: 10px;
+  color: transparent;
+}
+
+.plan-checklist-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-checklist-title {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.plan-checklist-notes {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.plan-checklist-index {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted-dim);
+  min-width: 16px;
+}
+
+/* Legacy Plan Block (inline in chat) - keep for backwards compat */
+.plan-block {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.plan-title {
+  font-weight: 600;
+}
+
+.plan-meta {
+  font-family: var(--font-mono);
+  color: var(--muted-dim);
+}
+
+.plan-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-step {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--foreground);
+}
+
+.plan-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.plan-step-running .plan-step-dot {
+  background: var(--warning);
+}
+
+.plan-step-done .plan-step-dot {
+  background: var(--accent);
+}
+
+.plan-step-blocked .plan-step-dot {
+  background: var(--error);
+}
+
+.plan-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plan-step-title {
+  font-weight: 500;
+}
+
+.plan-step-notes {
+  font-size: 10px;
+  color: var(--muted-dim);
+}
+
+/* Tool Tree (inline in chat messages) - Compact Design */
+.tool-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 8px 0;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tool-tree-item {
+  background: var(--card);
+  padding: 6px 10px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-tree-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.tool-tree-item:last-child {
+  border-radius: 0 0 6px 6px;
+}
+
+.tool-tree-item:only-child {
+  border-radius: 6px;
+}
+
+/* Status dot */
+.tool-tree-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+
+.tool-tree-item.running .tool-tree-status {
+  background: var(--warning);
+  animation: pulse 1s infinite;
+}
+
+.tool-tree-item.success .tool-tree-status {
+  background: var(--success);
+}
+
+.tool-tree-item.error .tool-tree-status {
+  background: var(--error);
+}
+
+.tool-tree-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-tree-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-tree-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool-tree-icon {
+  display: none;
+}
+
+.tool-tree-name {
+  font-weight: 500;
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.tool-tree-args {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-tree-meta {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tool-tree-item.success .tool-tree-meta {
+  color: var(--success);
+}
+
+.tool-tree-item.error .tool-tree-meta {
+  color: var(--error);
+}
