@@ -29,7 +29,7 @@ import { SidePanelUI } from './panel-ui.js';
 
 (SidePanelUI.prototype as any).toggleCustomEndpoint = function toggleCustomEndpoint() {
   const provider = this.elements.provider?.value;
-  const isCustom = provider === 'custom';
+  const isCustom = provider === 'custom' || provider === 'kimi';
   
   // Always show the endpoint field, but highlight when required
   if (this.elements.customEndpointGroup) {
@@ -39,7 +39,12 @@ import { SidePanelUI } from './panel-ui.js';
   
   // Update placeholder based on provider
   if (this.elements.customEndpoint) {
-    if (isCustom) {
+    if (provider === 'kimi') {
+      if (!this.elements.customEndpoint.value || this.elements.customEndpoint.value === 'https://openrouter.ai/api/v1') {
+        this.elements.customEndpoint.value = 'https://api.kimi.com/coding/v1';
+      }
+      this.elements.customEndpoint.placeholder = 'https://api.kimi.com/coding/v1';
+    } else if (isCustom) {
       this.elements.customEndpoint.placeholder = 'https://openrouter.ai/api/v1';
     } else {
       this.elements.customEndpoint.placeholder = 'Leave empty for default API URL';
@@ -58,6 +63,9 @@ import { SidePanelUI } from './panel-ui.js';
         break;
       case 'google':
         modelHint.textContent = 'Recommended: gemini-2.0-flash or gemini-1.5-pro';
+        break;
+      case 'kimi':
+        modelHint.textContent = 'Recommended: kimi-for-coding (or your Kimi model ID)';
         break;
       case 'custom':
         modelHint.textContent = 'Enter the model ID from your provider';
@@ -85,7 +93,7 @@ import { SidePanelUI } from './panel-ui.js';
 (SidePanelUI.prototype as any).toggleProfileEditorEndpoint = function toggleProfileEditorEndpoint() {
   if (!this.elements.profileEditorEndpointGroup) return;
   const provider = this.elements.profileEditorProvider?.value;
-  this.elements.profileEditorEndpointGroup.style.display = provider === 'custom' ? 'block' : 'none';
+  this.elements.profileEditorEndpointGroup.style.display = provider === 'custom' || provider === 'kimi' ? 'block' : 'none';
 };
 
 (SidePanelUI.prototype as any).switchSettingsTab = function switchSettingsTab(
@@ -224,7 +232,7 @@ import { SidePanelUI } from './panel-ui.js';
 };
 
 (SidePanelUI.prototype as any).saveSettings = async function saveSettings() {
-  if (this.elements.provider?.value === 'custom' && !this.validateCustomEndpoint()) {
+  if ((this.elements.provider?.value === 'custom' || this.elements.provider?.value === 'kimi') && !this.validateCustomEndpoint()) {
     this.updateStatus('Invalid custom endpoint URL', 'error');
     return;
   }

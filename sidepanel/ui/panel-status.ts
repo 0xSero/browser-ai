@@ -76,6 +76,11 @@ import { SidePanelUI } from './panel-ui.js';
     return;
   }
 
+  if (provider === 'kimi') {
+    this.populateModelSelect([config.model || 'kimi-for-coding'], config.model);
+    return;
+  }
+
   if (provider === 'openai' && !customEndpoint) {
     // Use hardcoded list for faster loading, but allow API fetch as fallback
     this.populateModelSelect(OPENAI_MODELS, config.model);

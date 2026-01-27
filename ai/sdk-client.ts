@@ -30,21 +30,35 @@ export function resolveLanguageModel(settings: SDKModelSettings) {
     return providerInstance(modelId);
   }
 
-  if (provider === 'custom') {
+  if (provider === 'custom' || provider === 'kimi') {
     // Normalize the base URL
     // - Remove /chat/completions suffix if present (SDK will add it)
-    // - Keep /v1 or other path prefixes intact
+    // - Remove /messages suffix if present
     // - Remove trailing slashes
-    const baseURL = settings.customEndpoint
-      ? settings.customEndpoint.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '')
+    const rawBase = settings.customEndpoint
+      ? settings.customEndpoint
+          .replace(/\/chat\/completions\/?$/i, '')
+          .replace(/\/v1\/messages\/?$/i, '')
+          .replace(/\/messages\/?$/i, '')
+          .replace(/\/+$/, '')
       : '';
 
+    let baseURL = rawBase;
+
     if (!baseURL) {
-      throw new Error('Custom provider requires a customEndpoint to be configured');
+      if (provider === 'kimi') {
+        baseURL = 'https://api.kimi.com/coding/v1';
+      } else {
+        throw new Error('Custom provider requires a customEndpoint to be configured');
+      }
+    }
+
+    if (provider === 'kimi' && !/\/v1$/i.test(baseURL)) {
+      baseURL = `${baseURL}/v1`;
     }
 
     const customProvider = createOpenAICompatible({
-      name: 'custom',
+      name: provider,
       apiKey,
       baseURL,
     });

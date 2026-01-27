@@ -164,8 +164,38 @@ Safety:
 Base every answer strictly on real tool output.`;
   }
 
+  getRequestHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${this.apiKey}`,
+    };
+    if (this.provider === 'kimi') {
+      headers['User-Agent'] = 'claude-code/1.0';
+    }
+    return headers;
+  }
+
+  getAnthropicHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-api-key': this.apiKey,
+      'anthropic-version': '2023-06-01',
+    };
+    return headers;
+  }
+
+  getOpenAIEndpoint(): string {
+    if (this.provider === 'custom') {
+      return (this.customEndpoint || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    }
+    if (this.provider === 'kimi') {
+      return (this.customEndpoint || 'https://api.kimi.com/coding/v1').replace(/\/+$/, '');
+    }
+    return 'https://api.openai.com/v1';
+  }
+
   async callOpenAI(tools: ToolDefinition[], options: ChatOptions = {}): Promise<ChatResponse> {
-    const endpoint = this.provider === 'custom' ? this.customEndpoint : 'https://api.openai.com/v1';
+    const endpoint = this.getOpenAIEndpoint();
 
     // Always sanitize messages to ensure tool calls have matching results
     // This helps with both native OpenAI and proxy endpoints (OpenRouter, etc.)
@@ -195,10 +225,7 @@ Base every answer strictly on real tool output.`;
       try {
         response = await fetch(`${endpoint}/chat/completions`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
-          },
+          headers: this.getRequestHeaders(),
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined,
         });
@@ -267,7 +294,12 @@ Base every answer strictly on real tool output.`;
         }
       : null;
 
-    return this.formatOpenAIMessage(message, usage);
+    const result = this.formatOpenAIMessage(message, usage);
+    // Capture reasoning_content from providers like Kimi
+    if (message.reasoning_content && !result.thinking) {
+      result.thinking = message.reasoning_content;
+    }
+    return result;
   }
 
   // Sanitize messages for proxy endpoints that might route to Anthropic
@@ -346,8 +378,17 @@ Base every answer strictly on real tool output.`;
     return result;
   }
 
+  getAnthropicEndpoint(): string {
+    const defaultBase = 'https://api.anthropic.com';
+    const rawBase = (this.customEndpoint || defaultBase).replace(/\/+$/, '');
+    if (/\/v1\/messages$/i.test(rawBase)) return rawBase;
+    if (/\/messages$/i.test(rawBase)) return rawBase;
+    if (/\/v1$/i.test(rawBase)) return `${rawBase}/messages`;
+    return `${rawBase}/v1/messages`;
+  }
+
   async callAnthropic(tools: ToolDefinition[]): Promise<ChatResponse> {
-    const endpoint = 'https://api.anthropic.com/v1/messages';
+    const endpoint = this.getAnthropicEndpoint();
 
     // Extract system message
     const systemMessage = this.messages.find((m) => m.role === 'system');
@@ -372,11 +413,7 @@ Base every answer strictly on real tool output.`;
       try {
         response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': this.apiKey,
-            'anthropic-version': '2023-06-01',
-          },
+          headers: this.getAnthropicHeaders(),
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined,
         });
@@ -604,7 +641,7 @@ Base every answer strictly on real tool output.`;
     // OpenAI and OpenAI-compatible endpoints: rely on the user toggle
     // If a custom endpoint cannot handle the multi-part payload, the user can
     // simply disable screenshot sending in settings.
-    if (this.provider === 'openai' || this.provider === 'custom') {
+    if (this.provider === 'openai' || this.provider === 'custom' || this.provider === 'kimi') {
       return true;
     }
 
@@ -832,13 +869,9 @@ Base every answer strictly on real tool output.`;
         ],
       };
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(this.getAnthropicEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
+        headers: this.getAnthropicHeaders(),
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout ? AbortSignal.timeout(this.requestTimeout) : undefined,
       });
@@ -857,14 +890,11 @@ Base every answer strictly on real tool output.`;
     }
 
     // OpenAI or compatible vision
-    const endpoint = this.provider === 'custom' ? this.customEndpoint : 'https://api.openai.com/v1';
+    const endpoint = this.getOpenAIEndpoint();
 
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
+      headers: this.getRequestHeaders(),
       body: JSON.stringify({
         model: this.model,
         temperature: this.temperature,
@@ -1239,6 +1269,7 @@ Base every answer strictly on real tool output.`;
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
     let aggregatedContent = '';
+    let aggregatedReasoning = '';
     let streamUsage: Usage | null = null; // Track usage from streaming
     const toolCallMap = new Map<number, { id: string; type: string; function: { name: string; arguments: string } }>();
     const invoke = (name: keyof StreamCallbacks, payload?: { content?: string }) => {
@@ -1322,6 +1353,9 @@ Base every answer strictly on real tool output.`;
             if (delta.content) {
               appendContent(delta.content);
             }
+            if (delta.reasoning_content) {
+              aggregatedReasoning += delta.reasoning_content;
+            }
             if (delta.tool_calls) {
               captureToolCalls(delta.tool_calls);
             }
@@ -1353,6 +1387,9 @@ Base every answer strictly on real tool output.`;
             if (delta.content) {
               appendContent(delta.content);
             }
+            if (delta.reasoning_content) {
+              aggregatedReasoning += delta.reasoning_content;
+            }
             if (delta.tool_calls) {
               captureToolCalls(delta.tool_calls);
             }
@@ -1373,6 +1410,11 @@ Base every answer strictly on real tool output.`;
     };
 
     this.messages.push(assistantMessage);
-    return this.formatOpenAIMessage(assistantMessage, streamUsage);
+    const result = this.formatOpenAIMessage(assistantMessage, streamUsage);
+    // Preserve reasoning_content from providers like Kimi that stream it separately
+    if (aggregatedReasoning && !result.thinking) {
+      result.thinking = aggregatedReasoning;
+    }
+    return result;
   }
 }
