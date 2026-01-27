@@ -175,7 +175,6 @@ class ExtensionValidator {
       'sidepanel/panel.html',
       'sidepanel/panel.css',
       'sidepanel/panel.js',
-      'ai/provider.js',
       'tools/browser-tools.js',
     ];
 
@@ -189,7 +188,7 @@ class ExtensionValidator {
   validateJavaScriptSyntax() {
     this.log('\n=== Validating JavaScript Files ===', 'info');
 
-    const jsFiles = ['background.js', 'content.js', 'sidepanel/panel.js', 'ai/provider.js', 'tools/browser-tools.js'];
+    const jsFiles = ['background.js', 'content.js', 'sidepanel/panel.js', 'tools/browser-tools.js'];
 
     jsFiles.forEach((file) => {
       this.test(`${file} has valid syntax`, () => {

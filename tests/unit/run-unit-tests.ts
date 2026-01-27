@@ -15,12 +15,8 @@ import {
 import { createMessage, normalizeConversationHistory, toProviderMessages } from '../../ai/message-schema.js';
 import type { Message } from '../../ai/message-schema.js';
 import { createExponentialBackoff, isValidFinalResponse } from '../../ai/retry-engine.js';
-import { extractThinking } from '../../sidepanel/utils/notes-utils.js';
-import {
-  buildToolEventSnapshot,
-  categorizeToolName,
-  extractScreenshotUrls,
-} from '../../sidepanel/utils/run-history-utils.js';
+import { extractThinking } from '../../ai/message-utils.js';
+
 import { buildRunPlan, normalizePlanStatus, normalizePlanSteps } from '../../types/plan.js';
 import type { RunPlan } from '../../types/plan.js';
 import { RUNTIME_MESSAGE_SCHEMA_VERSION, isRuntimeMessage } from '../../types/runtime-messages.js';
@@ -380,47 +376,7 @@ function testMessageSchema(runner: TestRunner) {
   });
 }
 
-// Test Run History Utils
-function testRunHistoryUtils(runner: TestRunner) {
-  log('\n=== Testing Run History Helpers ===', 'info');
 
-  runner.test('categorizeToolName maps known tools', () => {
-    runner.assertEqual(categorizeToolName('screenshot'), 'screenshots');
-    runner.assertEqual(categorizeToolName('navigate'), 'navigation');
-    runner.assertEqual(categorizeToolName('getContent'), 'extraction');
-    runner.assertEqual(categorizeToolName('click'), 'input');
-    runner.assertEqual(categorizeToolName('unknownTool'), 'other');
-  });
-
-  runner.test('extractScreenshotUrls finds data URLs', () => {
-    const result = {
-      success: true,
-      dataUrl: 'data:image/png;base64,abc',
-      images: [{ url: 'data:image/jpeg;base64,def' }],
-    };
-    const urls = extractScreenshotUrls(result);
-    runner.assertTrue(urls.length === 2, 'Expected two screenshot URLs');
-    runner.assertTrue(urls.some((url) => url.includes('data:image/png')));
-    runner.assertTrue(urls.some((url) => url.includes('data:image/jpeg')));
-  });
-
-  runner.test('buildToolEventSnapshot captures screenshots and status', () => {
-    const snapshot = buildToolEventSnapshot({
-      id: 'tool-1',
-      toolName: 'screenshot',
-      args: { tabId: 1 },
-      result: {
-        success: true,
-        dataUrl: 'data:image/png;base64,abc',
-        message: 'Captured',
-      },
-    });
-    runner.assertEqual(snapshot.status, 'success');
-    runner.assertEqual(snapshot.category, 'screenshots');
-    runner.assertTrue(Array.isArray(snapshot.screenshotUrls), 'screenshotUrls should be present');
-    runner.assertTrue(snapshot.screenshotUrls?.length === 1, 'screenshotUrls should contain one entry');
-  });
-}
 
 // Test Conversation Compaction
 function testConversationCompaction(runner: TestRunner) {
@@ -682,7 +638,7 @@ function main() {
   testInputValidation(runner);
   testErrorHandling(runner);
   testMessageSchema(runner);
-  testRunHistoryUtils(runner);
+
   testConversationCompaction(runner);
   testThinkingExtraction(runner);
   testPlanNormalization(runner);
