@@ -30,6 +30,7 @@ type RunMeta = {
 class BackgroundService {
   browserTools: BrowserTools;
   currentSettings: Record<string, any> | null;
+  currentSessionId: string | null;
   currentPlan: RunPlan | null;
   subAgentCount: number;
   subAgentProfileCursor: number;
@@ -41,6 +42,7 @@ class BackgroundService {
   constructor() {
     this.browserTools = new BrowserTools();
     this.currentSettings = null;
+    this.currentSessionId = null;
     this.currentPlan = null;
     this.subAgentCount = 0;
     this.subAgentProfileCursor = 0;
@@ -176,13 +178,17 @@ class BackgroundService {
       }
 
       this.currentSettings = settings;
-      this.currentPlan = null;
-      this.subAgentCount = 0;
-      this.subAgentProfileCursor = 0;
-      // Reset enforcement state
-      this.lastBrowserAction = null;
-      this.awaitingVerification = false;
-      this.currentStepVerified = false;
+      const isNewSession = this.currentSessionId !== sessionId;
+      if (isNewSession) {
+        this.currentSessionId = sessionId;
+        this.currentPlan = null;
+        this.subAgentCount = 0;
+        this.subAgentProfileCursor = 0;
+        // Reset enforcement state
+        this.lastBrowserAction = null;
+        this.awaitingVerification = false;
+        this.currentStepVerified = false;
+      }
 
       try {
         await this.browserTools.configureSessionTabs(selectedTabs || [], {
@@ -581,15 +587,25 @@ class BackgroundService {
         sendResult(errorResult);
         return errorResult;
       }
-      const rawIndex = args.step_index;
+      const rawIndex = args.step_index ?? args.stepIndex ?? args.step ?? args.index;
       const parsedIndex = typeof rawIndex === 'number' ? rawIndex : Number(rawIndex);
-      const stepIndex = Number.isFinite(parsedIndex) ? parsedIndex : -1;
+      let stepIndex = Number.isFinite(parsedIndex) ? parsedIndex : -1;
       const rawStatus = typeof args.status === 'string' ? args.status : 'done';
-      const status = rawStatus === 'pending' || rawStatus === 'done' || rawStatus === 'blocked' ? rawStatus : 'done';
+      const normalizedStatus = rawStatus === 'completed' || rawStatus === 'complete' ? 'done' : rawStatus;
+      const status =
+        normalizedStatus === 'pending' || normalizedStatus === 'done' || normalizedStatus === 'blocked'
+          ? normalizedStatus
+          : 'done';
       const maxIndex = this.currentPlan.steps.length - 1;
       if (stepIndex < 0 || stepIndex > maxIndex) {
-        const errorResult = { 
-          success: false, 
+        const oneBasedIndex = stepIndex - 1;
+        if (oneBasedIndex >= 0 && oneBasedIndex <= maxIndex) {
+          stepIndex = oneBasedIndex;
+        }
+      }
+      if (stepIndex < 0 || stepIndex > maxIndex) {
+        const errorResult = {
+          success: false,
           error: `Invalid step_index: ${stepIndex}. Valid range is 0-${maxIndex}.`,
           hint: `Plan has ${this.currentPlan.steps.length} steps (indices 0 to ${maxIndex}).`,
           currentPlan: this.currentPlan.steps.map((s, i) => `${i}: ${s.title} [${s.status}]`),

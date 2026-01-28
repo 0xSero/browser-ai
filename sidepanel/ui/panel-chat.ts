@@ -28,8 +28,6 @@ import { SidePanelUI } from './panel-ui.js';
   const tabsContext = this.getSelectedTabsContext();
   const fullMessage = userMessage + tabsContext;
 
-  this.currentPlan = null;
-
   this.displayUserMessage(userMessage);
 
   const displayEntry = createMessage({ role: 'user', content: userMessage });
